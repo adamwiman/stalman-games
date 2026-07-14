@@ -1,0 +1,15 @@
+// ============================================================
+// GAME REGISTRY
+// To add a game: drop the file in games/, add an entry here,
+// then add the file path to ASSETS in sw.js and bump CACHE_VERSION.
+// ============================================================
+const GAMES = [
+  {
+    id: "2048",                    // unique id, used for time limits + scores
+    title: "2048",
+    emoji: "🔢",
+    blurb: "Slide tiles. Make 2048!",
+    file: "games/2048.html",
+    scoreKey: "score.2048"         // localStorage key the game writes its best score to
+  }
+];
