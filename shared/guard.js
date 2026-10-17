@@ -69,7 +69,14 @@
     p.style.color = min <= 5 ? "#fff" : "#17335b";
   }
 
-  function blockEvent(e) { e.stopPropagation(); e.preventDefault(); }
+  // Input never reaches the game behind the overlay. Inside the overlay the
+  // default action is kept, so the back link still works: on iPad a
+  // preventDefault() on pointerdown would cancel the tap's click.
+  var overlay = null;
+  function blockEvent(e) {
+    e.stopPropagation();
+    if (!overlay || !overlay.contains(e.target)) e.preventDefault();
+  }
 
   function lock() {
     if (locked) return;
@@ -87,13 +94,10 @@
       "color:#17335b;background:#ffc63f;border:2px solid #fff;border-radius:16px;" +
       'padding:12px 26px;text-decoration:none">\u2190 Back to games</a></div>';
     document.body.appendChild(ov);
-    // stop the game from receiving input behind the overlay
+    overlay = ov;
     ["keydown", "keyup", "touchstart", "touchmove", "pointerdown"].forEach(function (t) {
       window.addEventListener(t, blockEvent, true);
     });
-    // but let the back link work
-    ov.querySelector("a").addEventListener("touchstart", function (e) { e.stopPropagation(); }, true);
-    ov.querySelector("a").addEventListener("pointerdown", function (e) { e.stopPropagation(); }, true);
     if (pill) { pill.remove(); pill = null; }
   }
 
