@@ -11,5 +11,13 @@ const GAMES = [
     blurb: "Slide tiles. Make 2048!",
     file: "games/2048.html",
     scoreKey: "score.2048"         // localStorage key the game writes its best score to
+  },
+  {
+    id: "goopipes",
+    title: "Goo Pipes",
+    emoji: "🧪",
+    blurb: "Build the pipe before the goo escapes!",
+    file: "games/goopipes.html",
+    scoreKey: "score.goopipes"
   }
 ];

@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Dependencies (if tooling is added later)
+node_modules/
+
+# Claude Code local settings
+.claude/settings.local.json

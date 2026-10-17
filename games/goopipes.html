@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Goo Pipes</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg:#17181c; --panel:#212429; --slot:#1e2126; --line:#2c3037;
+    --ink:#d3d7de; --dim:#8a8f98; --accent:#ffc63f; --goo:#3fe44b;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body {
+    margin:0; height:100%;
+    background:var(--bg); color:var(--ink);
+    font-family:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN","Arial Rounded MT Bold",system-ui,sans-serif;
+    -webkit-user-select:none; user-select:none;
+    overscroll-behavior:none;
+  }
+  .wrap {
+    max-width:860px; margin:0 auto; min-height:100%;
+    display:flex; flex-direction:column;
+    padding:max(14px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  }
+  .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .back {
+    text-decoration:none; color:var(--ink); font-weight:800; font-size:16px;
+    background:var(--panel); border:2px solid var(--line); border-radius:999px;
+    padding:8px 16px;
+  }
+  .back:active { opacity:.7; }
+  h1 { font-size:30px; margin:0; font-weight:800; letter-spacing:1px; }
+  h1 .goo { color:var(--goo); }
+
+  .bar { display:flex; gap:8px; margin-bottom:10px; }
+  .box {
+    flex:1; background:var(--panel); border:2px solid var(--line); border-radius:12px;
+    padding:5px 8px; text-align:center; min-width:0;
+  }
+  .box .lbl { font-size:10px; font-weight:800; letter-spacing:1.5px; color:var(--dim); }
+  .box .val { font-size:20px; font-weight:800; white-space:nowrap; }
+  #dist.met { color:var(--goo); }
+
+  .ctrl { display:flex; gap:8px; align-items:stretch; margin-bottom:10px; flex-wrap:wrap; }
+  .qwrap {
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:2px solid var(--line); border-radius:12px; padding:4px 10px;
+  }
+  .qlbl { font-size:10px; font-weight:800; letter-spacing:1.5px; color:var(--accent); writing-mode:vertical-rl; transform:rotate(180deg); }
+  #queue { display:block; }
+  .status {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    background:var(--panel); border:2px solid var(--line); border-radius:12px;
+    font-size:15px; font-weight:800; letter-spacing:1px; padding:4px 10px; min-width:110px;
+  }
+  .status.hot { color:var(--accent); border-color:var(--accent); }
+  .btn {
+    font:inherit; font-weight:800; font-size:15px; color:var(--ink);
+    background:var(--panel); border:2px solid var(--line); border-radius:12px;
+    padding:6px 14px; cursor:pointer;
+  }
+  .btn:active { opacity:.7; }
+  #fast.on { color:#17181c; background:var(--goo); border-color:var(--goo); }
+
+  .board-outer { display:flex; justify-content:center; }
+  #boardWrap { position:relative; }
+  #board {
+    display:block; background:var(--panel);
+    border:2px solid var(--line); border-radius:12px;
+    touch-action:none;
+  }
+  .hint { text-align:center; font-size:13px; color:var(--dim); margin-top:12px; }
+
+  .modal {
+    position:absolute; inset:0; border-radius:12px; z-index:10;
+    background:rgba(13,14,17,.9);
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:20px;
+  }
+  .modal.show { display:flex; }
+  .modal h2 { font-size:30px; margin:0 0 6px; }
+  .modal p { margin:0 0 20px; color:var(--dim); font-weight:700; }
+  .modal button {
+    font:inherit; font-weight:800; font-size:17px; color:#17181c;
+    background:var(--accent); border:none; border-radius:12px;
+    padding:10px 24px; cursor:pointer; margin:0 6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="../index.html">← Games</a>
+    <h1>GOO <span class="goo">PIPES</span></h1>
+  </div>
+  <div class="bar">
+    <div class="box"><div class="lbl">SCORE</div><div class="val" id="score">0</div></div>
+    <div class="box"><div class="lbl">BEST</div><div class="val" id="best">0</div></div>
+    <div class="box"><div class="lbl">LEVEL</div><div class="val" id="level">1</div></div>
+    <div class="box"><div class="lbl">PIPE</div><div class="val" id="dist">0/8</div></div>
+  </div>
+  <div class="ctrl">
+    <div class="qwrap"><span class="qlbl">NEXT</span><canvas id="queue"></canvas></div>
+    <div class="status" id="status"></div>
+    <button class="btn" id="fast">⏩ Fast</button>
+    <button class="btn" id="new">New game</button>
+  </div>
+  <div class="board-outer">
+    <div id="boardWrap">
+      <canvas id="board"></canvas>
+      <div class="modal" id="modal">
+        <h2 id="modalTitle"></h2>
+        <p id="modalText"></p>
+        <div id="modalBtns"></div>
+      </div>
+    </div>
+  </div>
+  <p class="hint">
+    Tap a square to lay the next pipe before the goo gets there — build a pipe at least as long
+    as the PIPE goal! Keyboard: arrows move, Enter places, Space = fast goo (bonus points).
+  </p>
+</div>
+
+<script>
+/*LOGIC-START*/
+"use strict";
+// ---- pure game logic (no DOM) — exercised by tests/goopipes.test.js ----
+var COLS = 10, ROWS = 7;
+var SIDES = ["U", "R", "D", "L"];
+var OPPOSITE = { U: "D", R: "L", D: "U", L: "R" };
+var DELTA = { U: [-1, 0], R: [0, 1], D: [1, 0], L: [0, -1] };
+// which side the goo leaves through, given the side it entered from
+var CONNECT = {
+  H:  { L: "R", R: "L" },
+  V:  { U: "D", D: "U" },
+  UR: { U: "R", R: "U" },
+  RD: { R: "D", D: "R" },
+  DL: { D: "L", L: "D" },
+  LU: { L: "U", U: "L" },
+  X:  { U: "D", D: "U", L: "R", R: "L" }
+};
+var PIECE_TYPES = ["H", "V", "UR", "RD", "DL", "LU", "X"];
+
+function exitSide(type, enterSide) {
+  var m = CONNECT[type];
+  return (m && m[enterSide]) || null;
+}
+function axisOf(side) { return side === "L" || side === "R" ? "h" : "v"; }
+function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+function emptyBoard() {
+  var g = [];
+  for (var r = 0; r < ROWS; r++) { g.push([]); for (var c = 0; c < COLS; c++) g[r].push(null); }
+  return g;
+}
+function makePiece(type) { return { type: type, filled: { h: false, v: false }, gooPasses: [] }; }
+function makeStart(dir) { return { type: "S", dir: dir, filled: { h: true, v: true }, gooPasses: [] }; }
+function isFlooded(cell) { return !!cell && (cell.filled.h || cell.filled.v); }
+
+// Where may the next queue piece go? "place" (empty cell), "replace"
+// (existing un-flooded piece, costs a penalty) or null (locked).
+function placement(board, r, c) {
+  var cell = board[r][c];
+  if (!cell) return "place";
+  if (cell.type === "S" || isFlooded(cell)) return null;
+  return "replace";
+}
+
+// Goo leaves (r,c) travelling `moveDir`. Can it enter the next cell?
+function tryEnter(board, r, c, moveDir) {
+  var d = DELTA[moveDir], nr = r + d[0], nc = c + d[1];
+  if (!inBounds(nr, nc)) return { ok: false, reason: "edge" };
+  var cell = board[nr][nc];
+  if (!cell) return { ok: false, reason: "empty" };
+  var enter = OPPOSITE[moveDir];
+  var exit = exitSide(cell.type, enter);
+  if (!exit) return { ok: false, reason: "blocked" };
+  if (cell.type === "X") {
+    if (cell.filled[axisOf(enter)]) return { ok: false, reason: "filled" };
+    return { ok: true, r: nr, c: nc, enterSide: enter, exit: exit, secondPass: isFlooded(cell) };
+  }
+  if (isFlooded(cell)) return { ok: false, reason: "filled" };
+  return { ok: true, r: nr, c: nc, enterSide: enter, exit: exit, secondPass: false };
+}
+
+// One flow step: the goo just finished filling the cell in `state`
+// ({r,c,enterSide}; enterSide null for the start piece). Claims the next
+// cell's axis and returns {done:false, state:{r,c,enterSide,exit,secondPass}}
+// or {done:true, reason, exitDir}.
+function advanceFlow(board, state) {
+  var cell = board[state.r][state.c];
+  var out = cell.type === "S" ? cell.dir : exitSide(cell.type, state.enterSide);
+  var res = tryEnter(board, state.r, state.c, out);
+  if (!res.ok) return { done: true, reason: res.reason, exitDir: out };
+  var next = board[res.r][res.c];
+  if (next.type === "X") next.filled[axisOf(res.enterSide)] = true;
+  else { next.filled.h = true; next.filled.v = true; }
+  return {
+    done: false,
+    state: { r: res.r, c: res.c, enterSide: res.enterSide, exit: res.exit, secondPass: res.secondPass }
+  };
+}
+
+// Runs the whole flow at once (used by the tests; the UI steps it over time).
+function simulateFlow(board, start) {
+  var state = { r: start.r, c: start.c, enterSide: null };
+  var path = [];
+  for (;;) {
+    var res = advanceFlow(board, state);
+    if (res.done) return { path: path, reason: res.reason, distance: path.length };
+    state = res.state;
+    path.push(state);
+    if (path.length > COLS * ROWS * 2 + 4) return { path: path, reason: "overflow", distance: path.length };
+  }
+}
+
+function roundOutcome(distance, required) { return distance >= required ? "level" : "over"; }
+// 50/segment, 100 for the second pass through a cross, +50 while fast-forwarding
+function segmentScore(secondPass, fast) { return (secondPass ? 100 : 50) + (fast ? 50 : 0); }
+
+function levelParams(level) {
+  return {
+    required: Math.min(8 + (level - 1) * 2, 24),
+    fillMs: Math.max(700, Math.round(2600 * Math.pow(0.88, level - 1))),
+    countdownMs: Math.max(4, 13 - level) * 1000,
+    fastMs: 110
+  };
+}
+function randomType(rand) { return PIECE_TYPES[Math.floor(rand() * PIECE_TYPES.length)]; }
+// Start piece anywhere, any direction, as long as it doesn't face the board edge.
+function randomStart(rand) {
+  for (;;) {
+    var r = Math.floor(rand() * ROWS), c = Math.floor(rand() * COLS);
+    var dir = SIDES[Math.floor(rand() * 4)];
+    var d = DELTA[dir];
+    if (inBounds(r + d[0], c + d[1])) return { r: r, c: c, dir: dir };
+  }
+}
+// mulberry32 — seedable RNG so tests are deterministic
+function makeRand(seed) {
+  var a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    var t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/*LOGIC-END*/
+
+// ================= rendering & game shell =================
+var SCORE_KEY = "score.goopipes";
+var REPLACE_PENALTY = 50, REPLACE_MS = 500, DIST_BONUS = 100, STUB_MS = 450;
+
+var boardCv = document.getElementById("board");
+var queueCv = document.getElementById("queue");
+var bctx = boardCv.getContext("2d");
+var qctx = queueCv.getContext("2d");
+var scoreEl = document.getElementById("score");
+var bestEl = document.getElementById("best");
+var levelEl = document.getElementById("level");
+var distEl = document.getElementById("dist");
+var statusEl = document.getElementById("status");
+var fastBtn = document.getElementById("fast");
+var modal = document.getElementById("modal");
+
+var EDGE = "#43474e", BODY = "#8b919b", CHANNEL = "#141519", GOO = "#3fe44b";
+var SLOT = "#1e2126", LINE = "#31353d", ACCENT = "#ffc63f";
+// piece geometry: polylines between cell-side midpoints ("C" = center)
+var PATHS = {
+  H: [["L", "C", "R"]], V: [["U", "C", "D"]],
+  UR: [["U", "C", "R"]], RD: [["R", "C", "D"]], DL: [["D", "C", "L"]], LU: [["L", "C", "U"]],
+  X: [["L", "C", "R"], ["U", "C", "D"]]
+};
+var DIR_ANGLE = { U: 0, R: Math.PI / 2, D: Math.PI, L: -Math.PI / 2 };
+
+var game = null;
+var cursor = { r: 3, c: 4 };
+var cellPx = 48, dpr = 1;
+
+function sidePoint(side, s) {
+  if (side === "U") return [s / 2, 0];
+  if (side === "R") return [s, s / 2];
+  if (side === "D") return [s / 2, s];
+  if (side === "L") return [0, s / 2];
+  return [s / 2, s / 2];
+}
+function strokePath(ctx, pts, width, color) {
+  ctx.strokeStyle = color; ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+function strokePartial(ctx, pts, width, color, t) {
+  if (t <= 0) return;
+  var total = 0, lens = [], i, dx, dy;
+  for (i = 1; i < pts.length; i++) {
+    dx = pts[i][0] - pts[i - 1][0]; dy = pts[i][1] - pts[i - 1][1];
+    lens.push(Math.sqrt(dx * dx + dy * dy)); total += lens[i - 1];
+  }
+  var target = total * Math.min(1, t);
+  ctx.strokeStyle = color; ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (i = 1; i < pts.length && target > 0; i++) {
+    if (target >= lens[i - 1]) { ctx.lineTo(pts[i][0], pts[i][1]); target -= lens[i - 1]; }
+    else {
+      var f = target / lens[i - 1];
+      ctx.lineTo(pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f,
+                 pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f);
+      target = 0;
+    }
+  }
+  ctx.stroke();
+}
+function drawFlange(ctx, side, s, pw) {
+  var th = Math.max(3, s * 0.11), w = pw + s * 0.10;
+  ctx.fillStyle = BODY; ctx.strokeStyle = EDGE; ctx.lineWidth = Math.max(1.5, s * 0.03);
+  var x, y, ww, hh;
+  if (side === "L") { x = 0; y = (s - w) / 2; ww = th; hh = w; }
+  else if (side === "R") { x = s - th; y = (s - w) / 2; ww = th; hh = w; }
+  else if (side === "U") { x = (s - w) / 2; y = 0; ww = w; hh = th; }
+  else { x = (s - w) / 2; y = s - th; ww = w; hh = th; }
+  ctx.fillRect(x, y, ww, hh);
+  ctx.strokeRect(x + 0.5, y + 0.5, ww - 1, hh - 1);
+}
+// Draws one piece into an s×s box at the current origin.
+function drawPiece(ctx, s, cell, now) {
+  ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+  var pw = s * 0.46, ch = s * 0.22;
+  if (cell.type === "S") { drawStart(ctx, s, cell, now, pw, ch); return; }
+  var i, pts;
+  var paths = PATHS[cell.type];
+  for (i = 0; i < paths.length; i++) {
+    pts = paths[i].map(function (sd) { return sidePoint(sd, s); });
+    strokePath(ctx, pts, pw, EDGE);
+    strokePath(ctx, pts, pw - Math.max(3, s * 0.08), BODY);
+    drawFlange(ctx, paths[i][0], s, pw);
+    drawFlange(ctx, paths[i][paths[i].length - 1], s, pw);
+    strokePath(ctx, pts, ch, CHANNEL);
+  }
+  for (i = 0; i < cell.gooPasses.length; i++) {
+    var p = cell.gooPasses[i];
+    pts = [sidePoint(p.from, s), [s / 2, s / 2], sidePoint(p.to, s)];
+    strokePartial(ctx, pts, ch, GOO, p.t);
+  }
+}
+function drawStart(ctx, s, cell, now, pw, ch) {
+  var stub = [[s / 2, s / 2], sidePoint(cell.dir, s)];
+  strokePath(ctx, stub, pw, EDGE);
+  strokePath(ctx, stub, pw - Math.max(3, s * 0.08), BODY);
+  drawFlange(ctx, cell.dir, s, pw);
+  strokePath(ctx, stub, ch, CHANNEL);
+  var pass = cell.gooPasses[0];
+  if (pass) strokePartial(ctx, stub, ch, GOO, pass.t);
+  // pump body
+  var ts = s * 0.62, o = (s - ts) / 2;
+  ctx.fillStyle = BODY; ctx.fillRect(o, o, ts, ts);
+  ctx.strokeStyle = EDGE; ctx.lineWidth = Math.max(2, s * 0.06);
+  ctx.strokeRect(o, o, ts, ts);
+  var iw = s * 0.30, io = (s - iw) / 2;
+  ctx.fillStyle = CHANNEL; ctx.fillRect(io, io, iw, iw);
+  if (pass && pass.t > 0) {
+    ctx.globalAlpha = Math.min(1, pass.t * 2);
+    ctx.fillStyle = GOO; ctx.fillRect(io, io, iw, iw);
+    ctx.globalAlpha = 1;
+  }
+  // direction arrow (pulses while the countdown runs)
+  var counting = game && game.phase === "countdown";
+  ctx.save();
+  ctx.translate(s / 2, s / 2);
+  ctx.rotate(DIR_ANGLE[cell.dir]);
+  ctx.globalAlpha = counting ? 0.55 + 0.45 * Math.sin(now / 140) : 0.9;
+  ctx.fillStyle = (pass && pass.t > 0) ? CHANNEL : ACCENT;
+  ctx.beginPath();
+  ctx.moveTo(0, -iw * 0.42); ctx.lineTo(iw * 0.36, iw * 0.30); ctx.lineTo(-iw * 0.36, iw * 0.30);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ---------- layout ----------
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  var wrapW = document.querySelector(".wrap").clientWidth - 4;
+  var availH = window.innerHeight - boardCv.getBoundingClientRect().top - 64;
+  cellPx = Math.max(30, Math.floor(Math.min(wrapW / COLS, Math.max(availH, 220) / ROWS)));
+  boardCv.style.width = cellPx * COLS + "px";
+  boardCv.style.height = cellPx * ROWS + "px";
+  boardCv.width = cellPx * COLS * dpr;
+  boardCv.height = cellPx * ROWS * dpr;
+  var qs = 46;
+  queueCv.style.width = (qs * 5 + 24) + "px";
+  queueCv.style.height = qs + "px";
+  queueCv.width = (qs * 5 + 24) * dpr;
+  queueCv.height = qs * dpr;
+}
+
+// ---------- HUD ----------
+function syncScore() {
+  scoreEl.textContent = game.score.toLocaleString();
+  var best = Number(localStorage.getItem(SCORE_KEY) || 0);
+  if (game.score > best) { best = game.score; localStorage.setItem(SCORE_KEY, String(best)); }
+  bestEl.textContent = best.toLocaleString();
+}
+function addScore(delta) {
+  game.score = Math.max(0, game.score + delta);
+  syncScore();
+}
+function syncDist() {
+  distEl.textContent = game.dist + "/" + game.params.required;
+  distEl.classList.toggle("met", game.dist >= game.params.required);
+}
+function syncStatus() {
+  if (game.phase === "countdown") {
+    var s = Math.ceil(game.countLeft / 1000);
+    statusEl.textContent = "GOO IN " + s + "s";
+    statusEl.classList.toggle("hot", s <= 3);
+  } else if (game.phase === "flow") {
+    statusEl.textContent = game.fast ? "FAST! ⏩" : "GOO FLOWING…";
+    statusEl.classList.remove("hot");
+  } else {
+    statusEl.textContent = "ROUND OVER";
+    statusEl.classList.remove("hot");
+  }
+}
+function showModal(title, text, buttons) {
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalText").textContent = text;
+  var wrap = document.getElementById("modalBtns");
+  wrap.innerHTML = "";
+  buttons.forEach(function (b) {
+    var btn = document.createElement("button");
+    btn.textContent = b[0];
+    btn.onclick = b[1];
+    wrap.appendChild(btn);
+  });
+  modal.classList.add("show");
+}
+function hideModal() { modal.classList.remove("show"); }
+
+// ---------- game state ----------
+function newGame() {
+  game = { level: 1, score: 0 };
+  hideModal();
+  startLevel();
+  syncScore();
+}
+function startLevel() {
+  game.params = levelParams(game.level);
+  game.board = emptyBoard();
+  game.dist = 0;
+  game.phase = "countdown";
+  game.countLeft = game.params.countdownMs;
+  game.fast = false;
+  game.current = null;
+  game.pending = null;
+  game.spill = null;
+  game.fx = [];
+  game.startPos = randomStart(Math.random);
+  game.board[game.startPos.r][game.startPos.c] = makeStart(game.startPos.dir);
+  game.queue = [];
+  for (var i = 0; i < 5; i++) game.queue.push(randomType(Math.random));
+  fastBtn.classList.remove("on");
+  levelEl.textContent = game.level;
+  hideModal();
+  syncDist();
+  syncStatus();
+}
+function nextLevel() {
+  game.level++;
+  startLevel();
+}
+function takeQueue() {
+  var t = game.queue.shift();
+  game.queue.push(randomType(Math.random));
+  return t;
+}
+function tryPlace(r, c) {
+  if (!game || game.phase === "done" || game.pending || modal.classList.contains("show")) return;
+  var mode = placement(game.board, r, c);
+  if (!mode) return;
+  if (mode === "replace") {
+    addScore(-REPLACE_PENALTY);
+    spawnDebris(r, c);
+    game.board[r][c] = null;
+    game.pending = { r: r, c: c, type: takeQueue(), at: performance.now() + REPLACE_MS };
+  } else {
+    var piece = makePiece(takeQueue());
+    piece.placedAt = performance.now();
+    game.board[r][c] = piece;
+  }
+}
+function spawnDebris(r, c) {
+  var chunks = [];
+  for (var i = 0; i < 7; i++) {
+    chunks.push({
+      ang: Math.random() * Math.PI * 2,
+      sp: 0.0015 + Math.random() * 0.002,   // cells per ms
+      sz: 0.08 + Math.random() * 0.10,      // fraction of a cell
+      rot: Math.random() * Math.PI
+    });
+  }
+  game.fx.push({ r: r, c: c, start: performance.now(), chunks: chunks });
+}
+function setFast() {
+  if (!game || game.fast || game.phase === "done") return;
+  game.fast = true;
+  fastBtn.classList.add("on");
+  if (game.phase === "countdown") game.countLeft = 0;
+  else if (game.phase === "flow") {
+    var cur = game.current;
+    var t = Math.min(1, cur.elapsed / cur.dur);
+    cur.dur = game.params.fastMs;
+    cur.elapsed = t * cur.dur;
+  }
+  syncStatus();
+}
+function beginFlow() {
+  game.phase = "flow";
+  var sp = game.startPos, cell = game.board[sp.r][sp.c];
+  var pass = { from: "C", to: cell.dir, t: 0, second: false };
+  cell.gooPasses.push(pass);
+  game.current = { r: sp.r, c: sp.c, pass: pass, elapsed: 0, dur: game.fast ? game.params.fastMs : STUB_MS };
+  syncStatus();
+}
+function advanceSegment(leftover) {
+  var cur = game.current;
+  var isStub = cur.pass.from === "C";
+  if (!isStub) {
+    game.dist++;
+    addScore(segmentScore(cur.pass.second, game.fast));
+    syncDist();
+  }
+  var res = advanceFlow(game.board, { r: cur.r, c: cur.c, enterSide: isStub ? null : cur.pass.from });
+  if (res.done) { endRound(res); return; }
+  var st = res.state;
+  var pass = { from: st.enterSide, to: st.exit, t: 0, second: st.secondPass };
+  game.board[st.r][st.c].gooPasses.push(pass);
+  game.current = {
+    r: st.r, c: st.c, pass: pass, elapsed: leftover,
+    dur: game.fast ? game.params.fastMs : game.params.fillMs
+  };
+}
+function endRound(res) {
+  game.phase = "done";
+  game.spill = { r: game.current.r, c: game.current.c, dir: res.exitDir, at: performance.now() };
+  syncStatus();
+  var outcome = roundOutcome(game.dist, game.params.required);
+  var g = game;
+  if (outcome === "level") {
+    var bonus = (game.dist - game.params.required) * DIST_BONUS;
+    addScore(bonus);
+    setTimeout(function () {
+      if (game !== g) return;
+      showModal("Level " + g.level + " complete! 🎉",
+        "Pipe length " + g.dist + " (needed " + g.params.required + ")" +
+        (bonus ? " — distance bonus +" + bonus : "") + ". The goo gets faster…",
+        [["Next level", nextLevel]]);
+    }, 700);
+  } else {
+    setTimeout(function () {
+      if (game !== g) return;
+      showModal("Game over ☠️",
+        "The goo escaped! Pipe length " + g.dist + " of " + g.params.required + " needed.",
+        [["Try again", newGame]]);
+    }, 700);
+  }
+}
+
+// ---------- main loop ----------
+function update(dt) {
+  if (!game) return;
+  if (game.phase === "countdown") {
+    game.countLeft -= dt;
+    syncStatus();
+    if (game.countLeft <= 0) beginFlow();
+  } else if (game.phase === "flow") {
+    game.current.elapsed += dt;
+    var guard = 0;
+    while (game.phase === "flow" && game.current.elapsed >= game.current.dur && guard++ < 300) {
+      var leftover = game.current.elapsed - game.current.dur;
+      game.current.pass.t = 1;
+      advanceSegment(leftover);
+    }
+    if (game.phase === "flow") {
+      game.current.pass.t = Math.min(1, game.current.elapsed / game.current.dur);
+    }
+  }
+  if (game.pending && performance.now() >= game.pending.at) {
+    var p = game.pending;
+    game.pending = null;
+    var piece = makePiece(p.type);
+    piece.placedAt = performance.now();
+    game.board[p.r][p.c] = piece;
+  }
+  game.fx = game.fx.filter(function (f) { return performance.now() - f.start < 520; });
+}
+
+function render(now) {
+  bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  bctx.clearRect(0, 0, cellPx * COLS, cellPx * ROWS);
+  var r, c, s = cellPx;
+  for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++) {
+    bctx.fillStyle = SLOT;
+    bctx.fillRect(c * s + 1, r * s + 1, s - 2, s - 2);
+    bctx.strokeStyle = LINE; bctx.lineWidth = 1;
+    bctx.strokeRect(c * s + 0.5, r * s + 0.5, s - 1, s - 1);
+  }
+  if (!game) return;
+  for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++) {
+    var piece = game.board[r][c];
+    if (!piece) continue;
+    bctx.save();
+    bctx.translate(c * s, r * s);
+    if (piece.placedAt) {
+      var age = now - piece.placedAt;
+      if (age < 140) {
+        var k = 0.75 + 0.25 * (age / 140);
+        bctx.translate(s / 2 * (1 - k), s / 2 * (1 - k));
+        bctx.scale(k, k);
+      }
+    }
+    drawPiece(bctx, s, piece, now);
+    bctx.restore();
+  }
+  // ghost preview of the next piece at the cursor
+  if (game.phase !== "done" && !game.pending && !modal.classList.contains("show") &&
+      placement(game.board, cursor.r, cursor.c)) {
+    bctx.save();
+    bctx.translate(cursor.c * s, cursor.r * s);
+    bctx.globalAlpha = 0.30;
+    drawPiece(bctx, s, makePiece(game.queue[0]), now);
+    bctx.restore();
+  }
+  // cursor
+  bctx.strokeStyle = ACCENT; bctx.lineWidth = 3;
+  bctx.strokeRect(cursor.c * s + 2, cursor.r * s + 2, s - 4, s - 4);
+  // debris from replaced pieces
+  game.fx.forEach(function (f) {
+    var age = now - f.start, p = age / 520;
+    if (age < 0 || p > 1) return;
+    bctx.globalAlpha = Math.max(0, 1 - p);
+    bctx.fillStyle = BODY;
+    f.chunks.forEach(function (ch) {
+      var d = ch.sp * age * s;
+      var x = f.c * s + s / 2 + Math.cos(ch.ang) * d;
+      var y = f.r * s + s / 2 + Math.sin(ch.ang) * d;
+      var sz = ch.sz * s * (1 - p * 0.5);
+      bctx.save();
+      bctx.translate(x, y); bctx.rotate(ch.rot + age / 200);
+      bctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+      bctx.restore();
+    });
+    bctx.globalAlpha = 1;
+  });
+  // goo spill where the round ended
+  if (game.spill) {
+    var sAge = now - game.spill.at;
+    if (sAge < 900) {
+      var sp = sidePoint(game.spill.dir, s);
+      var px = game.spill.c * s + sp[0], py = game.spill.r * s + sp[1];
+      var pr = sAge / 900;
+      bctx.globalAlpha = 1 - pr;
+      bctx.fillStyle = GOO;
+      bctx.beginPath();
+      bctx.arc(px, py, s * (0.12 + 0.45 * pr), 0, Math.PI * 2);
+      bctx.fill();
+      bctx.globalAlpha = 1;
+    }
+  }
+  renderQueue(now);
+}
+function renderQueue(now) {
+  qctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var qs = 46, gap = 6;
+  qctx.clearRect(0, 0, qs * 5 + 24, qs);
+  if (!game) return;
+  for (var i = 0; i < 5; i++) {
+    var x = i * (qs + gap);
+    qctx.fillStyle = SLOT;
+    qctx.fillRect(x, 0, qs, qs);
+    qctx.strokeStyle = i === 0 ? ACCENT : LINE;
+    qctx.lineWidth = i === 0 ? 2.5 : 1.5;
+    qctx.strokeRect(x + 1, 1, qs - 2, qs - 2);
+    qctx.save();
+    qctx.translate(x + 5, 5);
+    drawPiece(qctx, qs - 10, makePiece(game.queue[i]), now);
+    qctx.restore();
+  }
+}
+
+// One clock for everything (placedAt/pending/fx all use performance.now(),
+// so render must too — rAF timestamps can drift from it).
+var last = 0;
+function frame() {
+  var now = performance.now();
+  var dt = Math.min(50, now - last);
+  last = now;
+  update(dt);
+  render(now);
+  requestAnimationFrame(frame);
+}
+
+// ---------- input ----------
+boardCv.addEventListener("pointerdown", function (e) {
+  e.preventDefault();
+  var rect = boardCv.getBoundingClientRect();
+  var c = Math.floor((e.clientX - rect.left) / cellPx);
+  var r = Math.floor((e.clientY - rect.top) / cellPx);
+  if (!inBounds(r, c)) return;
+  cursor.r = r; cursor.c = c;
+  tryPlace(r, c);
+});
+boardCv.addEventListener("pointermove", function (e) {
+  if (e.pointerType !== "mouse") return;
+  var rect = boardCv.getBoundingClientRect();
+  var c = Math.floor((e.clientX - rect.left) / cellPx);
+  var r = Math.floor((e.clientY - rect.top) / cellPx);
+  if (inBounds(r, c)) { cursor.r = r; cursor.c = c; }
+});
+window.addEventListener("keydown", function (e) {
+  if (modal.classList.contains("show")) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      var btn = document.querySelector("#modalBtns button");
+      if (btn) btn.click();
+    }
+    return;
+  }
+  var moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+  if (moves[e.key]) {
+    e.preventDefault();
+    cursor.r = Math.max(0, Math.min(ROWS - 1, cursor.r + moves[e.key][0]));
+    cursor.c = Math.max(0, Math.min(COLS - 1, cursor.c + moves[e.key][1]));
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    tryPlace(cursor.r, cursor.c);
+  } else if (e.key === " ") {
+    e.preventDefault();
+    setFast();
+  }
+});
+fastBtn.addEventListener("click", setFast);
+document.getElementById("new").addEventListener("click", newGame);
+window.addEventListener("resize", resize);
+
+// ---------- boot ----------
+resize();
+newGame();
+requestAnimationFrame(frame);
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("../sw.js").catch(function () {});
+}
+</script>
+<script src="../shared/guard.js" data-game="goopipes"></script>
+</body>
+</html>

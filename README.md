@@ -86,6 +86,8 @@ sw.js                 offline cache — keep ASSETS + CACHE_VERSION updated
 manifest.webmanifest  PWA install metadata
 shared/guard.js       playtime tracking + "time's up" lock (used by all games)
 games/2048.html       the 2048 game (fully self-contained)
+games/goopipes.html   the Goo Pipes game (fully self-contained)
+tests/                Node-runnable logic tests (node tests/goopipes.test.js)
 icons/                app icons
 ```
 
