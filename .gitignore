@@ -16,3 +16,7 @@ node_modules/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Test output
+test-results/
+playwright-report/

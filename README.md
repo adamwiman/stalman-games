@@ -88,9 +88,37 @@ shared/guard.js       playtime tracking + "time's up" lock (used by all games)
 games/2048.html       the 2048 game (fully self-contained)
 games/goopipes.html   the Goo Pipes game (fully self-contained)
 games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
-tests/                Node-runnable logic tests (node tests/goopipes.test.js)
+tests/                logic, consistency and browser tests (see "Tests")
+package.json          test tooling only — the site itself has no build step
+playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
 icons/                app icons
 ```
+
+## Tests
+
+The site needs no build or install; the tests do. One-time setup:
+
+```sh
+npm install
+npx playwright install chromium webkit
+```
+
+Then `npm test` runs everything:
+
+- `npm run test:unit` — plain Node, no browser:
+  `tests/goopipes.test.js` (Goo Pipes game logic) and
+  `tests/integrity.test.js` (every game is in `config.js` and precached in
+  `sw.js`, has the back link, `guard.js`, service worker and score key, and
+  loads nothing from the network).
+- `npm run test:e2e` — Playwright, `tests/e2e/`: the hub, parent settings,
+  time limits and lock, offline via the service worker, and real play in
+  every game. Runs on desktop Chrome, desktop Safari (WebKit) and iPad
+  (WebKit with touch) in portrait, landscape and iPad mini landscape. Any
+  page error or request outside the site fails the test.
+
+Run a single device with e.g. `npx playwright test --project=ipad-portrait`.
+These are emulated browsers; still try a new game on a real iPad before
+handing it over.
 
 ## Storage keys (all localStorage, on device)
 
