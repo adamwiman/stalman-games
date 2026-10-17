@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Numlingarnas resa</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!--
+  Numlingarnas resa — logik- och mattegåtor (spel-id: numlings)
+  Del av spelhubben. Helt fristående: inga nätverksresurser.
+  localStorage: state.numlings (sparade framsteg), score.numlings (numlingar som bor i Numeria)
+-->
+<style>
+:root{
+  /* hubbens färger */
+  --sky:#ddf1ff; --ink:#17335b; --sun:#ffc63f; --coral:#ff6b6b; --mint:#38d9a9;
+  /* spelets extra färger */
+  --ink2:#4a6182; --paper:#ffffff;
+  --good:#1a8a5f; --goodbg:#d4f6ea; --bad:#c93a3a; --badbg:#ffe3e3;
+  --sel:#ff7a1a;
+  --cs: clamp(54px, 7vw, 74px);
+  --font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--sky);overflow-x:hidden;font-size:17px;line-height:1.35;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+.bg{position:fixed;left:0;right:0;bottom:0;height:24vh;z-index:-1;pointer-events:none}
+.bg svg{width:100%;height:100%;display:block}
+#app{max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));min-height:100vh;display:flex;flex-direction:column;gap:12px}
+/* länk tillbaka till hubben (visas bara på startskärmen) */
+.hubnav{display:none;max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+body.at-title .hubnav{display:block}
+body.at-title #app{padding-top:4px}
+.back{display:inline-block;text-decoration:none;color:var(--ink);font-weight:800;font-size:16px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 16px;box-shadow:0 3px 0 var(--ink)}
+.back:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+h1,h2,h3,p{margin:0}
+h2{font-size:clamp(1.35rem,2.6vw,1.9rem);font-weight:900;letter-spacing:.2px}
+h3{font-size:1.2rem;font-weight:900}
+button{font:inherit;color:inherit;touch-action:manipulation}
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:20px;box-shadow:4px 5px 0 var(--ink)}
+.btn{font-weight:800;font-size:1.05rem;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.55em 1.15em;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s;line-height:1.15}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.go{background:var(--sun)}
+/* hover bara på enheter med riktig muspekare (undviker "fastnade" hover efter tryck på iPad) */
+@media (hover:hover){
+  .btn:hover{background:#f0f8ff}
+  .btn.go:hover{background:#ffd466}
+  .cr.dr:hover{transform:translateY(-3px)}
+  .choice:hover{background:#fff5d6}
+  button.slot:hover{background:#ffe9e5}
+  .opst:hover{background:#e2dbcf}
+}
+.btn.big{font-size:1.25rem;padding:.65em 1.5em}
+.btn.sm{font-size:.95rem;padding:.4em .9em}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 4px 0 var(--ink)}
+.iconbtn{width:46px;height:46px;border-radius:50%;border:3px solid var(--ink);background:#fff;box-shadow:0 3px 0 var(--ink);display:grid;place-items:center;cursor:pointer;font-weight:900;font-size:1.25rem;padding:0;flex:none}
+.iconbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.iconbtn svg{width:24px;height:24px}
+:focus-visible{outline:4px solid #1767d1;outline-offset:3px}
+.note{color:var(--ink2);font-weight:700}
+.stars{color:#e09c00;letter-spacing:1px;font-size:1.1rem;white-space:nowrap;-webkit-text-stroke:.6px var(--ink)}
+
+/* ---------- figurer ---------- */
+.cr{width:var(--cs);height:calc(var(--cs)*1.057);display:inline-block;position:relative;flex:none;user-select:none;-webkit-user-select:none}
+.cr svg{width:100%;height:100%;display:block;overflow:visible}
+.cr text{font-family:var(--font)}
+.cr.dr{cursor:grab;touch-action:none;transition:transform .15s}
+.cr.sm{--cs:clamp(44px,5.2vw,56px)}
+.cr.xs{--cs:40px}
+.cr.big{--cs:clamp(110px,16vw,150px)}
+.cr.selected{transform:translateY(-7px) scale(1.08)}
+.cr.selected::before{content:"";position:absolute;inset:-7px -5px -3px;border:3px dashed var(--sel);border-radius:16px;background:rgba(255,122,26,.12)}
+.cr.lifted{opacity:.3}
+.ghost{position:fixed;left:0;top:0;pointer-events:none;z-index:1000;transform:translate(-50%,-55%) scale(1.15);filter:drop-shadow(0 8px 6px rgba(0,0,0,.25))}
+.shake{animation:shake .5s}
+.pop{animation:pop .45s}
+.bob{animation:bob 2.6s ease-in-out infinite}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px) rotate(-6deg)}40%{transform:translateX(8px) rotate(5deg)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes pop{0%{transform:scale(.3) translateY(20px);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ---------- brickor och zoner ---------- */
+.tray{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;justify-content:center;min-height:calc(var(--cs) + 24px);padding:10px;border:3px dashed rgba(23,51,91,.35);border-radius:16px;background:rgba(255,250,240,.78)}
+.tray-label{font-weight:800;font-size:.95rem;margin:0 0 4px 6px;color:var(--ink2)}
+.hover{outline:4px dashed var(--sel)!important;outline-offset:2px;background-color:rgba(255,226,180,.65)!important}
+[data-drop]{cursor:pointer}
+.actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+
+/* ---------- banornas ram ---------- */
+.station{display:flex;flex-direction:column;gap:12px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top .ttl{display:flex;align-items:center;gap:10px}
+.top .ttl svg{width:40px;height:40px}
+.spacer{flex:1}
+.hearts{display:flex;gap:3px;align-items:center}
+.heart{width:26px;height:24px}
+.heart path{fill:#ff6b6b;stroke:var(--ink);stroke-width:2}
+.heart.empty path{fill:#fff;stroke-opacity:.35}
+.tries{font-weight:800;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.3em .8em}
+.say{display:flex;align-items:center;gap:12px;padding:8px 14px 8px 8px;font-size:clamp(1rem,1.9vw,1.2rem);font-weight:700;min-height:64px}
+.say .cr{--cs:46px}
+.say.good{background:var(--goodbg)}
+.say.bad{background:var(--badbg)}
+
+/* ---------- startskärm ---------- */
+.title{display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;padding-top:3vh}
+.logo{display:flex;flex-direction:column;align-items:center;line-height:.9;transform:rotate(-3deg)}
+.logo span{font-size:clamp(2.6rem,9.5vw,6rem);font-weight:900;color:var(--sun);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 7px 0 var(--ink);letter-spacing:1px}
+.logo span+span{margin-left:1.6em}
+.tag{font-size:clamp(1.05rem,2.2vw,1.3rem);font-weight:700;max-width:36ch}
+.parade{display:flex;gap:clamp(4px,1.5vw,14px);justify-content:center;flex-wrap:wrap;margin:8px 0 4px}
+.parade .cr{--cs:clamp(52px,9vw,84px)}
+.title-btns{display:flex;flex-direction:column;gap:14px;align-items:center}
+
+/* ---------- sidor ---------- */
+.page{padding:22px;display:flex;flex-direction:column;gap:14px;max-width:880px;width:100%;margin:0 auto}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.choice{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;border:3px solid var(--ink);border-radius:16px;background:#fff;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+.choice b{font-size:1.2rem}
+.choice:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* ---------- bygg truppen ---------- */
+.build-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.build-grid{grid-template-columns:1fr}}
+.maker,.troupe{padding:16px;display:flex;flex-direction:column;gap:12px}
+.preview{display:flex;justify-content:center;padding:6px 0 0}
+.prow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.plabel{font-weight:800;width:62px;color:var(--ink2)}
+.chip{width:52px;height:52px;border-radius:14px;border:3px solid rgba(23,51,91,.3);background:#fff;cursor:pointer;display:grid;place-items:center;padding:4px}
+.chip svg{width:34px;height:34px}
+.chip.on{border-color:var(--ink);background:#fff1c7;box-shadow:0 3px 0 var(--ink)}
+.chip.swatch::after{content:"";width:30px;height:30px;border-radius:50%;background:var(--sw);border:3px solid var(--ink)}
+.numgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.num{aspect-ratio:1;border-radius:10px;border:2px solid rgba(23,51,91,.3);background:#fff;font-weight:800;cursor:pointer;padding:0;font-size:1rem;font-variant-numeric:tabular-nums}
+.num.on{background:var(--sun);border-color:var(--ink);border-width:3px}
+.maker-btns,.troupe-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.bmsg{min-height:1.4em;text-align:center;font-weight:800;color:var(--bad)}
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.slot{aspect-ratio:1/1.05;border:3px dashed rgba(23,51,91,.3);border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.6);position:relative;padding:2px}
+button.slot{cursor:pointer;border-style:solid;border-color:rgba(23,51,91,.25);background:#fff}
+.slot .cr{--cs:min(100%,66px)}
+.tent{position:absolute;top:-6px;right:-6px;width:24px;height:24px}
+.count{font-weight:800;color:var(--ink2);font-size:1rem;margin-left:6px}
+.hint{color:var(--ink2);font-weight:700;font-size:.95rem}
+
+/* ---------- karta ---------- */
+.mapwrap{padding:10px}
+.mapwrap>svg{width:100%;height:auto;display:block}
+.mapnode{cursor:default}
+.mapnode text{font-family:var(--font);font-weight:900;paint-order:stroke;stroke:#fffaf0;stroke-width:5px;stroke-linejoin:round}
+.pulse{animation:pulse 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.18);opacity:.35}}
+.next{padding:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.next .what{flex:1;min-width:240px;display:flex;flex-direction:column;gap:6px}
+.next .what svg{width:44px;height:44px}
+.lvpick{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.lvopt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:3px solid rgba(23,51,91,.3);border-radius:14px;background:#fff;padding:6px 10px;cursor:pointer;min-width:96px;font-weight:800;line-height:1.15}
+.lvopt .st{color:#e09c00;-webkit-text-stroke:.6px var(--ink);font-size:1.05rem;letter-spacing:1px}
+.lvopt small{font-size:.8rem;color:var(--ink2)}
+.lvopt .sug{font-size:.72rem;font-weight:900;color:var(--good)}
+.lvopt.on{border-color:var(--ink);background:#fff1c2;box-shadow:0 3px 0 var(--ink)}
+.lvopt:disabled{opacity:.35;cursor:not-allowed}
+
+/* ---------- Viskportarna ---------- */
+.gates{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;border-radius:22px;background:linear-gradient(#c7e8cf,#9fd3aa);border:3px solid var(--ink)}
+.gatecol{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border-radius:20px;border:3px solid transparent;cursor:pointer;background:rgba(255,255,255,.25)}
+.gate svg{width:clamp(110px,17vw,180px);display:block}
+.gatecol.rumble .gate{animation:shake .5s}
+.gname{font-weight:900;font-size:1.15rem}
+.passed{min-height:calc(var(--cs) + 14px);display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-content:flex-start;width:100%;padding:8px;border-radius:14px;background:rgba(255,250,240,.82);border:2px solid rgba(23,51,91,.25)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opts .btn{border-radius:16px;text-align:left}
+
+/* ---------- Ballongfärden ---------- */
+.canyon{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,1.1fr) minmax(0,1fr);gap:12px;align-items:end;padding:14px;border-radius:22px;border:3px solid var(--ink);background:linear-gradient(180deg,#bfe4f2 0%,#e9f5f7 55%,#d9a46f 55.2%,#c88a52 100%);overflow:hidden;min-height:420px}
+.cliff{display:flex;flex-direction:column;align-self:stretch;justify-content:flex-end}
+.cliff .tray{background:rgba(255,245,228,.85)}
+.balloon{display:flex;flex-direction:column;align-items:center;transition:transform 1.1s ease-in;position:relative}
+.balloon.flying{transform:translateY(-160%)}
+.envelope{position:relative;width:min(240px,100%)}
+.envelope svg{width:100%;display:block}
+.sign{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:6px 10px;text-align:center;min-width:120px;box-shadow:0 3px 0 var(--ink)}
+.sign small{display:block;font-weight:800;font-size:.8rem;color:var(--ink2)}
+.sign b{display:block;font-size:2rem;font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums}
+.sign b.expr{font-size:1.25rem;white-space:nowrap;padding:2px 0}
+.basket{width:min(240px,100%);min-height:calc(var(--cs)*.75 + 26px);margin-top:-4px;background:repeating-linear-gradient(90deg,#c98b4a 0 10px,#b37639 10px 20px);border:3px solid var(--ink);border-radius:6px 6px 22px 22px;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:2px;padding:6px;cursor:pointer}
+.basket .cr{--cs:clamp(40px,4.6vw,50px)}
+.sum{margin-top:8px;font-weight:900;font-size:1.15rem;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.2em .9em;font-variant-numeric:tabular-nums}
+@media (max-width:760px){.canyon{grid-template-columns:1fr;min-height:0}.cliff{order:2}.balloon{order:1}.cliff:last-child{order:3}}
+
+/* ---------- Mönsterbäcken ---------- */
+.creek{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3.2fr) minmax(0,1fr);border-radius:22px;border:3px solid var(--ink);overflow:hidden;min-height:260px}
+.bank{background:#e8cf96;padding:10px;display:flex;flex-direction:column}
+.bank .tray{flex:1;background:rgba(255,250,240,.6)}
+.water{background:linear-gradient(180deg,#5fb3d6,#3e93bd);display:flex;flex-direction:column;justify-content:center;padding:18px 10px;gap:10px;position:relative}
+.water::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(170deg,transparent 0 26px,rgba(255,255,255,.12) 26px 30px);pointer-events:none}
+.stones{--g:.42fr;display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr) minmax(0,var(--g))) minmax(0,1fr);align-items:center;row-gap:6px;position:relative}
+.stone{aspect-ratio:1.25;border-radius:48% 52% 45% 55%/55% 50% 50% 45%;background:#b9b3a9;border:3px solid var(--ink);box-shadow:inset -5px -6px 0 rgba(0,0,0,.14),0 4px 0 rgba(0,0,0,.18);display:grid;place-items:center;font-weight:900;font-size:clamp(1rem,2.4vw,1.6rem);font-variant-numeric:tabular-nums;min-width:0}
+.stone.d3{font-size:clamp(.9rem,2vw,1.35rem)}
+.stone.d4{font-size:clamp(.8rem,1.7vw,1.15rem)}
+.stone.blank{background:#e9f4f8;border-style:dashed;color:var(--ink2)}
+.stone.active{background:#fff2c2;border-style:solid;color:var(--ink);box-shadow:0 0 0 5px var(--sun),0 4px 0 rgba(0,0,0,.18)}
+.stone.done{background:#bfe8c9}
+.stone.wobble{animation:shake .5s}
+.diff{display:flex;justify-content:center;font-weight:900;color:#fff;font-size:clamp(.8rem,1.6vw,1rem);text-shadow:0 2px 0 rgba(0,0,0,.35);white-space:nowrap}
+.padrow{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap}
+.numpad{display:grid;grid-template-columns:repeat(3,64px);gap:8px}
+.numpad.wide{grid-template-columns:repeat(4,60px)}
+.key{height:56px;border-radius:14px;border:3px solid var(--ink);background:#fff;box-shadow:0 3px 0 var(--ink);font-weight:900;font-size:1.4rem;cursor:pointer;padding:0}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.key.ok{background:var(--sun)}
+.key:disabled{opacity:.4}
+.side{display:flex;flex-direction:column;gap:10px;align-items:center;max-width:320px;text-align:center}
+@media (max-width:760px){.creek{grid-template-columns:1fr}.bank .tray{min-height:70px}.stones{--g:.12fr}.diff{grid-row:2!important}.water{padding:14px 6px}}
+
+/* ---------- Näckrosdammen ---------- */
+.legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.lchip{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.35em .9em;font-weight:700}
+.lchip i{width:20px;height:20px;border-radius:50%;border:4px solid var(--c);flex:none}
+.secret{letter-spacing:2px;color:var(--ink2);font-weight:900}
+.pond{position:relative;width:min(100%,820px,calc(54vh * 1.5));min-width:min(100%,320px);margin:0 auto;aspect-ratio:3/2;border-radius:28px;border:3px solid var(--ink);overflow:hidden;cursor:pointer;background:#4fa6cc}
+.pond svg{position:absolute;inset:0;width:100%;height:100%}
+.pond .cr{position:absolute;width:8%;height:auto;aspect-ratio:106/112;transform:translate(-50%,-55%);pointer-events:none}
+
+/* ---------- Kompisflotten ---------- */
+.rulesign{padding:10px 16px;font-weight:700;font-size:1.1rem;background:#fff6d8}
+.lake{border:3px solid var(--ink);border-radius:22px;background:linear-gradient(180deg,#6cc0de,#3d93bd);padding:24px 12px;display:flex;justify-content:center;overflow:hidden;position:relative}
+.lake::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(175deg,transparent 0 30px,rgba(255,255,255,.13) 30px 34px);pointer-events:none}
+.raft{position:relative;display:flex;align-items:center;padding:12px 14px;background:repeating-linear-gradient(90deg,#c98b4a 0 26px,#b37639 26px 30px);border:3px solid var(--ink);border-radius:16px;box-shadow:0 6px 0 rgba(0,0,0,.18);transition:transform 1.1s ease-in;max-width:100%}
+.lake.sailing .raft{transform:translateX(130%)}
+.seat{width:calc(var(--cs) + 16px);height:calc(var(--cs) + 16px);border:3px dashed rgba(255,250,240,.9);border-radius:14px;display:grid;place-items:center;background:rgba(255,250,240,.25);cursor:pointer;flex:none}
+.link{width:22px;height:22px;border-radius:50%;border:3px solid var(--ink);background:#d9d4c8;flex:none;margin:0 4px;display:grid;place-items:center;font-size:13px;font-weight:900;color:#fff}
+.link.ok{background:var(--good)}
+.link.bad{background:var(--bad)}
+.raft.ring{width:min(400px,86vw,46vh);min-width:300px;aspect-ratio:1;border-radius:50%;padding:0;background:repeating-conic-gradient(#c98b4a 0 14deg,#b37639 14deg 16deg)}
+.raft.ring .seat{position:absolute;transform:translate(-50%,-50%)}
+.raft.ring .link{position:absolute;transform:translate(-50%,-50%);margin:0}
+.shores{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sidewrap{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;align-items:start}
+.sidemain,.sidecol{display:flex;flex-direction:column;gap:12px}
+@media (max-width:900px){.sidewrap{grid-template-columns:1fr}}
+@media (max-width:700px){.shores{grid-template-columns:1fr}.raft:not(.ring){flex-wrap:nowrap;overflow-x:auto}.raft{--cs:46px}}
+
+/* ---------- Ugglans dörr ---------- */
+.lockscene{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:14px;padding:14px;border-radius:22px;border:3px solid var(--ink);background:linear-gradient(180deg,#2b4466,#3f6a7c 70%,#4f7f5d 70.2%,#3f6d4c)}
+.owlbox{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:10px}
+.owlbox svg{width:min(220px,100%)}
+.owl-say{background:var(--paper);border:3px solid var(--ink);border-radius:16px;padding:8px 12px;font-weight:700;text-align:center}
+.lockpanel{padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.legend-s{font-size:.95rem;font-weight:700;display:flex;flex-direction:column;gap:3px;align-self:stretch}
+.legend-s span{display:flex;align-items:center;gap:8px}
+.history{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;align-self:stretch;align-items:center;padding:4px}
+.grow{display:flex;gap:6px;align-items:center}
+.gnum{font-weight:800;color:var(--ink2);width:26px;text-align:right;font-size:.9rem}
+.cell{width:44px;height:44px;border-radius:10px;border:3px solid var(--ink);display:grid;place-items:center;font-weight:900;font-size:1.35rem;background:#fff;font-variant-numeric:tabular-nums}
+.cell.yes{background:#5cc27f}
+.cell.near{background:#ffc63f}
+.cell.no{background:#c9cdd4}
+.cell.cur{border-style:dashed;background:#fffdf5}
+.cell.cur.filled{border-style:solid;background:#fff2c2}
+.pegs{display:flex;gap:4px;margin-left:8px;min-width:100px;flex-wrap:wrap}
+.peg{width:18px;height:18px;border-radius:50%;border:3px solid var(--ink)}
+.peg.full{background:var(--ink)}
+.peg.hollow{background:#fff}
+.sq{width:18px;height:18px;border-radius:5px;border:2px solid var(--ink);display:inline-block;flex:none}
+@media (max-width:760px){.lockscene{grid-template-columns:1fr}.owlbox svg{width:130px}}
+
+/* ---------- Talmaskinen ---------- */
+.factory{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,1.3fr) minmax(0,1fr);gap:12px;padding:14px;border-radius:22px;border:3px solid var(--ink);background:linear-gradient(180deg,#e3ecf7 0%,#cfdcee 68%,#aebbd0 68.2%,#9eabc1 100%)}
+.factory .tray{background:rgba(255,255,255,.8)}
+.mach{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.mach svg{width:min(300px,100%);display:block}
+.mdisp{display:flex;align-items:center;gap:12px;font-weight:900;font-size:clamp(1.6rem,3.4vw,2.2rem);background:var(--ink);color:#8ff2cd;border-radius:16px;padding:6px 18px;border:3px solid var(--ink);font-variant-numeric:tabular-nums;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.mdisp .out{min-width:2.4ch;text-align:center;border-bottom:3px dashed #8ff2cd;color:#fff}
+.mdisp .arrow{color:#ffc63f}
+.mcur{display:flex;align-items:center;gap:8px;font-weight:800}
+.ftable{display:grid;grid-template-columns:auto auto auto;gap:4px 10px;align-items:center;justify-items:center;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:8px 14px;font-weight:900;font-size:1.2rem;font-variant-numeric:tabular-nums;max-height:240px;overflow-y:auto}
+.ftable .h{font-size:.85rem;color:var(--ink2)}
+.ftable .ar{color:var(--ink2)}
+@media (max-width:760px){.factory{grid-template-columns:1fr}}
+
+/* ---------- Trädgårdslandet ---------- */
+.garden{display:flex;justify-content:center;padding:12px 10px;border-radius:22px;border:3px solid var(--ink);background:linear-gradient(180deg,#b6e2ad,#8cc98a);overflow-x:auto}
+.plots{--pw:calc(var(--cs) + 14px);display:grid;gap:7px;grid-template-columns:repeat(var(--c),var(--pw)) auto;align-items:center;justify-items:center}
+.plot{width:var(--pw);height:var(--pw);border-radius:14px;background:#8a5a2b;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0 6px,transparent 6px 13px);border:3px solid var(--ink);display:grid;place-items:center;cursor:pointer}
+.plot.empty{border-style:dashed;background-color:#9c6a38}
+.rock{width:var(--pw);height:var(--pw);border-radius:42% 48% 40% 46%/48% 42% 50% 44%;background:#b9b3a9;border:3px solid var(--ink);box-shadow:inset -5px -6px 0 rgba(0,0,0,.14);display:grid;place-items:center;font-weight:900;font-size:1.7rem}
+.tsum{display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:3px 8px;min-width:62px;line-height:1.1}
+.tsum b{font-size:1.45rem;font-variant-numeric:tabular-nums}
+.tsum small{font-size:.8rem;color:var(--ink2);font-weight:800}
+.tsum.ok{background:var(--goodbg)}
+.tsum.over{background:var(--badbg)}
+.tsum.wrong{background:var(--badbg);border-color:var(--bad)}
+.tsum.ghost-cell{visibility:hidden}
+
+/* ---------- Bärbusken ---------- */
+.bushscene{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,1.4fr) minmax(0,1fr);gap:12px;padding:14px;border-radius:22px;border:3px solid var(--ink);background:linear-gradient(180deg,#d9f1d0 0%,#c3e7b8 70%,#9fd18f 70.2%,#8cc47c 100%)}
+.bushscene .tray{background:rgba(255,255,255,.75)}
+.bush{display:flex;flex-direction:column;align-items:center;gap:8px}
+.bush svg{width:min(290px,100%);display:block}
+.group{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
+.qcol{display:flex;flex-direction:column;gap:12px;align-items:center;max-width:480px}
+.question{font-weight:800;font-size:clamp(1.05rem,2vw,1.25rem);text-align:center;max-width:44ch;padding:10px 14px;background:#fff6d8;margin:0 auto}
+.answers{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.ans{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:3px solid rgba(23,51,91,.3);border-radius:14px;padding:8px 14px;cursor:pointer;min-width:130px;font-weight:800}
+.ans small{font-size:.85rem;color:var(--ink2)}
+.ans b{font-size:2rem;min-height:1.2em;font-variant-numeric:tabular-nums}
+.ans.on{border-color:var(--ink);background:#fff2c2;box-shadow:0 3px 0 var(--ink)}
+@media (max-width:760px){.bushscene{grid-template-columns:1fr}}
+
+/* ---------- Bergsstigen ---------- */
+.mountain{position:relative;padding:12px 10px;border-radius:22px;border:3px solid var(--ink);background:linear-gradient(180deg,#cde9f7,#eef7fb);display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden}
+.mountain>*{position:relative}
+.mountain>.mbg{position:absolute;inset:0;width:100%;height:100%}
+.peak{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.4rem;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:4px 16px;box-shadow:0 3px 0 var(--ink)}
+.peak svg{width:30px;height:30px}
+.prow2{display:flex;gap:10px;align-items:center;justify-content:center}
+.opst{min-width:84px;height:54px;border-radius:40% 45% 38% 42%/50% 46% 52% 48%;background:#d8d1c5;border:3px solid var(--ink);font-weight:900;font-size:1.4rem;cursor:pointer;box-shadow:inset -4px -5px 0 rgba(0,0,0,.12),0 4px 0 rgba(0,0,0,.2);padding:0 10px;font-variant-numeric:tabular-nums}
+.opst.on{background:var(--sun);transform:translateY(-3px);box-shadow:0 0 0 4px #fff,0 4px 0 rgba(0,0,0,.2)}
+.runv{min-width:56px;font-weight:900;font-size:1.15rem;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.45);text-align:left}
+.runv.l{text-align:right}
+.base{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.3rem;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:4px 14px 4px 6px;box-shadow:0 3px 0 var(--ink)}
+.base .cr{--cs:46px}
+.trail{font-weight:900;text-align:center;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:4px 12px}
+
+/* ---------- Numeria / resultat ---------- */
+.crowd{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.gallery{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-height:52vh;overflow-y:auto;padding:6px}
+.bar{height:22px;border-radius:999px;border:3px solid var(--ink);background:#fff;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--sun)}
+.badges{display:flex;gap:10px;flex-wrap:wrap}
+.badge{border:3px solid var(--ink);border-radius:14px;padding:6px 10px;font-weight:800;background:#fff;opacity:.4}
+.badge.got{background:#fff1c2;opacity:1}
+.lvlrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:2px dashed rgba(23,51,91,.2)}
+.lvlrow .nm{width:180px;font-weight:800;display:flex;gap:8px;align-items:center}
+.lvlrow .nm svg{width:30px;height:30px;flex:none}
+.lvbtn{border:3px solid rgba(23,51,91,.3);border-radius:10px;background:#fff;padding:.3em .6em;cursor:pointer;font-weight:800;color:#e09c00}
+.lvbtn.on{border-color:var(--ink);background:#fff1c2}
+.skills{display:flex;flex-direction:column;gap:6px;padding-left:1.1em;margin:0}
+
+/* ---------- dialogruta ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(23,51,91,.55);display:grid;place-items:center;z-index:500;padding:16px;animation:fade .2s}
+.modal{max-width:560px;width:100%;padding:22px;display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow-y:auto}
+.modal .crowd .cr{--cs:46px}
+.reveal{background:#fff6d8;border:3px solid var(--ink);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.lvup{font-weight:900;color:var(--good)}
+@keyframes fade{from{opacity:0}}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:2000;overflow:hidden}
+.confetti i{position:absolute;top:-24px;width:10px;height:15px;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(112vh) rotate(760deg)}}
+
+/* lägre skärmar (t.ex. äldre iPads liggande): lite tätare */
+@media (max-height:800px) and (min-width:700px){
+  #app{gap:10px}
+  .say{min-height:54px;padding:6px 12px 6px 6px}
+  .say .cr{--cs:40px}
+  .key{height:50px}
+  .creek{min-height:220px}
+  .plots{--pw:calc(var(--cs) + 8px)}
+  .opst{height:48px}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<nav class="hubnav"><a class="back" href="../index.html">← Spel</a></nav>
+<div class="bg" aria-hidden="true"><svg viewBox="0 0 1200 200" preserveAspectRatio="none"><path d="M0 120 C150 60 300 70 420 110 S700 160 860 100 1100 60 1200 90 V200 H0Z" fill="#8fcf9c"/><path d="M0 160 C200 110 380 120 560 150 S900 180 1040 140 1160 130 1200 140 V200 H0Z" fill="#6fb985"/></svg></div>
+<div id="app"></div>
+<noscript>Det här spelet behöver JavaScript.</noscript>
+<script>
+'use strict';
+/* =========================================================
+   Numlingarnas resa — logik- och mattegåtor
+   ========================================================= */
+
+// ---------- hjälpfunktioner ----------
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function wshuffle(items,wf){return items.map(it=>({it,k:Math.pow(Math.random(),1/wf(it))})).sort((a,b)=>b.k-a.k).map(o=>o.it);}
+const A=(n,f)=>Array.from({length:n},(_,i)=>f(i));
+const sum=a=>a.reduce((s,x)=>s+x,0);
+const isPrime=n=>{if(n<2)return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true;};
+const isSquare=n=>Number.isInteger(Math.sqrt(n));
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const digitSum=n=>String(n).split('').reduce((s,d)=>s+Number(d),0);
+const TRI=new Set([1,3,6,10,15,21,28,36,45,55]);
+const PRIMES=[2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97];
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const pl=(n,one,many)=>`${n} ${n===1?one:many}`;
+const LEVEL_NAMES=['','Uppvärmning','Klurig','Listig','Geni'];
+const starStr=l=>'★'.repeat(l)+'☆'.repeat(4-l);
+const stars=l=>`<span class="stars" role="img" aria-label="nivå ${l} av 4">${starStr(l)}</span>`;
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- sparat läge ----------
+const GAME_ID='numlings';
+const SAVE_KEY='state.'+GAME_ID;   // hela spelets läge (hubbens konvention: state.<id>)
+const SCORE_KEY='score.'+GAME_ID;  // visas på hubbens kort: numlingar som bor i Numeria
+const ALL=['gates','balloon','stones','venn','raft','lock','machine','garden','share','path'];
+const OLD_ROUTE=['gates','balloon','stones','venn','raft','lock'];
+const ROUTE_LEN=6;
+const levelsAt=l=>{const o={};ALL.forEach(k=>o[k]=l);return o;};
+const freshState=()=>({nextId:1,camp:[],home:[],levels:levelsAt(1),startLevel:null,played:{},sound:true,chosen:false,journey:null,journeys:0});
+let S=freshState();
+try{
+  const raw=localStorage.getItem(SAVE_KEY);
+  if(raw){
+    const o=JSON.parse(raw)||{};
+    S=Object.assign(freshState(),o);
+    const lv=Object.assign({},o.levels||{});
+    const known=Object.values(lv).filter(v=>v>=1&&v<=4);
+    const base=(S.startLevel>=1&&S.startLevel<=4)?S.startLevel:(known.length?Math.min(...known):1);
+    S.levels={};ALL.forEach(k=>{S.levels[k]=(lv[k]>=1&&lv[k]<=4)?lv[k]:base;});
+    if(!S.played||typeof S.played!=='object')S.played={};
+    if(!Array.isArray(S.camp))S.camp=[];
+    if(!Array.isArray(S.home))S.home=[];
+    if(S.journey&&!Array.isArray(S.journey.route))S.journey.route=OLD_ROUTE.slice();
+  }
+}catch(e){S=freshState();}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+
+// ---------- ljud ----------
+let AC=null;
+function audio(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}if(AC.state==='suspended')AC.resume();return AC;}
+function tone(f,d=.12,type='triangle',v=.1,w=0){if(!S.sound)return;const a=audio();if(!a)return;const t=a.currentTime+w;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.03);}
+const SFX={
+  pop(){tone(560,.07,'sine',.07);},
+  ok(){tone(660,.1);tone(990,.16,'triangle',.1,.08);},
+  bad(){tone(196,.25,'sawtooth',.045);tone(150,.3,'sawtooth',.045,.09);},
+  win(){[523,659,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.1,i*.1));},
+  sad(){[392,330,262].forEach((f,i)=>tone(f,.28,'sine',.08,i*.16));},
+  key(){tone(440+Math.random()*120,.05,'sine',.05);}
+};
+
+// ---------- numlingar ----------
+const SHAPES=['circle','triangle','square','hexagon'];
+const SHAPE_SV={circle:'cirkel',triangle:'triangel',square:'kvadrat',hexagon:'sexhörning'};
+const CORNERS={circle:0,triangle:3,square:4,hexagon:6};
+const COLORS={red:{f:'#ff6b6b',d:'#c94545'},blue:{f:'#3d8be0',d:'#24609f'},yellow:{f:'#ffc63f',d:'#c08f14'},purple:{f:'#9a6ad6',d:'#6a439f'}};
+const COLOR_SV={red:'röd',blue:'blå',yellow:'gul',purple:'lila'};
+const COLOR_NAMES=Object.keys(COLORS);
+// by/br = magens plats och storlek, fs = textstorlek för [ensiffrigt, tvåsiffrigt] tal
+const LAY={
+  circle:{body:'<circle cx="50" cy="56" r="40"/>',ey:36,ex:[[50],[36,64],[29,50,71]],er:8,by:71,br:21,fs:[33,28],hl:'<ellipse cx="37" cy="24" rx="7" ry="3.5" transform="rotate(-25 37 24)"/>'},
+  square:{body:'<rect x="11" y="17" width="78" height="78" rx="14"/>',ey:38,ex:[[50],[36,64],[29,50,71]],er:8,by:72,br:21,fs:[33,28],hl:'<rect x="19" y="22" width="14" height="5" rx="2.5"/>'},
+  triangle:{body:'<path d="M50 9 L93 92 L7 92 Z"/>',ey:47,ex:[[50],[42,58],[37.5,50,62.5]],er:6,by:74,br:17.5,fs:[27,22],hl:'<ellipse cx="45" cy="29" rx="2.8" ry="6" transform="rotate(28 45 29)"/>'},
+  hexagon:{body:'<path d="M94 55 L72 93 L28 93 L6 55 L28 17 L72 17 Z"/>',ey:37,ex:[[50],[36,64],[29,50,71]],er:8,by:71,br:21,fs:[33,28],hl:'<ellipse cx="38" cy="23" rx="7" ry="3.5" transform="rotate(-20 38 23)"/>'}
+};
+const SVGCACHE=new Map();
+function creatureSVG(c){
+  const key=`${c.shape}|${c.color}|${c.eyes}|${c.n}`;
+  if(SVGCACHE.has(key))return SVGCACHE.get(key);
+  const L=LAY[c.shape],col=COLORS[c.color];
+  const er=c.eyes===1?L.er*1.3:L.er;
+  const eyes=L.ex[c.eyes-1].map(x=>`<circle cx="${x}" cy="${L.ey}" r="${er}" fill="#fff" stroke="#17335b" stroke-width="2.5"/><circle cx="${(x+er*.15).toFixed(1)}" cy="${(L.ey+er*.18).toFixed(1)}" r="${(er*.5).toFixed(1)}" fill="#17335b"/><circle cx="${(x+er*.33).toFixed(1)}" cy="${(L.ey-er*.08).toFixed(1)}" r="${(er*.17).toFixed(1)}" fill="#fff"/>`).join('');
+  const fs=L.fs[String(c.n).length>1?1:0];
+  const svg=`<svg viewBox="-3 -3 106 112" aria-hidden="true" focusable="false"><g fill="${col.d}" stroke="#17335b" stroke-width="2.5"><ellipse cx="33" cy="99" rx="11" ry="6"/><ellipse cx="67" cy="99" rx="11" ry="6"/></g><g fill="${col.f}" stroke="#17335b" stroke-width="3.5" stroke-linejoin="round">${L.body}</g><g fill="#fff" opacity=".35">${L.hl}</g>${eyes}<circle cx="50" cy="${L.by}" r="${L.br}" fill="#fffdf6" stroke="#17335b" stroke-width="2.5"/><text x="50" y="${L.by}" dy=".35em" text-anchor="middle" font-size="${fs}" font-weight="900" letter-spacing="-.5" fill="#17335b">${c.n}</text></svg>`;
+  SVGCACHE.set(key,svg);return svg;
+}
+const describe=c=>`${COLOR_SV[c.color]} ${SHAPE_SV[c.shape]}, ${pl(c.eyes,'öga','ögon')}, talet ${c.n}`;
+function crHTML(c,o={}){
+  const cls=['cr'];
+  if(o.dr)cls.push('dr');if(o.sm)cls.push('sm');if(o.xs)cls.push('xs');if(o.sel)cls.push('selected');if(o.cls)cls.push(o.cls);
+  const role=o.dr?' tabindex="0" role="button"':' role="img"';
+  return `<div class="${cls.join(' ')}" data-id="${c.id}"${role} aria-label="${describe(c)}"${o.style?` style="${o.style}"`:''}>${creatureSVG(c)}</div>`;
+}
+const GUIDE={id:'g',shape:'hexagon',color:'blue',eyes:2,n:'π'};
+function newCreature(o={}){return{id:S.nextId++,shape:o.shape||pick(SHAPES),color:o.color||pick(COLOR_NAMES),eyes:o.eyes||rnd(1,3),n:o.n||rnd(1,30)};}
+const sameLook=(a,b)=>a.shape===b.shape&&a.color===b.color&&a.eyes===b.eyes&&a.n===b.n;
+function shapeIcon(s){const L=LAY[s];return `<svg viewBox="0 0 100 100" aria-hidden="true"><g fill="#dfe6f2" stroke="#17335b" stroke-width="7" stroke-linejoin="round">${L.body}</g></svg>`;}
+function eyeIcon(n){const xs=[[50],[34,66],[22,50,78]][n-1];return `<svg viewBox="0 0 100 100" aria-hidden="true">${xs.map(x=>`<circle cx="${x}" cy="50" r="13" fill="#fff" stroke="#17335b" stroke-width="6"/><circle cx="${x+2}" cy="52" r="6" fill="#17335b"/>`).join('')}</svg>`;}
+
+// ---------- ikoner ----------
+const ICONS={
+  gates:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 37V17a15 15 0 0 1 30 0v20h-8V18a7 7 0 0 0-14 0v19z" fill="#c9c0b2" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/><circle cx="20" cy="8" r="3.5" fill="#ffc63f" stroke="#17335b" stroke-width="2"/></svg>`,
+  balloon:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3C12 3 8 9 8 15c0 7 7 12 10 14h4c3-2 10-7 10-14 0-6-4-12-12-12z" fill="#ff6b6b" stroke="#17335b" stroke-width="2.5"/><path d="M20 3c-3 3-4 8-4 12s2 10 3 14M20 3c3 3 4 8 4 12s-2 10-3 14" fill="none" stroke="#17335b" stroke-width="1.6"/><rect x="15" y="31" width="10" height="7" rx="1.5" fill="#c98b4a" stroke="#17335b" stroke-width="2"/></svg>`,
+  stones:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M2 32c6-4 10 4 18 0s12 4 18 0" fill="none" stroke="#3d8be0" stroke-width="3" stroke-linecap="round"/><g fill="#b9b3a9" stroke="#17335b" stroke-width="2.2"><ellipse cx="9" cy="23" rx="6" ry="4"/><ellipse cx="21" cy="17" rx="6" ry="4"/><ellipse cx="33" cy="11" rx="6" ry="4"/></g></svg>`,
+  venn:`<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="15" cy="20" r="11" fill="rgba(70,185,115,.45)" stroke="#2a8f52" stroke-width="2.8"/><circle cx="25" cy="20" r="11" fill="rgba(255,155,55,.45)" stroke="#d9721a" stroke-width="2.8"/></svg>`,
+  raft:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M19 4v24" stroke="#17335b" stroke-width="2.5"/><path d="M20.5 6l12 18h-12z" fill="#fffaf0" stroke="#17335b" stroke-width="2.2" stroke-linejoin="round"/><rect x="5" y="27" width="30" height="7" rx="3" fill="#c98b4a" stroke="#17335b" stroke-width="2.5"/></svg>`,
+  lock:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 7l6 6h12l6-6v22a12 10 0 0 1-24 0z" fill="#9a6b47" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/><circle cx="15" cy="20" r="5" fill="#fff" stroke="#17335b" stroke-width="2"/><circle cx="25" cy="20" r="5" fill="#fff" stroke="#17335b" stroke-width="2"/><circle cx="15.5" cy="20.5" r="2.2" fill="#17335b"/><circle cx="25.5" cy="20.5" r="2.2" fill="#17335b"/><path d="M18 26l2 3.5 2-3.5z" fill="#ffc63f" stroke="#17335b" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  machine:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 6h10l-3 6H6z" fill="#ffc63f" stroke="#17335b" stroke-width="2" stroke-linejoin="round"/><rect x="6" y="13" width="28" height="21" rx="4" fill="#9fb3cf" stroke="#17335b" stroke-width="2.5"/><circle cx="18" cy="24" r="6" fill="none" stroke="#ffc63f" stroke-width="4" stroke-dasharray="3 2.3"/><circle cx="18" cy="24" r="2.5" fill="#17335b"/><circle cx="29" cy="19" r="2" fill="#38d9a9" stroke="#17335b" stroke-width="1.5"/><path d="M34 28h4v8" fill="none" stroke="#17335b" stroke-width="2.5"/></svg>`,
+  garden:`<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="22" width="32" height="14" rx="3" fill="#8a5a2b" stroke="#17335b" stroke-width="2.5"/><path d="M4 29h32M15 22v14M25 22v14" stroke="#17335b" stroke-width="1.6"/><path d="M20 22v-9" stroke="#2a8f52" stroke-width="2.5"/><path d="M20 15c-6 0-9-4-9-8 5 0 9 3 9 8zM20 13c5 0 8-3 8-7-4 0-8 3-8 7z" fill="#5cc27f" stroke="#17335b" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+  share:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M7 30c-5 0-6-8-1-10-2-6 4-11 9-8 2-6 11-6 13 0 6-2 10 5 6 9 4 3 2 9-3 9z" fill="#4e9a73" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/><g fill="#c93a3a" stroke="#17335b" stroke-width="1.4"><circle cx="13" cy="21" r="3"/><circle cx="21" cy="17" r="3"/><circle cx="27" cy="23" r="3"/><circle cx="19" cy="26" r="3"/></g><rect x="18" y="30" width="4" height="7" fill="#8a5a2b" stroke="#17335b" stroke-width="1.8"/></svg>`,
+  path:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M2 37L16 12l7 10 5-7 10 22z" fill="#9aa6b4" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 12l-3 6 3-1 2 2z" fill="#fff" stroke="#17335b" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 12V3" stroke="#17335b" stroke-width="2"/><path d="M16 3h8l-2 3 2 3h-8" fill="#ff6b6b" stroke="#17335b" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  tent:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5L37 35H3z" fill="#ff9a3d" stroke="#17335b" stroke-width="3" stroke-linejoin="round"/><path d="M20 15l7 20H13z" fill="#7a3f12" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
+  home:`<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 36V19l10-9 10 9v17z" fill="#ffc63f" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/><path d="M22 36V22l8-7 7 7v14z" fill="#9a6ad6" stroke="#17335b" stroke-width="2.5" stroke-linejoin="round"/><rect x="13" y="26" width="6" height="10" fill="#17335b"/><path d="M16 10V3l6 2-6 2" fill="#ff6b6b" stroke="#17335b" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+  soundOn:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#17335b"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="#17335b" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  soundOff:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#17335b"/><path d="M16 9l6 6M22 9l-6 6" stroke="#17335b" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  map:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" fill="#fff1c2" stroke="#17335b" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="#17335b" stroke-width="2"/></svg>`
+};
+const HEART=full=>`<svg viewBox="0 0 26 24" class="heart${full?'':' empty'}" aria-hidden="true"><path d="M13 22C6 16 2 12.5 2 8a5.5 5.5 0 0 1 11-2.5A5.5 5.5 0 0 1 24 8c0 4.5-4 8-11 14z"/></svg>`;
+
+// ---------- banorna ----------
+const META={
+  gates:{name:'Viskportarna',blurb:'Två portar, en hemlig regel. Vem får gå var?',skill:'Hitta en dold regel utifrån exempel: jämnt och udda, större än, delbarhet, primtal, kvadrattal och OCH/ELLER-logik.'},
+  balloon:{name:'Ballongfärden',blurb:'Ballongen lyfter bara vid exakt rätt vikt.',skill:'Addera flera tal till en exakt summa, och på högre nivåer räkna ut ett uttryck först (multiplikation, kvadrater, parenteser).'},
+  stones:{name:'Mönsterbäcken',blurb:'Hitta de saknade talen på stegstenarna.',skill:'Talföljder: lika stora steg, dubblering, kvadrattal, triangeltal, kubtal, Fibonacci-liknande mönster och primtal.'},
+  venn:{name:'Näckrosdammen',blurb:'Placera varje numling i rätt cirklar.',skill:'Sortera i Venndiagram och lista ut två eller tre hemliga regler samtidigt.'},
+  raft:{name:'Kompisflotten',blurb:'Alla grannar på flotten måste följa regeln.',skill:'Planera en ordning efter en regel: gemensamma egenskaper, udda och jämnt, gemensamma delare, delbarhet och primtalssummor.'},
+  lock:{name:'Ugglans dörr',blurb:'Knäck den hemliga koden med ugglans ledtrådar.',skill:'Logiska slutsatser utifrån ledtrådar, samma idé som spelet Mastermind.'},
+  machine:{name:'Talmaskinen',blurb:'Vad gör maskinen med talen? Räkna ut vad som kommer ut.',skill:'Funktionsmaskin: hitta regeln (som + 5, · 2 eller · 2 + 1) från exempel och använd den.'},
+  garden:{name:'Trädgårdslandet',blurb:'Plantera numlingarna så att raderna och kolumnerna får rätt summa.',skill:'Planera med flera summor samtidigt (rader, kolumner och diagonal), som en enkel magisk kvadrat.'},
+  share:{name:'Bärbusken',blurb:'Dela bären lika. Hur många blir över?',skill:'Division: dela lika, med och utan rest, och baklänges (multiplikation plus rest).'},
+  path:{name:'Bergsstigen',blurb:'Välj en sten på varje rad och nå toppen med exakt rätt tal.',skill:'Planera flera räknesteg i rad (+, −, ·, /) för att nå ett mål.'}
+};
+
+// ---------- regler för portarna och dammen ----------
+function atom(key,text,short,test,lvl,fam){return{key,text,short,test,lvl,fam};}
+const ATOMS=(()=>{
+  const R=[];
+  R.push(atom('even','talet är jämnt','jämnt tal',c=>c.n%2===0,1,'parity'));
+  R.push(atom('odd','talet är udda','udda tal',c=>c.n%2===1,1,'parity'));
+  [10,12,15,20].forEach(k=>R.push(atom('gt'+k,`talet är större än ${k}`,`större än ${k}`,c=>c.n>k,1,'size')));
+  [8,10,13].forEach(k=>R.push(atom('lt'+k,`talet är mindre än ${k}`,`mindre än ${k}`,c=>c.n<k,1,'size')));
+  COLOR_NAMES.forEach(col=>R.push(atom('c-'+col,`färgen är ${COLOR_SV[col]}`,COLOR_SV[col],c=>c.color===col,1,'color')));
+  SHAPES.forEach(sh=>R.push(atom('s-'+sh,`formen är en ${SHAPE_SV[sh]}`,SHAPE_SV[sh],c=>c.shape===sh,1,'shape')));
+  [1,2,3].forEach(e=>R.push(atom('e'+e,`har ${pl(e,'öga','ögon')}`,pl(e,'öga','ögon'),c=>c.eyes===e,1,'eyes')));
+  [3,4,5].forEach(m=>R.push(atom('m'+m,`talet är delbart med ${m}`,`delbart med ${m}`,c=>c.n%m===0,2,'mult')));
+  R.push(atom('btw','talet är från 10 till 20','från 10 till 20',c=>c.n>=10&&c.n<=20,2,'size'));
+  R.push(atom('has1','talet innehåller siffran 1','innehåller siffran 1',c=>String(c.n).includes('1'),2,'digit'));
+  R.push(atom('corners','formen har hörn','har hörn',c=>c.shape!=='circle',2,'shape'));
+  R.push(atom('e2p','har minst 2 ögon','minst 2 ögon',c=>c.eyes>1,2,'eyes'));
+  R.push(atom('m6','talet är delbart med 6','delbart med 6',c=>c.n%6===0,3,'mult'));
+  R.push(atom('prime','talet är ett primtal','primtal',c=>isPrime(c.n),3,'prime'));
+  R.push(atom('square','talet är ett kvadrattal','kvadrattal',c=>isSquare(c.n),3,'square'));
+  R.push(atom('f24','talet går jämnt upp i 24','går jämnt upp i 24',c=>24%c.n===0,3,'factor'));
+  R.push(atom('f30','talet går jämnt upp i 30','går jämnt upp i 30',c=>30%c.n===0,3,'factor'));
+  R.push(atom('cgte','har fler hörn än ögon','fler hörn än ögon',c=>CORNERS[c.shape]>c.eyes,3,'cross'));
+  R.push(atom('dsEven','talets siffersumma är jämn','jämn siffersumma',c=>digitSum(c.n)%2===0,4,'digit'));
+  R.push(atom('tri','talet är ett triangeltal','triangeltal',c=>TRI.has(c.n),4,'tri'));
+  R.push(atom('multEyes','talet är delbart med antalet ögon','delbart med antalet ögon',c=>c.n%c.eyes===0,4,'cross'));
+  R.push(atom('multCorners','talet är delbart med antalet hörn','delbart med antalet hörn',c=>CORNERS[c.shape]>0&&c.n%CORNERS[c.shape]===0,4,'cross'));
+  R.push(atom('sumEyes','talet + antalet ögon blir jämnt','tal + ögon blir jämnt',c=>(c.n+c.eyes)%2===0,4,'cross'));
+  return R;
+})();
+const TIPS={
+  prime:'Ett primtal har exakt två delare: 1 och sig självt. 2, 3, 5, 7, 11, 13, 17, 19, 23, 29. (1 är inte ett primtal!)',
+  square:'Kvadrattal är ett tal gånger sig självt: 1, 4, 9, 16, 25. Så många prickar går att lägga i en perfekt kvadrat.',
+  tri:'Triangeltal är prickar staplade i en triangel: 1, 3, 6, 10, 15, 21, 28. Varje rad har en prick mer.',
+  f24:'Talen som går jämnt upp i 24 är 1, 2, 3, 4, 6, 8, 12 och 24.',
+  f30:'Talen som går jämnt upp i 30 är 1, 2, 3, 5, 6, 10, 15 och 30.',
+  m3:'Tal som är delbara med 3 finns i 3:ans tabell: 3, 6, 9, 12, 15, 18 …',
+  m4:'Tal som är delbara med 4 finns i 4:ans tabell: 4, 8, 12, 16, 20 …',
+  m5:'Tal som är delbara med 5 slutar alltid på 0 eller 5.',
+  m6:'Tal som är delbara med 6: 6, 12, 18, 24, 30. De är jämna OCH delbara med 3!',
+  dsEven:'Siffersumman av 27 är 2 + 7 = 9.',
+  multCorners:'Cirklar har inga hörn, trianglar har 3, kvadrater 4 och sexhörningar 6.',
+  cgte:'Cirklar har inga hörn, trianglar har 3, kvadrater 4 och sexhörningar 6.',
+  multEyes:'Alla tal är delbara med 1, så numlingar med ett öga passar alltid!',
+  sumEyes:'Udda + udda = jämnt, jämnt + jämnt = jämnt, men udda + jämnt = udda.'
+};
+function makeCompound(L){
+  const simple=ATOMS.filter(a=>a.lvl<=2&&a.fam!=='cross');
+  const a=pick(simple);let b=pick(simple),guard=0;
+  while(b.fam===a.fam&&guard++<60)b=pick(simple);
+  const op=pick(L>=4?['and','or','but']:['and','or']);
+  if(op==='and')return{key:'cmp',text:`${a.text} OCH ${b.text}`,test:c=>a.test(c)&&b.test(c),lvl:3,fam:'cmp',parts:[a,b]};
+  if(op==='or')return{key:'cmp',text:`${a.text} ELLER ${b.text}`,test:c=>a.test(c)||b.test(c),lvl:3,fam:'cmp',parts:[a,b]};
+  return{key:'cmp',text:`${a.text}, men INTE om ${b.text}`,test:c=>a.test(c)&&!b.test(c),lvl:4,fam:'cmp',parts:[a,b]};
+}
+// Nivå 3 och 4 blandar in fler regler från lägre nivåer, så stegringen blir mjukare.
+function rulePool(L){
+  const pool=ATOMS.filter(r=>r.lvl<=L);
+  const nc=L>=4?8:L===3?5:0;
+  for(let i=0;i<nc;i++)pool.push(makeCompound(L));
+  const w=L>=3?(r=>r.lvl>=L-1?2:1):(r=>r.lvl===L?4:r.lvl===L-1?2:1);
+  return wshuffle(pool,w);
+}
+const sigOf=(r,list)=>list.map(c=>r.test(c)?1:0).join('');
+function pickSplitRule(L,troupe){
+  const n=troupe.length,lo=Math.max(1,Math.round(n*.25)),hi=n-lo;
+  const pool=rulePool(L);
+  for(const r of pool){const t=troupe.filter(r.test).length;if(t>=lo&&t<=hi)return r;}
+  for(const r of pool){const t=troupe.filter(r.test).length;if(t>=1&&t<=n-1)return r;}
+  return pool[0];
+}
+function ruleOptions(correct,troupe,placed,L){
+  const seen=new Set([sigOf(correct,troupe)]),texts=new Set([correct.text]);
+  const against=[],other=[];
+  for(const r of rulePool(Math.max(2,L)).concat(shuffle(ATOMS))){
+    const s=sigOf(r,troupe);if(seen.has(s)||texts.has(r.text))continue;
+    seen.add(s);texts.add(r.text);
+    (placed.some(p=>r.test(p.c)!==p.val)?against:other).push(r);
+  }
+  return shuffle([correct,...against.concat(other).slice(0,3)]);
+}
+function tipFor(r){if(TIPS[r.key])return TIPS[r.key];if(r.parts){for(const p of r.parts)if(TIPS[p.key])return TIPS[p.key];}return '';}
+function pickVennRules(L,troupe){
+  const k=L>=4?3:2;
+  const maxLvl=L===1?2:L===2?1:L===3?3:2;
+  const pool=ATOMS.filter(a=>a.lvl<=maxLvl&&a.fam!=='cross');
+  let best=null,bs=-1e9;
+  for(let pass=0;pass<2&&!best;pass++){
+    for(let t=0;t<500;t++){
+      const rs=[],fams=new Set();
+      for(const r of shuffle(pool)){if(!fams.has(r.fam)){rs.push(r);fams.add(r.fam);}if(rs.length===k)break;}
+      const sigs=rs.map(r=>sigOf(r,troupe));
+      if(new Set(sigs).size<k)continue;
+      if(pass===0&&sigs.some(s=>!s.includes('1')||!s.includes('0')))continue;
+      const reg={};troupe.forEach(c=>{const key=rs.map(r=>r.test(c)?1:0).join('');reg[key]=(reg[key]||0)+1;});
+      let score=Object.keys(reg).length*10;
+      if(reg['1'.repeat(k)])score+=8;
+      if(rs.some(r=>r.lvl===maxLvl))score+=6;
+      score+=Math.random()*6;
+      if(score>bs){bs=score;best=rs;}
+    }
+  }
+  return best||[ATOMS.find(a=>a.key==='even'),ATOMS.find(a=>a.key==='c-blue'),ATOMS.find(a=>a.key==='e2p')].slice(0,k);
+}
+
+// ---------- regler för flotten ----------
+const shared=(a,b)=>(a.shape===b.shape)+(a.color===b.color)+(a.eyes===b.eyes);
+const PAIR_RULES=[
+  {key:'share',lvl:1,text:'Grannar måste ha minst en sak gemensamt: samma form, samma färg eller samma antal ögon.',test:(a,b)=>shared(a,b)>=1},
+  {key:'close',lvl:1,text:'Grannarnas tal får skilja högst 5. (12 och 9 skiljer 3.)',test:(a,b)=>Math.abs(a.n-b.n)<=5},
+  {key:'oddEven',lvl:2,text:'Bredvid varandra måste det ena talet vara udda och det andra jämnt.',test:(a,b)=>(a.n+b.n)%2===1},
+  {key:'one',lvl:2,text:'Grannar måste ha exakt EN sak gemensamt av form, färg och ögon. Inte noll, inte två!',test:(a,b)=>shared(a,b)===1},
+  {key:'gcd',lvl:3,text:'Grannarnas tal måste båda vara delbara med samma tal (större än 1). (6 och 9 går bra: båda är delbara med 3.)',test:(a,b)=>gcd(a.n,b.n)>1},
+  {key:'shareClose',lvl:3,text:'Grannar måste ha minst en sak gemensamt (form, färg eller ögon) OCH deras tal får skilja högst 8.',test:(a,b)=>shared(a,b)>=1&&Math.abs(a.n-b.n)<=8},
+  {key:'divides',lvl:4,text:'Det ena talet måste gå jämnt upp i det andra. (4 och 12 går bra, för 12 / 4 = 3.)',test:(a,b)=>a.n%b.n===0||b.n%a.n===0},
+  {key:'sumPrime',lvl:4,text:'Grannarnas tal måste tillsammans bli ett primtal. (4 + 7 = 11, som är ett primtal.)',test:(a,b)=>isPrime(a.n+b.n)},
+  {key:'two',lvl:4,text:'Grannar måste ha exakt TVÅ saker gemensamt av form, färg och ögon.',test:(a,b)=>shared(a,b)===2}
+];
+function findChain(list,k,test,ring){
+  const n=list.length;if(k>n||k<1)return null;if(k===1)return[list[0]];
+  const adj=list.map(a=>list.map(b=>a!==b&&test(a,b)));
+  let budget=40000;const path=[],used=new Array(n).fill(false);
+  function dfs(){
+    if(budget--<=0)return false;
+    if(path.length===k)return!ring||adj[path[k-1]][path[0]];
+    const last=path[path.length-1];
+    for(let j=0;j<n;j++){if(used[j]||!adj[last][j])continue;used[j]=true;path.push(j);if(dfs())return true;path.pop();used[j]=false;}
+    return false;
+  }
+  for(const s of shuffle(A(n,i=>i))){path.length=0;used.fill(false);used[s]=true;path.push(s);if(dfs())return path.map(i=>list[i]);}
+  return null;
+}
+
+// ---------- uttryck för ballongen ----------
+function exprFor(v,L){
+  const easy=[],more=[],hard=[];
+  for(let a=2;a<=9;a++){
+    const into=a<=5?easy:more;
+    const b=Math.floor(v/a),c=v-a*b;
+    if(b>=2&&b<=10)into.push(c?`${a} · ${b} + ${c}`:`${a} · ${b}`);
+    const b2=Math.ceil(v/a),c2=a*b2-v;
+    if(b2>=2&&b2<=10&&c2>0)into.push(`${a} · ${b2} − ${c2}`);
+  }
+  if(v%2===0&&v>=8)easy.push(`dubbla ${v/2}`);
+  if(v<=50)easy.push(`hälften av ${v*2}`);
+  if(L>=4){
+    for(let s=2;s<=9;s++){const d=v-s*s;if(d>0&&d<=10)hard.push(`${s}² + ${d}`);else if(d<0&&-d<=10)hard.push(`${s}² − ${-d}`);else if(d===0)hard.push(`${s}²`);}
+    for(let c=2;c<=5;c++)if(v%c===0&&v/c>=3){const q=v/c,a=rnd(1,q-1);hard.push(`(${a} + ${q-a}) · ${c}`);}
+    for(const d of[2,3,4,5]){const r=rnd(1,Math.min(9,Math.max(1,v-3))),q=v-r;if(q>=3&&q*d<=100)hard.push(`${q*d} / ${d} + ${r}`);}
+  }
+  if(hard.length&&Math.random()<.7)return pick(hard);
+  if(L>=4&&more.length&&Math.random()<.5)return pick(more);
+  if(easy.length)return pick(easy);
+  if(more.length)return pick(more);
+  return `${v-1} + 1`;
+}
+
+// ---------- talföljder ----------
+const SEQ={
+  add:n=>{const d=rnd(2,9),a=rnd(0,20);return{s:A(n,i=>a+i*d),why:`Lägg till ${d} varje gång.`};},
+  sub:n=>{const d=rnd(2,9),a=d*(n-1)+rnd(0,15);return{s:A(n,i=>a-i*d),why:`Ta bort ${d} varje gång.`};},
+  addBig:n=>{const d=rnd(11,25),a=rnd(5,60);return{s:A(n,i=>a+i*d),why:`Lägg till ${d} varje gång.`};},
+  dbl:n=>{const a=rnd(1,5);return{s:A(n,i=>a*2**i),why:'Dubbla varje gång (· 2).'};},
+  sq:n=>{const s=rnd(1,4);return{s:A(n,i=>(s+i)**2),why:'Kvadrattal: ett tal gånger sig självt (3 · 3 = 9, 4 · 4 = 16 …).'};},
+  alt:n=>{const p=rnd(4,9),q=rnd(1,p-2),a=rnd(5,20);let x=a;return{s:A(n,i=>{if(i)x+=i%2?p:-q;return x;}),why:`Lägg till ${p}, ta sedan bort ${q}, om och om igen.`,minBlank:4};},
+  grow:n=>{const d=rnd(1,3),a=rnd(1,10);let x=a;return{s:A(n,i=>{if(i)x+=d+i-1;return x;}),why:`Hoppet blir 1 större varje gång: +${d}, +${d+1}, +${d+2} …`};},
+  fib:n=>{const a=rnd(1,4),b=rnd(a,7);const s=[a,b];while(s.length<n)s.push(s[s.length-1]+s[s.length-2]);return{s,why:'Lägg ihop de två talen före för att få nästa.'};},
+  tri:n=>{const k=rnd(1,3);return{s:A(n,i=>(k+i)*(k+i+1)/2),why:'Triangeltal: varje hopp är 1 större än det förra.'};},
+  primes:n=>{const k=rnd(0,4);return{s:PRIMES.slice(k,k+n),why:'Primtal: de kan bara delas jämnt med 1 och sig självt.'};},
+  two:n=>{const a=rnd(1,10),b=rnd(25,40),d1=rnd(2,5),d2=rnd(1,4);return{s:A(n,i=>i%2===0?a+(i/2)*d1:b-((i-1)/2)*d2),why:`Två mönster turas om: det ena ökar med ${d1}, det andra minskar med ${d2}.`,minBlank:4};},
+  tpl:n=>{const a=rnd(1,2);return{s:A(Math.min(n,6),i=>a*3**i),why:'Gånger 3 varje gång.'};},
+  cube:n=>{const s=rnd(1,2);return{s:A(Math.min(n,6),i=>(s+i)**3),why:'Kubtal: 2 · 2 · 2 = 8, 3 · 3 · 3 = 27 …'};},
+  sqp:n=>{const s=rnd(1,3),c=pick([1,2,-1]);return{s:A(n,i=>(s+i)**2+c),why:`Kvadrattal ${c>0?'plus':'minus'} ${Math.abs(c)}.`};},
+  dbl1:n=>{let x=rnd(1,3);const s=[x];while(s.length<n){x=2*x+1;s.push(x);}return{s,why:'Dubbla och lägg till 1.'};},
+  jd:n=>{let x=rnd(1,10);return{s:A(n,i=>{if(i)x+=2**(i-1);return x;}),why:'Hoppet dubblas varje gång: +1, +2, +4, +8 …'};},
+  fibBig:n=>{const a=rnd(3,9),b=rnd(a+1,14);const s=[a,b];while(s.length<n)s.push(s[s.length-1]+s[s.length-2]);return{s,why:'Lägg ihop de två talen före för att få nästa.'};}
+};
+const SEQLV={1:['add','add','sub'],2:['addBig','dbl','sq','alt','sub'],3:['grow','fib','tri','primes','tpl'],4:['cube','sqp','dbl1','jd','fibBig','two']};
+function makeSeq(L){
+  const len=L>=3?7:6;
+  const lv=(L>1&&Math.random()<(L>=3?.4:.3))?L-1:L;
+  const g=SEQ[pick(SEQLV[lv])](len);
+  const s=g.s,minB=g.minBlank||3,nb=(L>=4&&s.length-minB>=2)?2:1;
+  const blanks=shuffle(A(s.length-minB,i=>i+minB)).slice(0,nb).sort((a,b)=>a-b);
+  return{seq:s,blanks,why:g.why};
+}
+
+// ---------- regler för talmaskinen ----------
+function machinePool(L,mn,mx){
+  const P=[],R=(txt,f,expl)=>P.push({txt,f,expl});
+  if(L===1){
+    for(let k=2;k<=10;k++)R(`talet + ${k}`,n=>n+k,`Maskinen lägger till ${k}.`);
+    for(let k=2;k<=Math.min(9,mn-1);k++)R(`talet − ${k}`,n=>n-k,`Maskinen tar bort ${k}.`);
+  }
+  if(L===2){
+    for(let k=11;k<=20;k++)R(`talet + ${k}`,n=>n+k,`Maskinen lägger till ${k}.`);
+    R('talet · 2',n=>2*n,'Maskinen dubblar talet.');
+    if(mx<=20)R('talet · 3',n=>3*n,'Maskinen tar talet gånger 3.');
+    R('talet · 10',n=>10*n,'Gånger 10: talet får en nolla på slutet.');
+    for(let k=10;k<=Math.min(15,mn-1);k++)R(`talet − ${k}`,n=>n-k,`Maskinen tar bort ${k}.`);
+  }
+  if(L===3){
+    for(let k=1;k<=9;k++)R(`talet · 2 + ${k}`,n=>2*n+k,`Maskinen dubblar talet och lägger till ${k}.`);
+    for(let k=1;k<=Math.min(9,2*mn-1);k++)R(`talet · 2 − ${k}`,n=>2*n-k,`Maskinen dubblar talet och tar bort ${k}.`);
+    R('talet · 3',n=>3*n,'Maskinen tar talet gånger 3.');
+    R('talet · 5',n=>5*n,'Maskinen tar talet gånger 5.');
+    if(mx<=15)R('talet · 4',n=>4*n,'Gånger 4: dubbla två gånger.');
+  }
+  if(L===4){
+    for(let k=1;k<=9;k++)R(`talet · 3 + ${k}`,n=>3*n+k,`Maskinen tar talet gånger 3 och lägger till ${k}.`);
+    for(let k=1;k<=Math.min(9,3*mn-1);k++)R(`talet · 3 − ${k}`,n=>3*n-k,`Maskinen tar talet gånger 3 och tar bort ${k}.`);
+    for(let k=1;k<=5;k++)R(`(talet + ${k}) · 2`,n=>(n+k)*2,`Maskinen lägger först till ${k} och dubblar sedan.`);
+    for(let k=1;k<=9;k++)R(`talet · 10 + ${k}`,n=>10*n+k,`Gånger 10, och sedan plus ${k}.`);
+    if(mx<=12)R('talet · talet',n=>n*n,'Talet gånger sig självt (kvadrattal).');
+  }
+  return P;
+}
+function machineRule(L,nums){
+  const mn=Math.min(...nums),mx=Math.max(...nums);
+  const lv=(L>1&&Math.random()<.35)?L-1:L;
+  let pool=machinePool(lv,mn,mx);if(!pool.length)pool=machinePool(1,mn,mx);
+  // välj först en sorts regel (plus, minus, gånger …) så att alla sorter blir lika vanliga
+  const fams=[...new Set(pool.map(r=>r.txt.replace(/\d+/g,'#')))];
+  const f=pick(fams);
+  return pick(pool.filter(r=>r.txt.replace(/\d+/g,'#')===f));
+}
+function machineOptions(correct,inputs,L,mn,mx){
+  const out=[correct],seen=new Set([correct.txt]);
+  const cands=[];for(let l=1;l<=Math.max(2,L);l++)cands.push(...machinePool(l,mn,mx));
+  for(const r of shuffle(cands)){
+    if(seen.has(r.txt))continue;
+    if(inputs.every(n=>r.f(n)===correct.f(n)))continue;
+    seen.add(r.txt);out.push(r);if(out.length===4)break;
+  }
+  return shuffle(out);
+}
+
+// ---------- stigar för berget ----------
+const POP={
+  add:k=>({t:`+ ${k}`,f:v=>v+k}),
+  sub:k=>({t:`− ${k}`,f:v=>v-k}),
+  mul:k=>({t:`· ${k}`,f:v=>v*k}),
+  div:k=>({t:`/ ${k}`,f:v=>v%k===0?v/k:NaN})
+};
+function randOp(L){
+  const r=Math.random();
+  if(L===1)return r<.55?POP.add(rnd(1,9)):POP.sub(rnd(1,9));
+  if(L===2)return r<.4?POP.add(rnd(2,9)):r<.72?POP.sub(rnd(2,9)):POP.mul(2);
+  if(L===3)return r<.3?POP.add(rnd(2,12)):r<.55?POP.sub(rnd(2,12)):r<.8?POP.mul(pick([2,3])):POP.div(2);
+  return r<.25?POP.add(rnd(3,15)):r<.45?POP.sub(rnd(3,15)):r<.75?POP.mul(pick([2,3,4])):POP.div(pick([2,3]));
+}
+const okVal=v=>Number.isInteger(v)&&v>=0&&v<=150;
+function makePath(L,start){
+  const R={1:2,2:3,3:3,4:4}[L];
+  for(let attempt=0;attempt<200;attempt++){
+    let v=start;const sol=[];let ok=true;
+    for(let r=0;r<R;r++){
+      let op=null;
+      for(let t=0;t<60;t++){const o=randOp(L),w=o.f(v);if(okVal(w)&&w!==v){op=o;break;}}
+      if(!op){ok=false;break;}
+      sol.push(op);v=op.f(v);
+    }
+    if(!ok||v===start||v<1)continue;
+    const rows=sol.map(s=>{
+      const opts=[s],ts=new Set([s.t]);let g=0;
+      while(opts.length<3&&g++<80){const o=randOp(L);if(!ts.has(o.t)){ts.add(o.t);opts.push(o);}}
+      return shuffle(opts);
+    });
+    return{start,target:v,rows};
+  }
+  return{start,target:start+2,rows:[[POP.add(2),POP.add(3),POP.sub(1)]]};
+}
+
+// ---------- skärmhantering ----------
+const app=document.getElementById('app');
+let CUR=null,ACT={};
+function focusKey(el){
+  if(!el||el===document.body||!app.contains(el))return null;
+  if(el.dataset.id)return `[data-id="${el.dataset.id}"]`;
+  if(el.dataset.drop)return `[data-drop="${el.dataset.drop}"]`;
+  if(el.dataset.act)return `[data-act="${el.dataset.act}"]${el.dataset.v?`[data-v="${el.dataset.v}"]`:''}`;
+  return null;
+}
+function go(html,acts,scroll=true){
+  const fk=scroll?null:focusKey(document.activeElement);
+  document.body.classList.remove('at-title');
+  app.innerHTML=html;ACT=acts||{};
+  if(scroll)window.scrollTo(0,0);
+  if(fk){const n=app.querySelector(fk);if(n)n.focus({preventScroll:true});}
+}
+// Sifferknappar reagerar direkt på fingret (när det lyfts) i stället för att vänta på
+// webbläsarens klick, som pekskärmar kan tappa när två siffror trycks snabbt efter
+// varandra. Ett klick som eventuellt kommer efteråt ignoreras, så ingen siffra blir dubbel.
+let keyDown=null,keyTouchAt=0;
+app.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'){keyDown=null;return;}
+  const k=e.target.closest('.key[data-act]');keyDown=k?{k,id:e.pointerId}:null;
+});
+app.addEventListener('pointerup',e=>{
+  if(!keyDown||e.pointerId!==keyDown.id)return;
+  const k=keyDown.k;keyDown=null;
+  if(!k.isConnected||k.disabled||e.target.closest('.key[data-act]')!==k)return;
+  keyTouchAt=Date.now();
+  const fn=ACT[k.dataset.act];if(fn)fn(k,e);
+});
+app.addEventListener('pointercancel',()=>{keyDown=null;});
+app.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]');
+  if(a&&a.classList.contains('key')&&Date.now()-keyTouchAt<700){e.preventDefault();return;}
+  if(a&&app.contains(a)){const fn=ACT[a.dataset.act];if(fn&&!a.disabled){e.preventDefault();fn(a,e);}return;}
+  const z=e.target.closest('[data-drop]');
+  if(z&&CUR&&!CUR.done&&CUR.sel!=null&&!e.target.closest('.cr.dr'))CUR.onDrop(CUR.sel,z.dataset.drop,e.clientX,e.clientY,z);
+});
+function modal(html,handlers={}){
+  closeModal();
+  const back=document.createElement('div');back.className='modal-back';
+  back.innerHTML=`<div class="modal panel" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(back);
+  back.addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b){const fn=handlers[b.dataset.m];closeModal();if(fn)fn(b);}});
+  const f=back.querySelector('.btn.go')||back.querySelector('button');if(f)f.focus();
+  return back;
+}
+function closeModal(){document.querySelectorAll('.modal-back').forEach(m=>m.remove());}
+function confetti(){
+  if(reduceMotion())return;
+  const box=document.createElement('div');box.className='confetti';
+  const cols=['#ff6b6b','#3d8be0','#ffc63f','#9a6ad6','#38d9a9'];
+  for(let i=0;i<70;i++){const p=document.createElement('i');p.style.left=Math.random()*100+'%';p.style.background=pick(cols);p.style.animationDelay=(Math.random()*.6)+'s';p.style.animationDuration=(1.7+Math.random()*1.5)+'s';box.appendChild(p);}
+  document.body.appendChild(box);setTimeout(()=>box.remove(),3800);
+}
+function toggleSound(){S.sound=!S.sound;save();if(S.sound)SFX.pop();if(CUR)CUR.render();}
+
+// ---------- dra och släpp (mus, finger och penna) ----------
+const DR={el:null,id:null,pid:null,sx:0,sy:0,moved:false,ghost:null,over:null};
+function zoneAt(x,y){const el=document.elementFromPoint(x,y);return el?el.closest('[data-drop]'):null;}
+document.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.cr.dr');
+  if(!el||!CUR||CUR.done||(e.button&&e.button!==0))return;
+  DR.el=el;DR.id=+el.dataset.id;DR.pid=e.pointerId;DR.sx=e.clientX;DR.sy=e.clientY;DR.moved=false;
+  e.preventDefault();
+});
+document.addEventListener('pointermove',e=>{
+  if(!DR.el||e.pointerId!==DR.pid)return;
+  const dx=e.clientX-DR.sx,dy=e.clientY-DR.sy;
+  if(!DR.moved&&dx*dx+dy*dy>64){
+    DR.moved=true;const r=DR.el.getBoundingClientRect();
+    DR.ghost=DR.el.cloneNode(true);DR.ghost.classList.remove('selected','shake','pop');DR.ghost.classList.add('ghost');
+    DR.ghost.style.width=r.width+'px';DR.ghost.style.height=r.height+'px';
+    document.body.appendChild(DR.ghost);DR.el.classList.add('lifted');
+  }
+  if(DR.moved){
+    DR.ghost.style.left=e.clientX+'px';DR.ghost.style.top=e.clientY+'px';
+    const z=zoneAt(e.clientX,e.clientY);
+    if(z!==DR.over){if(DR.over)DR.over.classList.remove('hover');if(z)z.classList.add('hover');DR.over=z;}
+  }
+});
+function endDrag(e,cancel){
+  if(!DR.el||e.pointerId!==DR.pid)return;
+  const {id,moved}=DR;
+  if(DR.ghost)DR.ghost.remove();
+  if(DR.over)DR.over.classList.remove('hover');
+  DR.el.classList.remove('lifted');
+  DR.el=null;DR.ghost=null;DR.over=null;
+  if(!CUR||CUR.done||cancel)return;
+  if(moved){const z=zoneAt(e.clientX,e.clientY);if(z)CUR.onDrop(id,z.dataset.drop,e.clientX,e.clientY,z);else{CUR.sel=null;CUR.render();}}
+  else CUR.onTap(id);
+}
+document.addEventListener('pointerup',e=>endDrag(e,false));
+document.addEventListener('pointercancel',e=>endDrag(e,true));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){const m=document.querySelector('.modal-back');if(m&&m.querySelector('[data-m="close"]'))closeModal();return;}
+  if(document.querySelector('.modal-back'))return;
+  const t=e.target;
+  if((e.key==='Enter'||e.key===' ')&&t.classList&&t.classList.contains('dr')&&CUR&&!CUR.done){e.preventDefault();CUR.onTap(+t.dataset.id);return;}
+  if((e.key==='Enter'||e.key===' ')&&t.matches&&t.matches('[data-drop]')&&CUR&&!CUR.done&&CUR.sel!=null){e.preventDefault();const r=t.getBoundingClientRect();CUR.onDrop(CUR.sel,t.dataset.drop,r.left+r.width/2,r.top+r.height/2,t);return;}
+  if(CUR&&CUR.onKey&&!CUR.done&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!(t.tagName==='BUTTON'&&!t.classList.contains('ans')&&(e.key==='Enter'||e.key===' '))){if(CUR.onKey(e.key))e.preventDefault();}
+});
+
+// ---------- gemensamt för alla banor ----------
+const PRAISE=['Ja!','Snyggt!','Bra tänkt!','Helt rätt!','Toppen!','Du klarade det!','Superbra!'];
+function baseStation(key,troupe,L){
+  const st={key,L,waiting:troupe.slice(),across:[],back:[],sel:null,say:'',mood:'',fx:{},done:false,hearts:5,max:5,startN:troupe.length,acts:{}};
+  st.setHearts=n=>{st.hearts=st.max=n;};
+  st.render=(scroll=false)=>{
+    go(shell(st),Object.assign({leave:confirmLeave,help:()=>showHelp(st),sound:toggleSound},st.acts),scroll);
+    st.fx={};if(st.after)st.after();
+  };
+  st.onTap=id=>{
+    if(st.done)return;
+    st.sel=st.sel===id?null:id;SFX.pop();
+    if(st.sel!=null){st.say=st.tapSay||'Tryck nu där den ska vara.';st.mood='';}
+    st.render();
+  };
+  st.onDrop=()=>{};
+  st.strike=msg=>{
+    st.hearts=Math.max(0,st.hearts-1);SFX.bad();st.say=msg;st.mood='bad';
+    if(st.hearts<=0){st.say=msg+' Det var sista hjärtat.';st.done=true;setTimeout(()=>finishStation(st),1300);}
+  };
+  st.win=()=>{st.done=true;setTimeout(()=>finishStation(st),900);};
+  return st;
+}
+function shell(st){
+  const m=META[st.key];
+  const hearts=st.heartsHTML?st.heartsHTML():`<div class="hearts" role="img" aria-label="${st.hearts} av ${st.max} hjärtan kvar">${A(st.max,i=>HEART(i<st.hearts)).join('')}</div>`;
+  return `<div class="station st-${st.key}">
+  <header class="top">
+    <button class="iconbtn" data-act="leave" aria-label="Tillbaka till kartan" title="Karta">${ICONS.map}</button>
+    <div class="ttl">${ICONS[st.key]}<h2>${m.name}</h2>${stars(st.L)}</div>
+    <div class="spacer"></div>${hearts}
+    <button class="iconbtn" data-act="help" aria-label="Så spelar du" title="Så spelar du">?</button>
+    <button class="iconbtn" data-act="sound" aria-label="Ljud ${S.sound?'på':'av'}" title="Ljud">${S.sound?ICONS.soundOn:ICONS.soundOff}</button>
+  </header>
+  <div class="say panel ${st.mood}" role="status" aria-live="polite">${crHTML(GUIDE)}<span>${st.say}</span></div>
+  ${st.html()}
+  </div>`;
+}
+function confirmLeave(){
+  modal(`<h3>Tillbaka till kartan?</h3><p>Banan börjar om från början när du kommer tillbaka. Dina numlingar stannar hos dig.</p><div class="row"><button class="btn go" data-m="close">Fortsätt spela</button><button class="btn" data-m="map">Tillbaka till kartan</button></div>`,{map:showMap});
+}
+function helpText(st){
+  const L=st.L;
+  switch(st.key){
+    case 'gates':return `<p>Två portar, en hemlig regel. Vissa numlingar får bara gå genom <b>Solporten</b>. Alla andra måste gå genom <b>Månporten</b>.</p><p>Skicka numlingar en i taget: dra en till en port, eller tryck på den och sedan på en port. Titta på vem som går vart och leta efter regeln.</p><p>Tror du att du vet regeln? Tryck på <b>Jag vet regeln!</b> så går alla som är kvar över på en gång.</p><p>Fel port kostar ett hjärta.</p>`;
+    case 'balloon':return `<p>Ballongen lyfter bara när korgen väger <b>exakt</b> lika mycket som talet på skylten. Varje numling väger lika mycket som talet på magen.</p><p>Tryck på numlingar för att sätta dem i korgen (tryck igen för att ta ut dem), och tryck sedan på <b>Lyft!</b></p>${L>=3?'<p>Skylten visar en uträkning. Räkna ut den först! Den säger också hur många passagerare som ska med.</p>':''}${st.showSum?'':'<p>På den här nivån visas ingen summa. Räkna i huvudet!</p>'}<p>Fel vikt kostar ett hjärta.</p>`;
+    case 'stones':return `<p>Talen på stegstenarna följer ett mönster. Räkna ut ${st.blanks&&st.blanks.length>1?'de saknade talen':'det saknade talet'}, skriv med sifferknapparna (eller tangentbordet) och tryck på <b>✓</b>.</p><p>Fastnat? <b>Visa hoppen</b> visar hur mycket talen ändras.</p><p>Varje klar stig bär över några numlingar. Fel tal kostar ett hjärta.</p>`;
+    case 'venn':{const nv=st.visible.filter(Boolean).length;return `<p>Varje cirkel i dammen har en regel. ${nv===st.k?'Reglerna står ovanför dammen.':nv?'En regel står ovanför dammen. De andra är <b>hemliga</b>: lista ut dem!':'Reglerna är <b>hemliga</b>: lista ut dem!'}</p><p>Sätt varje numling inuti varje cirkel vars regel den passar, och utanför de andra. Där cirklarna överlappar gäller båda reglerna. Numlingar som inte passar någon regel hamnar i vattnet utanför alla cirklar.</p><p>Dra en numling till sin plats, eller tryck på den och sedan i dammen. Fel plats kostar ett hjärta.</p>`;}
+    case 'raft':return `<p>Fyll <b>alla platser</b> på flotten. Varje par numlingar som sitter bredvid varandra måste följa regeln på skylten.</p>${st.isRing?'<p>Den här flotten är rund, så första och sista platsen är också grannar!</p>':''}<p>Dra numlingar till platserna, eller tryck på en och sedan på en plats. Tryck på <b>Segla!</b> när du är klar. En flotte som bryter mot regeln kostar ett hjärta.</p>`;
+    case 'lock':return `<p>Ugglans dörr har en hemlig kod med <b>${st.slots} siffror</b>, var och en från 1 till ${st.D}.${st.rep?' En siffra kan finnas mer än en gång.':' Ingen siffra används två gånger.'}</p><p>Gissa, så ger ugglan ledtrådar:</p>${lockLegend(st)}<p>Du har ${st.free} gratisgissningar. Efter det blir ugglan sömnig, och varje fel gissning skickar en numling tillbaka till lägret.</p>`;
+    case 'machine':return `<p>Talmaskinen gör alltid samma sak med talet som går in. De första numlingarna visar hur den fungerar.</p><p>Titta i tabellen, räkna ut vad som kommer ut för nästa numling och skriv svaret. Tryck på <b>✓</b>.</p><p>Har du listat ut regeln? Tryck på <b>Jag vet regeln!</b> så går alla som är kvar igenom. Fel svar kostar ett hjärta.</p>`;
+    case 'garden':return `<p>Sätt numlingar i rutorna i landet. Talet på varje numling räknas, och talen på stenarna räknas också.</p><p>Varje rad och kolumn${st.spec&&st.spec.diag?', och diagonalen,':''} måste få exakt den summa som står vid kanten. De små talen visar summan just nu.</p><p>Tips: alla radsummor tillsammans är lika med alla tal i landet tillsammans.</p><p>Tryck på <b>Plantera!</b> när du är klar. Fel summa kostar ett hjärta.</p>`;
+    case 'share':return `<p>Bären i busken ska delas <b>lika</b> mellan numlingarna. Hur många får var och en${L>=2?', och hur många blir över':''}?</p>${L>=4?'<p>Ibland är det tvärtom: du vet vad var och en fick och ska räkna ut hur många bär det fanns.</p>':''}<p>Tryck på en ruta, skriv svaret och tryck på <b>✓</b>. Fel svar kostar ett hjärta.</p>`;
+    case 'path':return `<p>Börja med talet längst ner. Välj en sten på varje rad, nerifrån och upp. Varje sten ändrar talet.</p><p>Nå toppen med <b>exakt</b> talet på flaggan. Tryck sedan på <b>Klättra!</b></p><p>Fel tal på toppen kostar ett hjärta.</p>`;
+  }
+  return '';
+}
+function showHelp(st){modal(`<h3>Så spelar du: ${META[st.key].name}</h3>${helpText(st)}<button class="btn go" data-m="close">Okej!</button>`);}
+
+function finishStation(st,extra=''){
+  if(!S.journey)return;
+  const j=S.journey;
+  const perfect=st.back.length===0&&st.waiting.length===0;
+  st.back.push(...st.waiting);st.waiting=[];
+  S.camp.push(...st.back);
+  j.troupe=st.across.slice();j.lost+=st.back.length;j.station++;
+  S.played[st.key]=(S.played[st.key]||0)+1;
+  const sug=S.levels[st.key];
+  let lvl='';
+  if(perfect&&st.L>=sug&&sug<4){S.levels[st.key]=sug+1;lvl=`<p class="lvup">Ny nivå! ${META[st.key].name} föreslås nu på ${stars(S.levels[st.key])}</p>`;}
+  else if(perfect&&st.L<sug)lvl=`<p class="lvup">Perfekt! Prova gärna ${stars(sug)} nästa gång.</p>`;
+  else if(perfect)lvl=`<p class="lvup">Perfekt på högsta nivån!</p>`;
+  save();
+  const made=st.across.length,back=st.back.length;
+  const title=perfect?pick(['Lysande!','Fantastiskt!','Supertänkt!','Otroligt!']):made?'Några kom igenom!':'Åh nej!';
+  const reveal=st.reveal?st.reveal():'';
+  if(perfect){SFX.win();confetti();}else SFX.sad();
+  const end=j.station>=j.route.length;
+  modal(`<h2>${title}</h2>${made?`<div class="crowd">${st.across.map(c=>crHTML(c)).join('')}</div>`:''}
+    <p><b>${made} av ${st.startN}</b> numlingar klarade ${META[st.key].name}.${back?` ${pl(back,'numling','numlingar')} gick tillbaka till lägret. De följer med på nästa resa.`:''}</p>
+    ${reveal?`<div class="reveal">${reveal}</div>`:''}${extra}${lvl}
+    <button class="btn go big" data-m="next">${j.troupe.length===0?'Tillbaka till lägret':end?'Vidare till Numeria!':'Fortsätt'}</button>`,
+    {next:()=>{if(j.troupe.length===0){S.journey=null;save();showAllBack();}else if(end)showArrival();else showMap();}});
+}
+
+// =========================================================
+//  Viskportarna — hitta den hemliga regeln
+// =========================================================
+function gateSVG(g){
+  const sun=g==='sun';
+  const rays=A(8,i=>{const r=i*Math.PI/4;return `<line x1="${(100+Math.cos(r)*22).toFixed(1)}" y1="${(80+Math.sin(r)*22).toFixed(1)}" x2="${(100+Math.cos(r)*31).toFixed(1)}" y2="${(80+Math.sin(r)*31).toFixed(1)}"/>`;}).join('');
+  const emblem=sun?`<g stroke="#17335b" stroke-width="3.5" stroke-linecap="round">${rays}</g><circle cx="100" cy="80" r="16" fill="#ffc63f" stroke="#17335b" stroke-width="3.5"/>`
+    :`<path d="M108 62a20 20 0 1 0 0 36a17 17 0 1 1 0-36z" fill="#f4f0d8" stroke="#17335b" stroke-width="3.5" stroke-linejoin="round"/><g fill="#fff"><circle cx="70" cy="128" r="2.6"/><circle cx="132" cy="146" r="2.2"/><circle cx="126" cy="112" r="1.8"/><circle cx="82" cy="170" r="1.8"/></g>`;
+  return `<svg viewBox="0 0 200 220" aria-hidden="true"><path d="M12 214V98a88 88 0 0 1 176 0v116z" fill="#cfc6b8" stroke="#17335b" stroke-width="5" stroke-linejoin="round"/><g fill="none" stroke="#17335b" stroke-opacity=".3" stroke-width="3" stroke-linecap="round"><path d="M14 124h28M158 124h28M14 160h28M158 160h28M14 194h28M158 194h28M36 44l15 15M164 44l-15 15M100 12v22"/></g><path d="M44 214V102a56 56 0 0 1 112 0v112z" fill="${sun?'#ffe39a':'#35406f'}" stroke="#17335b" stroke-width="4"/>${emblem}<path d="M8 214h184" stroke="#17335b" stroke-width="5" stroke-linecap="round"/></svg>`;
+}
+function makeGates(troupe,L){
+  const st=baseStation('gates',troupe,L);
+  st.all=troupe.slice();st.rule=pickSplitRule(L,troupe);st.sun=[];st.moon=[];
+  st.setHearts(L>=4?7:L===3?6:5);
+  const GN={sun:'Solporten',moon:'Månporten'};
+  st.say='Portarna har en hemlig regel. Dra en numling till en port, eller tryck på den och sedan på en port.';
+  st.tapSay='Tryck nu på en port.';
+  st.html=()=>`
+    <div class="gates">${['sun','moon'].map(g=>`
+      <div class="gatecol ${st.fx.gate===g?'rumble':''}" data-drop="${g}" tabindex="0" role="button" aria-label="${GN[g]}">
+        <div class="gate">${gateSVG(g)}</div>
+        <div class="gname">${GN[g]}</div>
+        <div class="passed">${st[g].map(c=>crHTML(c,{sm:1,cls:st.fx.pop===c.id?'pop':''})).join('')}</div>
+      </div>`).join('')}
+    </div>
+    <div><div class="tray-label">Väntar vid portarna</div>
+    <div class="tray" data-drop="tray">${st.waiting.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id,cls:st.fx.shake===c.id?'shake':''})).join('')||'<span class="hint">Alla har gått igenom!</span>'}</div></div>
+    <div class="actions"><button class="btn go" data-act="guess" ${st.sun.length+st.moon.length<3||st.done?'disabled':''}>Jag vet regeln!</button></div>
+    ${st.sun.length+st.moon.length<3?'<p class="hint" style="text-align:center">Skicka minst 3 numlingar först, sedan kan du gissa regeln.</p>':''}`;
+  st.onDrop=(id,zone)=>{
+    if(st.done)return;
+    const c=st.waiting.find(x=>x.id===id);st.sel=null;
+    if(!c||(zone!=='sun'&&zone!=='moon')){st.render();return;}
+    if(st.rule.test(c)===(zone==='sun')){
+      st.waiting=st.waiting.filter(x=>x!==c);st[zone].push(c);st.across.push(c);
+      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} Nummer ${c.n} går genom ${GN[zone]}.`;st.mood='good';
+      if(!st.waiting.length){st.say='Alla har gått igenom! Såg du regeln?';st.win();}
+    }else{
+      st.fx={shake:c.id,gate:zone};
+      st.strike(`${GN[zone]} mullrar. Nummer ${c.n} får inte gå där.`);
+    }
+    st.render();
+  };
+  st.acts.guess=()=>{
+    const placed=[...st.sun.map(c=>({c,val:true})),...st.moon.map(c=>({c,val:false}))];
+    const opts=ruleOptions(st.rule,st.all,placed,st.L);
+    const h={};opts.forEach((r,i)=>h['o'+i]=()=>{
+      if(st.done)return;
+      if(r===st.rule){
+        st.waiting.forEach(c=>{(st.rule.test(c)?st.sun:st.moon).push(c);st.across.push(c);});
+        st.waiting=[];SFX.ok();st.say='Du knäckte den! Alla hoppar genom rätt port.';st.mood='good';st.cracked=true;st.render();st.win();
+      }else{st.strike('Inte den regeln. Titta på numlingarna vid varje port igen.');st.render();}
+    });
+    modal(`<h3>Vilken regel har Solporten?</h3><p>Kolla alla numlingar som gick genom varje port. Bara en regel passar alla.</p><div class="opts">${opts.map((r,i)=>`<button class="btn" data-m="o${i}">${cap(r.text)}</button>`).join('')}</div><button class="btn sm" data-m="close">Inte än</button>`,h);
+  };
+  st.reveal=()=>`<p><b>Solportens regel:</b> ${cap(st.rule.text)}.</p><p><b>Månporten:</b> alla andra.</p>${tipFor(st.rule)?`<p>${tipFor(st.rule)}</p>`:''}${st.cracked?'<p><b>Du gissade regeln. Snyggt detektivarbete!</b></p>':''}`;
+  return st;
+}
+
+// =========================================================
+//  Ballongfärden — exakt rätt summa
+// =========================================================
+const BALLOON_SVG=`<svg viewBox="0 0 200 200" aria-hidden="true"><path d="M100 6C42 6 18 50 18 88c0 40 44 66 64 92h36c20-26 64-52 64-92 0-38-24-82-82-82z" fill="#ff6b6b" stroke="#17335b" stroke-width="5" stroke-linejoin="round"/><path d="M100 6C78 30 66 60 68 92s10 64 18 88M100 6c22 24 34 54 32 86s-10 64-18 88" fill="#ffc63f" stroke="#17335b" stroke-width="4"/><path d="M100 6v174" stroke="#17335b" stroke-width="3" stroke-opacity=".5"/><path d="M84 180l-20 20M116 180l20 20M94 180l-6 20M106 180l6 20" stroke="#17335b" stroke-width="3"/></svg>`;
+function makeBalloon(troupe,L){
+  const st=baseStation('balloon',troupe,L);
+  st.setHearts(L>=3?5:4);st.basket=[];
+  st.showSum=L===1||L===3;
+  st.newTrip=()=>{
+    const s=Math.min(st.waiting.length,rnd(2,3));
+    const grp=shuffle(st.waiting).slice(0,s);
+    st.target=sum(grp.map(c=>c.n));
+    st.count=L>=3?s:null;
+    st.expr=L>=3?exprFor(st.target,L):null;
+    st.basket=[];
+  };
+  st.newTrip();
+  st.say=L>=3?'Räkna ut talet på skylten. Lasta sedan exakt så mycket vikt, med rätt antal passagerare.':'Varje numling väger lika mycket som talet på magen. Tryck på numlingar för att lasta korgen med exakt rätt vikt.';
+  const inBasket=c=>st.basket.includes(c);
+  st.html=()=>{
+    const tot=sum(st.basket.map(c=>c.n));
+    const sign=st.expr?`<small>Behöver exakt</small><b class="expr">${st.expr}</b><small>med ${pl(st.count,'passagerare','passagerare')}</small>`:`<small>Behöver exakt</small><b>${st.target}</b>`;
+    return `<div class="canyon">
+      <div class="cliff"><div class="tray-label">Väntar</div><div class="tray" data-drop="tray">${st.waiting.filter(c=>!inBasket(c)).map(c=>crHTML(c,{dr:1,cls:st.fx.shake===c.id?'shake':''})).join('')||'<span class="hint">Alla sitter i korgen.</span>'}</div></div>
+      <div class="balloon ${st.flying?'flying':''}">
+        <div class="envelope">${BALLOON_SVG}<div class="sign">${sign}</div></div>
+        <div class="basket" data-drop="basket" tabindex="0" aria-label="Korgen">${st.basket.map(c=>crHTML(c,{dr:1})).join('')}</div>
+        ${st.showSum?`<div class="sum" aria-live="polite">${st.basket.length?`${st.basket.map(c=>c.n).join(' + ')} = ${tot}`:'Korgen är tom'}</div>`:''}
+      </div>
+      <div class="cliff"><div class="tray-label">Över ravinen</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+    </div>
+    <div class="actions"><button class="btn go big" data-act="lift" ${!st.basket.length||st.flying||st.done?'disabled':''}>Lyft!</button>${st.basket.length?'<button class="btn" data-act="empty">Töm korgen</button>':''}</div>`;
+  };
+  st.onTap=id=>{
+    if(st.done||st.flying)return;
+    const c=st.waiting.find(x=>x.id===id);if(!c)return;
+    if(inBasket(c))st.basket=st.basket.filter(x=>x!==c);
+    else if(st.basket.length<6)st.basket.push(c);
+    else{st.say='Korgen är full. Högst sex passagerare!';st.mood='bad';}
+    SFX.pop();st.render();
+  };
+  st.onDrop=(id,zone)=>{
+    if(st.done||st.flying)return;
+    const c=st.waiting.find(x=>x.id===id);if(!c)return;
+    if(zone==='basket'&&!inBasket(c)&&st.basket.length<6)st.basket.push(c);
+    else if(zone==='tray'&&inBasket(c))st.basket=st.basket.filter(x=>x!==c);
+    SFX.pop();st.render();
+  };
+  st.acts.empty=()=>{st.basket=[];st.render();};
+  st.acts.lift=()=>{
+    if(!st.basket.length||st.flying||st.done)return;
+    const tot=sum(st.basket.map(c=>c.n));
+    if(st.count&&st.basket.length!==st.count){st.strike(`Skylten säger exakt ${pl(st.count,'passagerare','passagerare')}, men korgen har ${st.basket.length}.`);st.render();return;}
+    if(tot!==st.target){
+      st.strike(tot>st.target?'För tungt! Ballongen lyfter inte från marken.':'För lätt! Ballongen vinglar och sjunker ner igen.');
+      st.render();return;
+    }
+    const riders=st.basket.slice();
+    st.flying=true;SFX.ok();st.say=`${pick(PRAISE)} ${riders.map(c=>c.n).join(' + ')} = ${st.target}. Upp, upp och iväg!`;st.mood='good';st.render();
+    setTimeout(()=>{
+      st.flying=false;
+      st.waiting=st.waiting.filter(c=>!riders.includes(c));st.across.push(...riders);st.fx={pop:riders.map(c=>c.id)};
+      if(!st.waiting.length){st.say='Alla flög över ravinen!';st.win();}
+      else st.newTrip();
+      st.render();
+    },reduceMotion()?200:1200);
+  };
+  return st;
+}
+
+// =========================================================
+//  Mönsterbäcken — talföljder
+// =========================================================
+function makeStones(troupe,L){
+  const st=baseStation('stones',troupe,L);
+  st.setHearts(L>=3?5:4);
+  st.per=Math.max(2,Math.ceil(troupe.length/4));
+  st.next=()=>{const s=makeSeq(st.L);st.seq=s.seq;st.why=s.why;st.blanks=s.blanks;st.bi=0;st.input='';st.hint=false;st.solved=false;};
+  st.next();
+  st.say=`Hitta ${st.blanks.length>1?'de saknade talen':'det saknade talet'} på stegstenarna. Skriv svaret och tryck på ✓.`;
+  st.html=()=>{
+    const n=st.seq.length;
+    const known=i=>!st.blanks.includes(i)||st.blanks.indexOf(i)<st.bi||st.solved;
+    let cells='';
+    st.seq.forEach((v,i)=>{
+      const blank=!known(i),active=blank&&i===st.blanks[st.bi];
+      const filledBlank=st.blanks.includes(i)&&known(i);
+      const txt=blank?(active?(st.input||'?'):'?'):v;
+      const d=String(txt).length>=4?'d4':String(txt).length===3?'d3':'';
+      cells+=`<div class="stone ${blank?'blank':''} ${active?'active':''} ${filledBlank?'done':''} ${active&&st.fx.wob?'wobble':''} ${d}" style="grid-column:${i*2+1};grid-row:1" ${active?'aria-live="polite"':''} aria-label="${blank?'saknat tal':v}">${txt}</div>`;
+      if(i<n-1&&st.hint){
+        const ok=known(i)&&known(i+1);const df=st.seq[i+1]-v;
+        cells+=`<div class="diff" style="grid-column:${i*2+2};grid-row:1">${ok?(df>=0?'+'+df:'−'+(-df)):'?'}</div>`;
+      }
+    });
+    const keys=[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'];
+    return `<div class="creek">
+      <div class="bank"><div class="tray-label">Väntar</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')}</div></div>
+      <div class="water"><div class="stones" style="--k:${n-1}">${cells}</div></div>
+      <div class="bank"><div class="tray-label">Över bäcken</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+    </div>
+    <div class="padrow">
+      ${st.solved?'':`<div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?'Radera':k==='✓'?'Kontrollera svaret':k}" ${st.done?'disabled':''}>${k}</button>`).join('')}</div>`}
+      <div class="side">${st.solved?`<p><b>Mönster:</b> ${st.why}</p>${st.waiting.length?'<button class="btn go big" data-act="next">Nya stenar</button>':''}`:`<button class="btn" data-act="hint" ${st.hint?'disabled':''}>Visa hoppen</button><p class="hint">Varje klar stig bär över ${pl(Math.min(st.per,st.waiting.length),'numling','numlingar')}.</p>`}</div>
+    </div>`;
+  };
+  st.press=k=>{
+    if(st.done||st.solved)return;
+    if(k==='⌫'){st.input=st.input.slice(0,-1);SFX.key();st.render();return;}
+    if(k==='✓'){st.check();return;}
+    if(st.input.length<4){st.input=(st.input==='0'?'':st.input)+k;SFX.key();st.render();}
+  };
+  st.check=()=>{
+    if(!st.input)return;
+    const v=+st.input,want=st.seq[st.blanks[st.bi]];
+    if(v===want){
+      st.bi++;st.input='';SFX.ok();
+      if(st.bi>=st.blanks.length){
+        st.solved=true;
+        const movers=st.waiting.slice(0,st.per);
+        st.waiting=st.waiting.slice(movers.length);st.across.push(...movers);st.fx={pop:movers.map(c=>c.id)};
+        st.say=`${pick(PRAISE)} Stenarna ligger stadigt och ${pl(movers.length,'numling','numlingar')} hoppar över.`;st.mood='good';
+        if(!st.waiting.length){st.say='Alla tog sig över Mönsterbäcken!';st.win();}
+      }else{st.say='Rätt! Nu nästa saknade sten.';st.mood='good';}
+    }else{
+      st.input='';st.fx={wob:1};
+      st.strike(`${v} passar inte. ${st.hint?'Titta på hoppen mellan stenarna.':'Prova ”Visa hoppen” om du vill ha hjälp.'}`);
+    }
+    st.render();
+  };
+  st.onKey=k=>{if(/^[0-9]$/.test(k)){st.press(+k);return true;}if(k==='Backspace'){st.press('⌫');return true;}if(k==='Enter'){st.press('✓');return true;}return false;};
+  st.acts.key=b=>{const v=b.dataset.v;st.press(/^[0-9]$/.test(v)?+v:v);};
+  st.acts.hint=()=>{st.hint=true;st.render();};
+  st.acts.next=()=>{st.next();st.say='Nya stenar! Vad kommer sedan?';st.mood='';st.render();};
+  return st;
+}
+
+// =========================================================
+//  Näckrosdammen — Venndiagram
+// =========================================================
+const VC=[
+  {name:'Grön',def:'den gröna cirkeln',stroke:'#2a8f52',fill:'rgba(70,185,115,.32)'},
+  {name:'Orange',def:'den orange cirkeln',stroke:'#d9721a',fill:'rgba(255,155,55,.32)'},
+  {name:'Rosa',def:'den rosa cirkeln',stroke:'#c93d7c',fill:'rgba(235,100,160,.28)'}
+];
+function makeVenn(troupe,L){
+  const st=baseStation('venn',troupe,L);
+  st.k=L>=4?3:2;st.rules=pickVennRules(L,troupe);
+  // Nivå 1: alla regler syns. Nivå 2: alla hemliga. Nivå 3–4: den svåraste regeln syns, resten är hemliga.
+  if(L===1)st.visible=st.rules.map(()=>true);
+  else if(L===2)st.visible=st.rules.map(()=>false);
+  else{const top=st.rules.reduce((b,r,i)=>r.lvl>st.rules[b].lvl?i:b,0);st.visible=st.rules.map((r,i)=>i===top);}
+  st.setHearts(L>=4?7:L===3?6:5);st.placed=[];
+  st.circles=st.k===2?[{x:240,y:205,r:135},{x:360,y:205,r:135}]:[{x:245,y:150,r:116},{x:355,y:150,r:116},{x:300,y:250,r:116}];
+  const nv=st.visible.filter(Boolean).length;
+  st.say=nv===st.k?'Läs cirklarnas regler och släpp sedan varje numling på rätt plats.':nv?'En regel syns, resten är hemliga. Släpp numlingar i dammen och lista ut var de hör hemma!':'Cirklarna har hemliga regler. Släpp numlingar i dammen och lista ut var de hör hemma!';
+  st.tapSay='Tryck nu på den plats i dammen där den hör hemma.';
+  const pondSVG=()=>`<svg viewBox="0 0 600 400" aria-hidden="true"><defs><linearGradient id="pw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63b9db"/><stop offset="1" stop-color="#3f93bd"/></linearGradient></defs><rect width="600" height="400" fill="url(#pw)"/><g fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="3" stroke-linecap="round"><path d="M30 60q20-8 40 0M520 340q20-8 40 0M40 330q16-6 32 0M530 70q16-6 32 0"/></g><g fill="#5fb36f" stroke="#17335b" stroke-width="2.5"><path d="M38 360a22 16 0 1 0 30 6l-14-6z"/><path d="M560 40a20 14 0 1 0 -26 -8l12 6z"/></g>${st.circles.map((c,i)=>`<circle cx="${c.x}" cy="${c.y}" r="${c.r}" fill="${VC[i].fill}" stroke="${VC[i].stroke}" stroke-width="7"/>`).join('')}</svg>`;
+  st.html=()=>`
+    <div class="legend">${st.rules.map((r,i)=>`<div class="lchip" style="--c:${VC[i].stroke}"><i></i><span><b>${VC[i].name} cirkel:</b> ${st.visible[i]||st.done?cap(r.text):'<span class="secret">? ? ?</span>'}</span></div>`).join('')}</div>
+    <div class="pond" data-drop="pond" aria-label="Damm med ${st.k} cirklar">${pondSVG()}${st.placed.map(p=>crHTML(p.c,{style:`left:${(p.x/6).toFixed(2)}%;top:${(p.y/4).toFixed(2)}%`,cls:st.fx.pop===p.c.id?'pop':''})).join('')}</div>
+    <div><div class="tray-label">Väntar på stranden</div><div class="tray" data-drop="tray">${st.waiting.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id,cls:st.fx.shake===c.id?'shake':''})).join('')||'<span class="hint">Alla är i dammen!</span>'}</div></div>`;
+  st.onDrop=(id,zone,x,y)=>{
+    if(st.done)return;
+    const c=st.waiting.find(q=>q.id===id);st.sel=null;
+    if(!c||zone!=='pond'){st.render();return;}
+    const r=document.querySelector('.pond').getBoundingClientRect();
+    const px=Math.min(578,Math.max(22,(x-r.left)/r.width*600)),py=Math.min(378,Math.max(22,(y-r.top)/r.height*400));
+    const regionAt=(qx,qy)=>st.circles.map(ci=>(qx-ci.x)**2+(qy-ci.y)**2<=ci.r**2);
+    const inside=regionAt(px,py);
+    const truth=st.rules.map(rl=>rl.test(c));
+    if(inside.every((v,i)=>v===truth[i])){
+      // flytta lite om någon annan numling redan står på samma plats
+      const key=inside.join(),free=(qx,qy)=>st.placed.every(p=>(p.x-qx)**2+(p.y-qy)**2>=36*36);
+      let spot=[px,py];
+      if(!free(px,py)){
+        search:for(let rad=24;rad<=120;rad+=12)for(let a=0;a<16;a++){
+          const qx=px+rad*Math.cos(a*Math.PI/8),qy=py+rad*Math.sin(a*Math.PI/8);
+          if(qx<22||qx>578||qy<22||qy>378)continue;
+          if(regionAt(qx,qy).join()===key&&free(qx,qy)){spot=[qx,qy];break search;}
+        }
+      }
+      st.waiting=st.waiting.filter(q=>q!==c);st.placed.push({c,x:spot[0],y:spot[1]});st.across.push(c);
+      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} Nummer ${c.n} hittade sitt näckrosblad.`;st.mood='good';
+      if(!st.waiting.length){st.say='Alla är sorterade! Här är de hemliga reglerna.';st.win();}
+    }else{
+      st.fx={shake:c.id};
+      const i=inside.findIndex((v,j)=>v!==truth[j]);
+      if(st.visible[i])st.strike(`Kolla ${VC[i].def}: nummer ${c.n} ${truth[i]?'passar':'passar inte'} ”${st.rules[i].short}”.`);
+      else st.strike('Plask! Det är inte rätt plats. Prova någon annanstans.');
+    }
+    st.render();
+  };
+  st.reveal=()=>st.rules.map((r,i)=>`<p><b>${VC[i].name} cirkel:</b> ${cap(r.text)}.</p>`).join('')+(st.rules.map(tipFor).filter(Boolean).slice(0,1).map(t=>`<p>${t}</p>`).join(''));
+  return st;
+}
+
+// =========================================================
+//  Kompisflotten — grannar följer en regel
+// =========================================================
+function makeRaft(troupe,L){
+  const st=baseStation('raft',troupe,L);
+  st.setHearts(L>=3?5:4);st.ring=L>=4;st.seatsMax=4;
+  const n0=troupe.length,k0=Math.min(st.seatsMax,n0);
+  const cands=wshuffle(PAIR_RULES.filter(r=>r.lvl<=L),L>=3?(r=>r.lvl>=L-1?2:1):(r=>r.lvl===L?4:1));
+  st.rule=cands.find(r=>findChain(troupe,k0,r.test,st.ring&&k0>=4))||cands.find(r=>findChain(troupe,Math.min(3,n0),r.test,false))||PAIR_RULES[0];
+  st.newTrip=()=>{
+    const rem=st.waiting;let k=Math.min(st.seatsMax,rem.length);
+    while(k>1&&!findChain(rem,k,st.rule.test,st.ring&&k>=4))k--;
+    st.k=k;st.isRing=st.ring&&k>=4;st.seats=new Array(k).fill(null);st.res=null;
+  };
+  st.newTrip();
+  st.say=`Fyll alla ${st.k} platser så att varje grannpar följer regeln. Tryck sedan på Segla!`;
+  st.tapSay='Tryck nu på en plats på flotten.';
+  const seatOf=id=>st.seats.indexOf(id);
+  const pairs=()=>{const p=A(st.k-1,i=>[i,i+1]);if(st.isRing)p.push([st.k-1,0]);return p;};
+  const byId=id=>st.waiting.find(c=>c.id===id)||st.across.find(c=>c.id===id);
+  const linkState=(i,j,idx)=>{
+    if(st.res)return st.res[idx];
+    if(st.L===1&&st.seats[i]!=null&&st.seats[j]!=null)return st.rule.test(byId(st.seats[i]),byId(st.seats[j]))?'ok':'bad';
+    return '';
+  };
+  st.html=()=>{
+    const ps=pairs();
+    let raft='';
+    const seatHTML=i=>{const id=st.seats[i];const c=id!=null?byId(id):null;return `<div class="seat" data-drop="seat-${i}" tabindex="0" aria-label="Plats ${i+1}${c?': '+describe(c):', tom'}"${st.isRing?` style="left:${(50+35*Math.cos(-Math.PI/2+2*Math.PI*i/st.k)).toFixed(2)}%;top:${(50+35*Math.sin(-Math.PI/2+2*Math.PI*i/st.k)).toFixed(2)}%"`:''}>${c?crHTML(c,{dr:1,sel:st.sel===c.id}):''}</div>`;};
+    const linkHTML=(idx,style='')=>{const s=linkState(ps[idx][0],ps[idx][1],idx);return `<span class="link ${s}"${style} aria-hidden="true">${s==='ok'?'✓':s==='bad'?'✗':''}</span>`;};
+    if(st.isRing){
+      for(let i=0;i<st.k;i++)raft+=seatHTML(i);
+      ps.forEach((p,idx)=>{const a=-Math.PI/2+2*Math.PI*(p[0]+.5)/st.k;raft+=linkHTML(idx,` style="left:${(50+30*Math.cos(a)).toFixed(2)}%;top:${(50+30*Math.sin(a)).toFixed(2)}%"`);});
+    }else{
+      for(let i=0;i<st.k;i++){raft+=seatHTML(i);if(i<st.k-1)raft+=linkHTML(i);}
+    }
+    const shore=st.waiting.filter(c=>seatOf(c.id)<0);
+    return `<div class="rulesign panel"><b>Flottens regel:</b> ${st.rule.text}${st.isRing?' <b>Flotten är rund: första och sista platsen är också grannar.</b>':''}</div>
+    <div class="sidewrap">
+      <div class="sidemain">
+        <div class="lake ${st.sailing?'sailing':''}"><div class="raft ${st.isRing?'ring':''}">${raft}</div></div>
+        <div class="actions"><button class="btn go big" data-act="sail" ${st.sailing||st.done?'disabled':''}>Segla!</button>${st.seats.some(x=>x!=null)?'<button class="btn" data-act="clear">Töm flotten</button>':''}</div>
+      </div>
+      <div class="sidecol">
+        <div><div class="tray-label">På stranden</div><div class="tray" data-drop="shore">${shore.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id})).join('')||'<span class="hint">Alla sitter på flotten.</span>'}</div></div>
+        <div><div class="tray-label">Över sjön</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+      </div>
+    </div>`;
+  };
+  st.onTap=id=>{
+    if(st.done||st.sailing)return;
+    if(st.sel!=null&&st.sel!==id&&seatOf(id)>=0){st.onDrop(st.sel,'seat-'+seatOf(id));return;}
+    st.sel=st.sel===id?null:id;SFX.pop();
+    if(st.sel!=null){st.say=seatOf(id)>=0?'Tryck på en annan plats för att flytta den, eller på stranden för att ta av den.':st.tapSay;st.mood='';}
+    st.render();
+  };
+  st.onDrop=(id,zone)=>{
+    if(st.done||st.sailing)return;
+    st.sel=null;const from=seatOf(id);
+    if(zone.startsWith('seat-')){
+      const to=+zone.slice(5);
+      if(from===to){st.render();return;}
+      const other=st.seats[to];st.seats[to]=id;
+      if(from>=0)st.seats[from]=other;
+      st.res=null;SFX.pop();
+    }else if(zone==='shore'&&from>=0){st.seats[from]=null;st.res=null;SFX.pop();}
+    const left=st.seats.filter(x=>x==null).length;
+    st.say=left?`Fortsätt! ${pl(left,'plats','platser')} kvar att fylla.`:'Flotten är full. Följer alla grannar regeln? Tryck på Segla!';st.mood='';
+    st.render();
+  };
+  st.acts.clear=()=>{st.seats.fill(null);st.res=null;st.sel=null;st.render();};
+  st.acts.sail=()=>{
+    if(st.sailing||st.done)return;
+    const empty=st.seats.filter(x=>x==null).length;
+    if(empty){st.say=`Fyll alla ${st.k} platser först. ${pl(empty,'plats','platser')} är fortfarande ${empty===1?'tom':'tomma'}.`;st.mood='bad';SFX.bad();st.render();return;}
+    const ps=pairs();
+    st.res=ps.map(([i,j])=>st.rule.test(byId(st.seats[i]),byId(st.seats[j]))?'ok':'bad');
+    const bad=st.res.filter(x=>x==='bad').length;
+    if(bad){st.strike(`${bad===1?'Ett grannpar bryter':bad+' grannpar bryter'} mot regeln. Leta efter de röda markeringarna.`);st.render();return;}
+    const riders=st.seats.map(byId);
+    st.sailing=true;SFX.ok();st.say=`${pick(PRAISE)} Alla grannpar följer regeln. Iväg de seglar!`;st.mood='good';st.render();
+    setTimeout(()=>{
+      st.sailing=false;
+      st.waiting=st.waiting.filter(c=>!riders.includes(c));st.across.push(...riders);st.fx={pop:riders.map(c=>c.id)};
+      if(!st.waiting.length){st.say='Alla tog sig över sjön!';st.win();}
+      else{st.newTrip();st.say=st.k===1?'Ingen av de som är kvar kan sitta bredvid varandra enligt regeln, så en numling åker ensam. Sätt en numling på flotten!':`Flotten är tillbaka med ${pl(st.k,'plats','platser')}. Samma regel!`;st.mood='';}
+      st.render();
+    },reduceMotion()?200:1200);
+  };
+  return st;
+}
+
+// =========================================================
+//  Ugglans dörr — knäck koden
+// =========================================================
+function owlSVG(mood){
+  const eyes=mood==='happy'
+    ?`<path d="M50 80q14-14 28 0M92 80q14-14 28 0" fill="none" stroke="#17335b" stroke-width="6" stroke-linecap="round"/>`
+    :`<circle cx="64" cy="80" r="20" fill="#fff" stroke="#17335b" stroke-width="4"/><circle cx="106" cy="80" r="20" fill="#fff" stroke="#17335b" stroke-width="4"/><circle cx="66" cy="83" r="9" fill="#17335b"/><circle cx="108" cy="83" r="9" fill="#17335b"/><circle cx="69" cy="79" r="3" fill="#fff"/><circle cx="111" cy="79" r="3" fill="#fff"/>${mood==='sleepy'?'<path d="M44 80a20 20 0 0 1 40 0zM86 80a20 20 0 0 1 40 0z" fill="#7a5236" stroke="#17335b" stroke-width="4" stroke-linejoin="round"/>':''}`;
+  return `<svg viewBox="0 0 170 190" aria-hidden="true"><path d="M10 176h150" stroke="#6b4a2c" stroke-width="12" stroke-linecap="round"/><path d="M85 34c-40 0-62 30-62 74 0 40 26 64 62 64s62-24 62-64c0-44-22-74-62-74z" fill="#9a6b47" stroke="#17335b" stroke-width="5"/><path d="M30 52l8-34 22 24M140 52l-8-34-22 24" fill="#9a6b47" stroke="#17335b" stroke-width="5" stroke-linejoin="round"/><path d="M85 104c-26 0-38 20-38 38 0 18 16 28 38 28s38-10 38-28c0-18-12-38-38-38z" fill="#e2c49b" stroke="#17335b" stroke-width="4"/><g fill="none" stroke="#a37d55" stroke-width="3" stroke-linecap="round"><path d="M70 124l6 5 6-5M88 124l6 5 6-5M78 140l6 5 6-5M64 142l4 4M106 142l-4 4"/></g>${eyes}<path d="M78 94l7 12 7-12z" fill="#ffc63f" stroke="#17335b" stroke-width="3" stroke-linejoin="round"/><g fill="#f6a234" stroke="#17335b" stroke-width="3"><path d="M64 168l-6 10h14zM106 168l-6 10h14z"/></g></svg>`;
+}
+function lockLegend(st){
+  return st.mode==='color'
+    ?`<div class="legend-s"><span><i class="sq" style="background:#5cc27f"></i> Grön: rätt siffra på rätt plats.</span><span><i class="sq" style="background:#ffc63f"></i> Gul: siffran finns i koden, men på en annan plats.</span><span><i class="sq" style="background:#c9cdd4"></i> Grå: siffran finns inte i koden${st.rep?' (eller inte så många gånger)':''}.</span></div>`
+    :`<div class="legend-s"><span><i class="peg full"></i> En siffra är rätt OCH på rätt plats.</span><span><i class="peg hollow"></i> En siffra finns i koden men på fel plats.</span><span>Ugglan säger inte vilka siffror prickarna gäller!</span></div>`;
+}
+function makeLock(troupe,L){
+  const st=baseStation('lock',troupe,L);
+  const cfg=[null,
+    {slots:3,D:4,rep:false,mode:'color',free:6},
+    {slots:3,D:6,rep:true,mode:'color',free:7},
+    {slots:4,D:6,rep:false,mode:'color',free:8},
+    {slots:4,D:6,rep:false,mode:'count',free:10}][L];
+  Object.assign(st,cfg);
+  st.code=st.rep?A(st.slots,()=>rnd(1,st.D)):shuffle(A(st.D,i=>i+1)).slice(0,st.slots);
+  st.guesses=[];st.cur=[];
+  st.say=`Gissa ugglans kod med ${st.slots} siffror. Varje siffra är från 1 till ${st.D}.${st.rep?' En siffra kan finnas flera gånger.':' Ingen siffra används två gånger.'}`;
+  const freeLeft=()=>Math.max(0,st.free-st.guesses.length);
+  st.heartsHTML=()=>`<div class="tries" aria-live="polite">Gratisgissningar kvar: ${freeLeft()}</div>`;
+  const feedback=g=>{
+    if(st.mode==='color'){
+      const res=A(g.length,()=>'no'),left={};
+      g.forEach((d,i)=>{if(d===st.code[i])res[i]='yes';else left[st.code[i]]=(left[st.code[i]]||0)+1;});
+      g.forEach((d,i)=>{if(res[i]!=='yes'&&left[d]>0){res[i]='near';left[d]--;}});
+      return res;
+    }
+    let exact=0;g.forEach((d,i)=>{if(d===st.code[i])exact++;});
+    let common=0;for(let d=1;d<=st.D;d++)common+=Math.min(g.filter(x=>x===d).length,st.code.filter(x=>x===d).length);
+    return{exact,near:common-exact};
+  };
+  st.html=()=>{
+    const solved=st.done&&st.guesses.length&&st.guesses[st.guesses.length-1].win;
+    const mood=solved?'happy':st.guesses.length>=st.free?'sleepy':'';
+    const owlLine=solved?'Ho-hurra! Du knäckte min kod!':st.guesses.length===0?'Hoho! Kan du knäcka min kod?':st.guesses.length>=st.free?'Gääsp … jag börjar bli sömnig. Skynda dig!':'Hmm, ho-ho. Fortsätt tänka!';
+    const rows=st.guesses.map((g,gi)=>`<div class="grow"><span class="gnum">${gi+1}.</span>${g.g.map((d,i)=>`<span class="cell ${st.mode==='color'?g.fb[i]:''}">${d}</span>`).join('')}${st.mode==='count'?`<span class="pegs" role="img" aria-label="${g.fb.exact} rätt plats, ${g.fb.near} fel plats">${A(g.fb.exact,()=>'<i class="peg full"></i>').join('')}${A(g.fb.near,()=>'<i class="peg hollow"></i>').join('')}${g.fb.exact+g.fb.near===0?'<span class="hint">inga</span>':''}</span>`:''}</div>`).join('');
+    const cur=A(st.slots,i=>`<span class="cell cur ${st.cur[i]!=null?'filled':''}">${st.cur[i]??''}</span>`).join('');
+    return `<div class="lockscene">
+      <div class="owlbox">${owlSVG(mood)}<div class="owl-say">${owlLine}</div></div>
+      <div class="lockpanel panel">
+        ${lockLegend(st)}
+        <div class="history">${rows||'<span class="hint">Dina gissningar visas här.</span>'}</div>
+        ${st.done?'':`<div class="grow" aria-label="Din gissning">${cur}</div>
+        <div class="numpad wide" role="group" aria-label="Siffror">${A(st.D,i=>`<button class="key" data-act="dig" data-v="${i+1}">${i+1}</button>`).join('')}<button class="key" data-act="del" aria-label="Radera">⌫</button><button class="key ok" data-act="try" ${st.cur.length<st.slots?'disabled':''} aria-label="Testa koden">Testa</button></div>`}
+      </div>
+    </div>
+    <div><div class="tray-label">Väntar vid dörren</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')||'<span class="hint">Ingen väntar längre.</span>'}</div></div>`;
+  };
+  st.dig=d=>{
+    if(st.done||st.cur.length>=st.slots)return;
+    if(!st.rep&&st.cur.includes(d)){st.say='Ingen siffra används två gånger i den här koden. Välj en annan.';st.mood='bad';st.render();return;}
+    st.cur.push(d);SFX.key();st.render();
+  };
+  st.del=()=>{if(st.done)return;st.cur.pop();SFX.key();st.render();};
+  st.tryIt=()=>{
+    if(st.done||st.cur.length<st.slots)return;
+    const g=st.cur.slice(),fb=feedback(g);st.cur=[];
+    const win=g.every((d,i)=>d===st.code[i]);
+    st.guesses.push({g,fb,win});
+    if(win){
+      st.across.push(...st.waiting);st.waiting=[];SFX.win();
+      st.say=`${pick(PRAISE)} Dörren knarrar upp efter ${pl(st.guesses.length,'gissning','gissningar')}. Alla går igenom!`;st.mood='good';
+      st.win();
+    }else if(st.guesses.length>st.free){
+      const c=st.waiting.pop();st.back.push(c);SFX.bad();
+      if(!st.waiting.length){st.say='Ugglan somnade, och den sista numlingen gick tillbaka till lägret.';st.mood='bad';st.done=true;setTimeout(()=>finishStation(st),1300);}
+      else{st.say=`Ugglan gäspar, och en numling går tillbaka till lägret för att vila. ${pl(st.waiting.length,'numling','numlingar')} väntar fortfarande.`;st.mood='bad';}
+    }else{
+      SFX.pop();
+      st.say=st.guesses.length===st.free?'Det var din sista gratisgissning. Tänk noga innan nästa!':pick(['Använd ledtrådarna: vilka siffror kan du stryka?','Varje ledtråd säger något. Vad vet du säkert?','Prova att bara byta en eller två siffror för att testa en idé.']);st.mood='';
+    }
+    st.render();
+  };
+  st.acts.dig=b=>st.dig(+b.dataset.v);
+  st.acts.del=()=>st.del();
+  st.acts.try=()=>st.tryIt();
+  st.onKey=k=>{if(/^[1-9]$/.test(k)&&+k<=st.D){st.dig(+k);return true;}if(k==='Backspace'){st.del();return true;}if(k==='Enter'){st.tryIt();return true;}return false;};
+  st.reveal=()=>`<p><b>Koden var:</b> ${st.code.join(' ')}</p><p>Du använde ${pl(st.guesses.length,'gissning','gissningar')}.</p>`;
+  return st;
+}
+
+// =========================================================
+//  Talmaskinen — hitta regeln
+// =========================================================
+const MACHINE_SVG=`<svg viewBox="0 0 300 190" aria-hidden="true"><path d="M14 18h64l-16 32H30z" fill="#ffc63f" stroke="#17335b" stroke-width="4" stroke-linejoin="round"/><rect x="36" y="48" width="20" height="26" fill="#c9d4e3" stroke="#17335b" stroke-width="4"/><rect x="196" y="26" width="24" height="40" fill="#c9d4e3" stroke="#17335b" stroke-width="4"/><g fill="#fff" opacity=".8"><circle cx="214" cy="16" r="8"/><circle cx="226" cy="6" r="5"/></g><rect x="22" y="64" width="246" height="112" rx="20" fill="#9fb3cf" stroke="#17335b" stroke-width="5"/><circle cx="92" cy="120" r="30" fill="none" stroke="#ffc63f" stroke-width="13" stroke-dasharray="10 7"/><circle cx="92" cy="120" r="21" fill="#ffc63f" stroke="#17335b" stroke-width="4"/><circle cx="92" cy="120" r="7" fill="#17335b"/><circle cx="148" cy="140" r="19" fill="none" stroke="#38d9a9" stroke-width="10" stroke-dasharray="8 6"/><circle cx="148" cy="140" r="12" fill="#38d9a9" stroke="#17335b" stroke-width="4"/><circle cx="148" cy="140" r="4" fill="#17335b"/><circle cx="236" cy="92" r="7" fill="#38d9a9" stroke="#17335b" stroke-width="3"/><circle cx="236" cy="114" r="7" fill="#ff6b6b" stroke="#17335b" stroke-width="3"/><rect x="196" y="132" width="56" height="12" rx="6" fill="#17335b"/><path d="M268 136h22v40h-14" fill="none" stroke="#17335b" stroke-width="5" stroke-linejoin="round"/></svg>`;
+function makeMachine(troupe,L){
+  const st=baseStation('machine',troupe,L);
+  st.setHearts(L>=3?6:5);
+  const nums=troupe.map(c=>c.n);st.mn=Math.min(...nums);st.mx=Math.max(...nums);
+  st.rule=machineRule(L,nums);
+  st.table=[];st.input='';st.typed=0;
+  const ex=Math.min(L<=2?2:3,Math.max(0,troupe.length-1));
+  for(let i=0;i<ex;i++){const c=st.waiting.shift();st.table.push({c,in:c.n,out:st.rule.f(c.n)});st.across.push(c);}
+  st.say=ex?`Maskinen visar hur den fungerar med de ${ex} första numlingarna. Vad kommer ut för nästa?`:'Vad kommer ut ur maskinen?';
+  st.html=()=>{
+    const cur=st.waiting[0];
+    const keys=[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'];
+    return `<div class="factory">
+      <div><div class="tray-label">Väntar</div><div class="tray">${st.waiting.map((c,i)=>crHTML(c,{sm:1,cls:i===0?'bob':''})).join('')||'<span class="hint">Alla har gått igenom.</span>'}</div></div>
+      <div class="mach">${MACHINE_SVG}
+        ${cur?`<div class="mdisp ${st.fx.wob?'shake':''}" aria-live="polite"><span>${cur.n}</span><span class="arrow">→</span><span class="out">${st.input||'?'}</span></div>`:''}
+      </div>
+      <div><div class="tray-label">Har gått igenom</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop===c.id?'pop':''})).join('')}</div></div>
+    </div>
+    <div class="padrow">
+      ${cur&&!st.done?`<div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?'Radera':k==='✓'?'Kontrollera svaret':k}">${k}</button>`).join('')}</div>`:''}
+      <div class="side">
+        <div class="ftable" role="table" aria-label="Det maskinen har gjort"><span class="h">In</span><span></span><span class="h">Ut</span>${st.table.map(r=>`<span>${r.in}</span><span class="ar">→</span><span>${r.out}</span>`).join('')}</div>
+        ${cur&&!st.done?`<button class="btn go" data-act="guess" ${st.typed<1||st.waiting.length<2?'disabled':''}>Jag vet regeln!</button>${st.typed<1?'<p class="hint">Räkna rätt på en numling först, sedan kan du gissa regeln.</p>':''}`:''}
+      </div>
+    </div>`;
+  };
+  st.press=k=>{
+    if(st.done||!st.waiting.length)return;
+    if(k==='⌫'){st.input=st.input.slice(0,-1);SFX.key();st.render();return;}
+    if(k==='✓'){st.check();return;}
+    if(st.input.length<4){st.input=(st.input==='0'?'':st.input)+k;SFX.key();st.render();}
+  };
+  st.check=()=>{
+    if(!st.input)return;
+    const c=st.waiting[0],v=+st.input,want=st.rule.f(c.n);
+    st.input='';
+    if(v===want){
+      st.waiting.shift();st.table.push({c,in:c.n,out:want});st.across.push(c);st.typed++;
+      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} ${c.n} blir ${want}.`;st.mood='good';
+      if(!st.waiting.length){st.say='Alla har gått genom Talmaskinen!';st.win();}
+    }else{
+      st.fx={wob:1};
+      st.strike(`${v} stämmer inte. Titta i tabellen: vad händer med talen i maskinen?`);
+    }
+    st.render();
+  };
+  st.acts.key=b=>{const v=b.dataset.v;st.press(/^[0-9]$/.test(v)?+v:v);};
+  st.acts.guess=()=>{
+    const opts=machineOptions(st.rule,st.table.map(r=>r.in),st.L,st.mn,st.mx);
+    const h={};opts.forEach((r,i)=>h['o'+i]=()=>{
+      if(st.done)return;
+      if(r===st.rule){
+        st.waiting.forEach(c=>{st.table.push({c,in:c.n,out:st.rule.f(c.n)});st.across.push(c);});
+        st.waiting=[];st.cracked=true;SFX.ok();st.say='Du knäckte maskinen! Alla som var kvar går igenom.';st.mood='good';st.render();st.win();
+      }else{st.strike('Inte den regeln. Kolla den mot talen i tabellen.');st.render();}
+    });
+    modal(`<h3>Vad gör Talmaskinen?</h3><p>Kolla varje rad i tabellen. Bara en regel passar alla.</p><div class="opts">${opts.map((r,i)=>`<button class="btn" data-m="o${i}">${cap(r.txt)}</button>`).join('')}</div><button class="btn sm" data-m="close">Inte än</button>`,h);
+  };
+  st.onKey=k=>{if(/^[0-9]$/.test(k)){st.press(+k);return true;}if(k==='Backspace'){st.press('⌫');return true;}if(k==='Enter'){st.press('✓');return true;}return false;};
+  st.reveal=()=>`<p><b>Maskinens regel:</b> ${cap(st.rule.txt)}</p><p>${st.rule.expl}</p>${st.cracked?'<p><b>Du listade ut regeln. Snyggt!</b></p>':''}`;
+  return st;
+}
+
+// =========================================================
+//  Trädgårdslandet — rader och kolumner med rätt summa
+// =========================================================
+function gardenSpec(L){return L===1?{r:2,c:2,stones:0,diag:false}:L===2?{r:2,c:3,stones:0,diag:false}:L===3?{r:3,c:3,stones:3,diag:false}:{r:3,c:3,stones:2,diag:true};}
+function makeGarden(troupe,L){
+  const st=baseStation('garden',troupe,L);
+  st.setHearts(L>=3?5:4);
+  st.newTrip=()=>{
+    const sp=gardenSpec(st.L),cells=sp.r*sp.c;
+    const use=Math.min(cells-sp.stones,st.waiting.length);
+    const pos=shuffle(A(cells,i=>i)),rocks=new Set(pos.slice(0,cells-use));
+    const chosen=shuffle(st.waiting).slice(0,use);
+    let j=0;
+    st.cells=A(cells,i=>rocks.has(i)?{rock:rnd(1,9)}:{id:null});
+    const sol=A(cells,i=>rocks.has(i)?st.cells[i].rock:chosen[j++].n);
+    st.spec=sp;st.res=null;
+    st.rowT=A(sp.r,r=>sum(A(sp.c,c=>sol[r*sp.c+c])));
+    st.colT=A(sp.c,c=>sum(A(sp.r,r=>sol[r*sp.c+c])));
+    st.diagT=sp.diag?sum(A(sp.r,i=>sol[i*sp.c+i])):null;
+  };
+  st.newTrip();
+  st.say='Sätt numlingarna i landet så att varje rad och kolumn får rätt summa. Talen på stenarna räknas också.';
+  st.tapSay='Tryck nu på en ruta i landet.';
+  const byId=id=>st.waiting.find(c=>c.id===id)||st.across.find(c=>c.id===id);
+  const val=i=>{const x=st.cells[i];if(x.rock!=null)return x.rock;return x.id!=null?byId(x.id).n:0;};
+  const filled=i=>st.cells[i].rock!=null||st.cells[i].id!=null;
+  const cellOf=id=>st.cells.findIndex(x=>x.id===id);
+  const lines=()=>{
+    const {r,c}=st.spec,L=[];
+    for(let y=0;y<r;y++)L.push({kind:'row',idx:y,cells:A(c,x=>y*c+x),t:st.rowT[y]});
+    for(let x=0;x<c;x++)L.push({kind:'col',idx:x,cells:A(r,y=>y*c+x),t:st.colT[x]});
+    if(st.spec.diag)L.push({kind:'diag',idx:0,cells:A(r,i=>i*c+i),t:st.diagT});
+    return L;
+  };
+  const sumBox=(ln,label)=>{
+    const now=sum(ln.cells.map(val)),full=ln.cells.every(filled);
+    const cls=st.res?(now===ln.t?'ok':'wrong'):now>ln.t?'over':full&&now===ln.t?'ok':'';
+    return `<div class="tsum ${cls}" aria-label="${label}: ska bli ${ln.t}, nu ${now}"><b>${label?label+' ':''}${ln.t}</b><small>nu ${now}</small></div>`;
+  };
+  st.html=()=>{
+    const {r,c}=st.spec,ls=lines();
+    let g='';
+    for(let y=0;y<r;y++){
+      for(let x=0;x<c;x++){
+        const i=y*c+x,cell=st.cells[i];
+        if(cell.rock!=null)g+=`<div class="rock" aria-label="Sten med talet ${cell.rock}">${cell.rock}</div>`;
+        else{const cr=cell.id!=null?byId(cell.id):null;g+=`<div class="plot ${cr?'':'empty'}" data-drop="plot-${i}" tabindex="0" aria-label="Ruta ${i+1}${cr?': '+describe(cr):', tom'}">${cr?crHTML(cr,{dr:1,sel:st.sel===cr.id}):''}</div>`;}
+      }
+      g+=sumBox(ls.find(l=>l.kind==='row'&&l.idx===y),'');
+    }
+    for(let x=0;x<c;x++)g+=sumBox(ls.find(l=>l.kind==='col'&&l.idx===x),'');
+    g+=st.spec.diag?sumBox(ls.find(l=>l.kind==='diag'),'↘'):'<div class="tsum ghost-cell"></div>';
+    const loose=st.waiting.filter(cr=>cellOf(cr.id)<0);
+    return `<div class="sidewrap"><div class="sidemain">
+      <div class="garden"><div class="plots" style="--c:${c}">${g}</div></div>
+      <div class="actions"><button class="btn go big" data-act="plant" ${st.done?'disabled':''}>Plantera!</button>${st.cells.some(x=>x.id!=null)?'<button class="btn" data-act="clear">Töm landet</button>':''}</div>
+    </div>
+    <div class="sidecol">
+      <div><div class="tray-label">Väntar</div><div class="tray" data-drop="tray">${loose.map(cr=>crHTML(cr,{dr:1,sel:st.sel===cr.id})).join('')||'<span class="hint">Alla står i landet.</span>'}</div></div>
+      <div><div class="tray-label">Klara</div><div class="tray">${st.across.map(cr=>crHTML(cr,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(cr.id)?'pop':''})).join('')}</div></div>
+    </div></div>`;
+  };
+  st.onTap=id=>{
+    if(st.done)return;
+    if(st.sel!=null&&st.sel!==id&&cellOf(id)>=0){st.onDrop(st.sel,'plot-'+cellOf(id));return;}
+    st.sel=st.sel===id?null:id;SFX.pop();
+    if(st.sel!=null){st.say=cellOf(id)>=0?'Tryck på en annan ruta för att flytta den, eller på Väntar för att ta bort den.':st.tapSay;st.mood='';}
+    st.render();
+  };
+  st.onDrop=(id,zone)=>{
+    if(st.done)return;
+    st.sel=null;const from=cellOf(id);
+    if(zone.startsWith('plot-')){
+      const to=+zone.slice(5);if(from===to||st.cells[to].rock!=null){st.render();return;}
+      const other=st.cells[to].id;st.cells[to].id=id;
+      if(from>=0)st.cells[from].id=other;
+      st.res=null;SFX.pop();
+    }else if(zone==='tray'&&from>=0){st.cells[from].id=null;st.res=null;SFX.pop();}
+    const left=st.cells.filter(x=>x.rock==null&&x.id==null).length;
+    st.say=left?`Fortsätt! ${pl(left,'ruta','rutor')} kvar att fylla.`:'Alla rutor är fyllda. Stämmer summorna? Tryck på Plantera!';st.mood='';
+    st.render();
+  };
+  st.acts.clear=()=>{st.cells.forEach(x=>{if(x.rock==null)x.id=null;});st.res=null;st.sel=null;st.render();};
+  st.acts.plant=()=>{
+    if(st.done)return;
+    const empty=st.cells.filter(x=>x.rock==null&&x.id==null).length;
+    if(empty){st.say=`Fyll alla rutor först. ${pl(empty,'ruta','rutor')} är fortfarande ${empty===1?'tom':'tomma'}.`;st.mood='bad';SFX.bad();st.render();return;}
+    const wrong=lines().filter(l=>sum(l.cells.map(val))!==l.t).length;
+    if(wrong){st.res=true;st.strike(`${wrong===1?'En summa':wrong+' summor'} stämmer inte. Kolla de röda rutorna vid kanten.`);st.render();return;}
+    const movers=st.cells.filter(x=>x.id!=null).map(x=>byId(x.id));
+    st.waiting=st.waiting.filter(cr=>!movers.includes(cr));st.across.push(...movers);st.fx={pop:movers.map(cr=>cr.id)};
+    SFX.ok();st.say=`${pick(PRAISE)} Alla summor stämmer och ${pl(movers.length,'numling','numlingar')} växer sig starka.`;st.mood='good';
+    if(!st.waiting.length){st.say='Hela truppen är klar i Trädgårdslandet!';st.win();}
+    else st.newTrip();
+    st.render();
+  };
+  return st;
+}
+
+// =========================================================
+//  Bärbusken — dela lika
+// =========================================================
+function bushSVG(N,hide){
+  const cols=Math.min(10,Math.max(1,N)),rows=Math.ceil(N/10);
+  const gap=cols>5?10:0,sx=170-((cols-1)*26+gap)/2,sy=118-(rows-1)*13;
+  let berries='';
+  if(!hide)for(let i=0;i<N;i++){const x=sx+(i%10)*26+(i%10>=5?gap:0),y=sy+Math.floor(i/10)*26;berries+=`<circle cx="${x}" cy="${y}" r="10" fill="#c93a3a" stroke="#17335b" stroke-width="2.2"/><circle cx="${x-3}" cy="${y-3.5}" r="2.6" fill="#fff" opacity=".7"/>`;}
+  return `<svg viewBox="0 0 340 250" aria-hidden="true"><rect x="158" y="196" width="24" height="44" rx="4" fill="#8a5a2b" stroke="#17335b" stroke-width="4"/><g fill="#4e9a73" stroke="#17335b" stroke-width="5"><circle cx="86" cy="128" r="68"/><circle cx="170" cy="92" r="82"/><circle cx="254" cy="128" r="68"/><circle cx="122" cy="168" r="56"/><circle cx="218" cy="168" r="56"/></g><g fill="#4e9a73"><circle cx="86" cy="128" r="64"/><circle cx="170" cy="92" r="78"/><circle cx="254" cy="128" r="64"/><circle cx="122" cy="168" r="52"/><circle cx="218" cy="168" r="52"/><rect x="90" y="100" width="160" height="90"/></g>${berries}${hide?'<text x="170" y="138" text-anchor="middle" font-size="84" font-weight="900" fill="#fff" stroke="#17335b" stroke-width="4" paint-order="stroke" style="font-family:var(--font)">?</text>':''}</svg>`;
+}
+function makeShare(troupe,L){
+  const st=baseStation('share',troupe,L);
+  st.setHearts(L>=3?5:4);
+  st.newTrip=()=>{
+    const w=st.waiting.length,rg={1:[2,3,2,5],2:[2,4,2,6],3:[3,5,3,9],4:[3,6,3,9]}[st.L];
+    const g=Math.min(w,rnd(rg[0],rg[1])),q=rnd(rg[2],rg[3]);
+    let r=0,rev=false;
+    if(st.L>=2&&g>1){r=rnd(0,g-1);if(!r&&Math.random()<.7)r=rnd(1,g-1);}
+    if(st.L>=4&&g>1&&Math.random()<.5){rev=true;if(!r)r=rnd(1,g-1);}
+    st.p={g,q,r,N:g*q+r,rev};
+    st.boxes=rev?['total']:(st.L>=2&&g>1)?['each','left']:['each'];
+    st.vals={};st.active=st.boxes[0];
+    st.group=st.waiting.slice(0,g);
+  };
+  st.newTrip();
+  st.say='Hjälp numlingarna att dela bären lika!';
+  const LAB={each:'Var och en får',left:'Över blir',total:'Bär i busken'};
+  const question=()=>{const {g,q,r,N,rev}=st.p;
+    if(rev)return `${g} numlingar delade lika på bären. Var och en fick ${q}, och ${r} blev över. Hur många bär fanns det i busken?`;
+    if(st.boxes.length===2)return `${N} bär ska delas lika mellan ${g} numlingar. Hur många får var och en, och hur många blir över?`;
+    return `${N} bär ska delas lika mellan ${pl(g,'numling','numlingar')}. Hur många bär får var och en?`;};
+  st.html=()=>{
+    const keys=[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'];
+    const gids=new Set(st.group.map(c=>c.id));
+    return `<div class="bushscene">
+      <div><div class="tray-label">Väntar</div><div class="tray">${st.waiting.filter(c=>!gids.has(c.id)).map(c=>crHTML(c,{sm:1})).join('')||'<span class="hint">Alla är vid busken.</span>'}</div></div>
+      <div class="bush">${bushSVG(st.p.N,st.p.rev)}<div class="group" aria-label="Numlingarna som delar">${st.group.map(c=>crHTML(c,{sm:1,cls:'bob'})).join('')}</div></div>
+      <div><div class="tray-label">Mätta och glada</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+    </div>
+    <div class="padrow">
+      <div class="qcol"><p class="question panel">${question()}</p>
+      <div class="answers">${st.boxes.map(b=>`<button class="ans ${st.active===b?'on':''} ${st.fx.wob?'shake':''}" data-act="box" data-v="${b}" aria-pressed="${st.active===b}"><small>${LAB[b]}</small><b>${st.vals[b]??''}</b></button>`).join('')}</div></div>
+      ${st.done?'':`<div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?'Radera':k==='✓'?'Kontrollera svaret':k}">${k}</button>`).join('')}</div>`}
+    </div>`;
+  };
+  st.press=k=>{
+    if(st.done)return;
+    const b=st.active,cur=st.vals[b]??'';
+    if(k==='⌫'){st.vals[b]=cur.slice(0,-1);if(!st.vals[b])delete st.vals[b];SFX.key();st.render();return;}
+    if(k==='✓'){
+      const missing=st.boxes.find(x=>st.vals[x]==null);
+      if(missing){st.active=missing;st.render();return;}
+      st.check();return;
+    }
+    if(cur.length<3){st.vals[b]=(cur==='0'?'':cur)+k;SFX.key();st.render();}
+  };
+  st.check=()=>{
+    const {g,q,r,N,rev}=st.p;
+    let ok,msg='';
+    if(rev){
+      const x=+st.vals.total;ok=x===N;
+      if(!ok)msg=`Tänk: ${g} numlingar fick ${q} var, det blir ${g} · ${q}. Glöm inte de ${r} som blev över.`;
+    }else{
+      const a=+st.vals.each,b=st.boxes.includes('left')?+st.vals.left:0;
+      ok=a===q&&b===r;
+      if(!ok){
+        if(g*a>N)msg=`För många! ${g} · ${a} = ${g*a}, men busken har bara ${N} bär.`;
+        else if(st.boxes.includes('left')&&b>=g)msg=`Om ${b} blir över kan alla få ett bär till!`;
+        else if(g*a+b!==N)msg=st.boxes.includes('left')?`${g} · ${a} + ${b} = ${g*a+b}, men busken har ${N} bär.`:`${g} · ${a} = ${g*a}. Det finns bär kvar att dela ut!`;
+        else msg='Det stämmer inte. Prova igen!';
+      }
+    }
+    if(ok){
+      const movers=st.group.slice();
+      st.waiting=st.waiting.filter(c=>!movers.includes(c));st.across.push(...movers);st.fx={pop:movers.map(c=>c.id)};
+      SFX.ok();st.say=`${pick(PRAISE)} ${N} delat med ${g} blir ${q}${r?`, och ${r} blir över`:''}. Mums!`;st.mood='good';
+      if(!st.waiting.length){st.say='Alla har ätit sig mätta vid Bärbusken!';st.win();}
+      else st.newTrip();
+    }else{
+      st.vals={};st.active=st.boxes[0];st.fx={wob:1};
+      st.strike(msg);
+    }
+    st.render();
+  };
+  st.acts.key=b=>{const v=b.dataset.v;st.press(/^[0-9]$/.test(v)?+v:v);};
+  st.acts.box=b=>{st.active=b.dataset.v;SFX.pop();st.render();};
+  st.onKey=k=>{if(/^[0-9]$/.test(k)){st.press(+k);return true;}if(k==='Backspace'){st.press('⌫');return true;}if(k==='Enter'){st.press('✓');return true;}return false;};
+  return st;
+}
+
+// =========================================================
+//  Bergsstigen — räkneväg till toppen
+// =========================================================
+const FLAG=`<svg viewBox="0 0 30 30" aria-hidden="true"><path d="M6 28V3" stroke="#17335b" stroke-width="3" stroke-linecap="round"/><path d="M7 4h17l-4 5 4 5H7z" fill="#ff6b6b" stroke="#17335b" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
+const MOUNTAIN_BG=`<svg class="mbg" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true"><path d="M-10 300 L70 120 L120 170 L200 30 L270 140 L320 90 L410 300Z" fill="#a3aebb" stroke="#17335b" stroke-width="2" vector-effect="non-scaling-stroke"/><path d="M200 30 L222 70 L208 64 L196 76 L186 62 L176 72Z" fill="#fff"/><path d="M-10 300 L60 210 L140 250 L230 190 L330 240 L410 200 L410 300Z" fill="#8f9aa8"/></svg>`;
+function makePathStation(troupe,L){
+  const st=baseStation('path',troupe,L);
+  st.setHearts(L>=3?5:4);
+  st.per=Math.max(2,Math.ceil(troupe.length/4));
+  st.next=()=>{
+    const lead=st.waiting[0];
+    const start=st.L===1?Math.min(lead.n,20):lead.n;
+    st.pz=makePath(st.L,start);st.choice=st.pz.rows.map(()=>null);st.solved=false;st.trail=null;
+  };
+  st.next();
+  st.say='Välj en sten på varje rad, nerifrån och upp, så att du når toppen med exakt rätt tal.';
+  const runVals=()=>{const v=[st.pz.start];for(let r=0;r<st.pz.rows.length;r++){const ci=st.choice[r];if(ci==null)break;v.push(st.pz.rows[r][ci].f(v[v.length-1]));}return v;};
+  st.html=()=>{
+    const R=st.pz.rows.length,rv=runVals(),showRun=st.L===1||st.solved;
+    let rows='';
+    for(let r=R-1;r>=0;r--){
+      const v=rv[r+1];
+      rows+=`<div class="prow2"><span class="runv l"></span>${st.pz.rows[r].map((o,i)=>`<button class="opst ${st.choice[r]===i?'on':''}" data-act="op" data-v="${r}-${i}" aria-pressed="${st.choice[r]===i}" ${st.done||st.solved?'disabled':''}>${o.t}</button>`).join('')}<span class="runv">${showRun&&v!=null&&!Number.isNaN(v)?'= '+v:''}</span></div>`;
+    }
+    const lead=st.waiting[0];
+    return `<div class="sidewrap"><div class="sidemain"><div class="mountain">${MOUNTAIN_BG}
+      <div class="peak">${FLAG}<span>Toppen: ${st.pz.target}</span></div>
+      ${rows}
+      <div class="base">${lead?crHTML(lead):''}<span>Start: ${st.pz.start}</span></div>
+      ${st.trail?`<div class="trail">Din stig: ${st.trail}</div>`:''}
+    </div>
+    <div class="actions">${st.solved?(st.waiting.length?'<button class="btn go big" data-act="next">Nästa stig</button>':''):`<button class="btn go big" data-act="climb" ${st.choice.some(x=>x==null)||st.done?'disabled':''}>Klättra!</button>`}</div>
+    ${!st.solved&&st.choice.some(x=>x==null)?'<p class="hint" style="text-align:center">Välj en sten på varje rad.</p>':''}
+    </div>
+    <div class="sidecol">
+      <div><div class="tray-label">Väntar vid foten</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')||'<span class="hint">Alla är uppe.</span>'}</div></div>
+      <div><div class="tray-label">Uppe på toppen</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+    </div></div>`;
+  };
+  st.acts.op=b=>{if(st.done||st.solved)return;const [r,i]=b.dataset.v.split('-').map(Number);st.choice[r]=st.choice[r]===i?null:i;st.trail=null;SFX.pop();st.render();};
+  st.acts.climb=()=>{
+    if(st.done||st.solved||st.choice.some(x=>x==null))return;
+    const vals=[st.pz.start];let bad=null;
+    for(let r=0;r<st.pz.rows.length;r++){
+      const o=st.pz.rows[r][st.choice[r]],prev=vals[vals.length-1],nv=o.f(prev);
+      if(Number.isNaN(nv)){bad=`${prev} kan inte delas jämnt med ${o.t.replace('/ ','')}.`;break;}
+      if(nv<0){bad=`${prev} ${o.t} blir mindre än noll. Så långt ner går inte stigen!`;break;}
+      vals.push(nv);
+    }
+    st.trail=vals.join(' → ');
+    if(bad){st.strike(bad);st.render();return;}
+    const end=vals[vals.length-1];
+    if(end===st.pz.target){
+      st.solved=true;
+      const movers=st.waiting.slice(0,st.per);
+      st.waiting=st.waiting.slice(movers.length);st.across.push(...movers);st.fx={pop:movers.map(c=>c.id)};
+      SFX.ok();st.say=`${pick(PRAISE)} Exakt ${end}! ${pl(movers.length,'numling','numlingar')} klättrar upp till toppen.`;st.mood='good';
+      if(!st.waiting.length){st.say='Alla har klättrat upp på Bergsstigen!';st.win();}
+    }else st.strike(`Stigen slutade på ${end}, men toppen är ${st.pz.target}.`);
+    st.render();
+  };
+  st.acts.next=()=>{st.next();st.say='En ny stig! Vilka stenar leder till toppen?';st.mood='';st.render();};
+  return st;
+}
+
+const FACTORY={gates:makeGates,balloon:makeBalloon,stones:makeStones,venn:makeVenn,raft:makeRaft,lock:makeLock,machine:makeMachine,garden:makeGarden,share:makeShare,path:makePathStation};
+function startStation(i,L){
+  const key=S.journey.route[i];
+  const lv=Math.max(1,Math.min(S.levels[key],L||S.levels[key]));
+  const troupe=S.journey.troupe.map(c=>({...c}));
+  document.querySelectorAll('.confetti').forEach(n=>n.remove());
+  CUR=FACTORY[key](troupe,lv);CUR.render(true);
+}
+// Varje resa går genom 6 av de 10 banorna. Banor man spelat minst väljs först.
+function pickRoute(){
+  const ranked=ALL.map(k=>({k,c:(S.played[k]||0)+Math.random()*.9})).sort((a,b)=>a.c-b.c).map(o=>o.k);
+  let route=shuffle(ranked.slice(0,ROUTE_LEN));
+  if(route.includes('lock'))route=route.filter(k=>k!=='lock').concat('lock');
+  return route;
+}
+
+// =========================================================
+//  SKÄRMAR
+// =========================================================
+function showTitle(){
+  CUR=null;closeModal();
+  const parade=[2,3,5,7,11,13,17].map((n,i)=>({id:'p'+i,shape:SHAPES[i%4],color:COLOR_NAMES[(i*3+1)%4],eyes:(i%3)+1,n}));
+  go(`<main class="title">
+    <h1 class="logo" aria-label="Numlingarnas resa"><span>Numlingarnas</span><span>resa</span></h1>
+    <p class="tag">Led en trupp numlingar genom kluriga mattebanor till Numeria, deras nya hem.</p>
+    <div class="parade">${parade.map((c,i)=>crHTML(c,{cls:'bob',style:`animation-delay:${(i*.18).toFixed(2)}s`})).join('')}</div>
+    <div class="title-btns">
+      ${S.journey?'<button class="btn go big" data-act="cont">Fortsätt resan</button>':'<button class="btn go big" data-act="new">Starta en resa</button>'}
+      <div class="row" style="justify-content:center"><button class="btn" data-act="home">Besök Numeria (${S.home.length})</button><button class="btn" data-act="settings">Inställningar</button></div>
+    </div>
+    ${S.camp.length&&!S.journey?`<p class="note">${pl(S.camp.length,'numling','numlingar')} väntar i lägret.</p>`:''}
+  </main>`,{new:()=>S.chosen?showBuilder():showChallenge(),cont:showMap,home:showHome,settings:showSettings});
+  document.body.classList.add('at-title');
+}
+
+function showChallenge(){
+  CUR=null;
+  const opts=[[1,'Jämnt och udda, större och mindre, addera små tal.'],[2,'Delbarhet, dubblering, hemliga regler, större summor.'],[3,'Primtal och kvadrattal, OCH/ELLER-regler, längre koder.'],[4,'Kubtal, delare, tre cirklar i dammen, rund flotte.']];
+  go(`<main class="panel page">
+    <h2>Hur svåra ska gåtorna vara från början?</h2>
+    <p>Varje gång hela truppen klarar en bana föreslås den banan på en högre nivå nästa gång. Före varje bana kan du också välja en lättare nivå. Du kan ändra detta i Inställningar.</p>
+    <div class="choices">${opts.map(o=>`<button class="choice" data-act="lv" data-v="${o[0]}">${stars(o[0])}<b>${LEVEL_NAMES[o[0]]}</b><span>${o[1]}</span></button>`).join('')}</div>
+    <p class="note">Ligger du före i matte? Prova Klurig eller Listig.</p>
+  </main>`,{lv:b=>{const l=+b.dataset.v;ALL.forEach(k=>S.levels[k]=l);S.startLevel=l;S.chosen=true;save();showBuilder();}});
+}
+
+let B=null;
+function showBuilder(){CUR=null;if(!B)B={shape:'circle',color:'blue',eyes:2,n:7,draft:S.camp.slice(0,10),msg:''};renderBuilder(true);}
+function renderBuilder(scroll=false){
+  const prev={id:'preview',shape:B.shape,color:B.color,eyes:B.eyes,n:B.n};
+  const campIds=new Set(S.camp.map(c=>c.id)),full=B.draft.length>=10;
+  const slots=A(10,i=>{const c=B.draft[i];if(!c)return '<div class="slot" aria-hidden="true"></div>';return `<button class="slot" data-act="rm" data-v="${c.id}" aria-label="Ta bort ${describe(c)}">${crHTML(c)}${campIds.has(c.id)?`<span class="tent" title="Från lägret">${ICONS.tent}</span>`:''}</button>`;}).join('');
+  go(`<main class="station">
+    <header class="top"><button class="btn sm" data-act="back">Tillbaka</button><h2>Bygg din trupp</h2></header>
+    <div class="build-grid">
+      <section class="panel maker" aria-label="Gör en numling">
+        <div class="preview">${crHTML(prev,{cls:'big bob'})}</div>
+        <div class="prow"><span class="plabel">Form</span>${SHAPES.map(s=>`<button class="chip ${B.shape===s?'on':''}" data-act="shape" data-v="${s}" aria-pressed="${B.shape===s}" aria-label="${SHAPE_SV[s]}" title="${SHAPE_SV[s]}">${shapeIcon(s)}</button>`).join('')}</div>
+        <div class="prow"><span class="plabel">Färg</span>${COLOR_NAMES.map(c=>`<button class="chip swatch ${B.color===c?'on':''}" data-act="color" data-v="${c}" aria-pressed="${B.color===c}" aria-label="${COLOR_SV[c]}" title="${COLOR_SV[c]}" style="--sw:${COLORS[c].f}"></button>`).join('')}</div>
+        <div class="prow"><span class="plabel">Ögon</span>${[1,2,3].map(e=>`<button class="chip ${B.eyes===e?'on':''}" data-act="eyes" data-v="${e}" aria-pressed="${B.eyes===e}" aria-label="${pl(e,'öga','ögon')}">${eyeIcon(e)}</button>`).join('')}</div>
+        <div><span class="plabel">Tal</span><div class="numgrid" role="group" aria-label="Tal">${A(30,i=>`<button class="num ${B.n===i+1?'on':''}" data-act="num" data-v="${i+1}" aria-pressed="${B.n===i+1}">${i+1}</button>`).join('')}</div></div>
+        <div class="maker-btns"><button class="btn" data-act="dice">Överraska mig</button><button class="btn go" data-act="add" ${full?'disabled':''}>Lägg till i truppen</button></div>
+        <p class="bmsg" role="status">${B.msg}</p>
+      </section>
+      <section class="panel troupe" aria-label="Din trupp">
+        <h3>Din trupp <span class="count">${B.draft.length} / 10</span></h3>
+        <p class="hint">Tryck på en numling för att ta bort den.${B.draft.some(c=>campIds.has(c.id))?' Numlingar med tält är tillbaka från lägret för ett nytt försök.':''}</p>
+        <div class="slots">${slots}</div>
+        <div class="troupe-btns"><button class="btn" data-act="fill" ${full?'disabled':''}>Fyll med slumpade numlingar</button></div>
+        <div class="troupe-btns"><button class="btn go big" data-act="start" ${B.draft.length<4?'disabled':''}>Starta resan</button></div>
+        ${B.draft.length<4?'<p class="hint" style="text-align:center">Du behöver minst 4 numlingar.</p>':''}
+      </section>
+    </div>
+  </main>`,{
+    back:showTitle,
+    shape:b=>{B.shape=b.dataset.v;B.msg='';SFX.pop();renderBuilder();},
+    color:b=>{B.color=b.dataset.v;B.msg='';SFX.pop();renderBuilder();},
+    eyes:b=>{B.eyes=+b.dataset.v;B.msg='';SFX.pop();renderBuilder();},
+    num:b=>{B.n=+b.dataset.v;B.msg='';SFX.pop();renderBuilder();},
+    dice:()=>{B.shape=pick(SHAPES);B.color=pick(COLOR_NAMES);B.eyes=rnd(1,3);B.n=rnd(1,30);B.msg='';SFX.pop();renderBuilder();},
+    add:()=>{
+      if(B.draft.length>=10)return;
+      const c={shape:B.shape,color:B.color,eyes:B.eyes,n:B.n};
+      if(B.draft.some(d=>sameLook(d,c))){B.msg='Du har redan en numling som ser ut exakt så. Ändra något!';SFX.bad();renderBuilder();return;}
+      B.draft.push(newCreature(c));B.msg='';SFX.ok();renderBuilder();
+    },
+    rm:b=>{const id=+b.dataset.v;B.draft=B.draft.filter(c=>c.id!==id);SFX.pop();renderBuilder();},
+    fill:()=>{let guard=0;while(B.draft.length<10&&guard++<200){const c={shape:pick(SHAPES),color:pick(COLOR_NAMES),eyes:rnd(1,3),n:rnd(1,30)};if(!B.draft.some(d=>sameLook(d,c)))B.draft.push(newCreature(c));}SFX.ok();renderBuilder();},
+    start:()=>{
+      if(B.draft.length<4)return;
+      const ids=new Set(B.draft.map(c=>c.id));S.camp=S.camp.filter(c=>!ids.has(c.id));
+      S.journey={troupe:B.draft.slice(),station:0,start:B.draft.length,lost:0,route:pickRoute()};S.journeys++;B=null;PICK=null;save();showMap();
+    }
+  },scroll);
+}
+
+function smoothPath(p){
+  let d=`M${p[0][0]} ${p[0][1]}`;
+  for(let i=0;i<p.length-1;i++){
+    const p0=p[i-1]||p[i],p1=p[i],p2=p[i+1],p3=p[i+2]||p2;
+    d+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)} ${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)} ${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0]} ${p2[1]}`;
+  }
+  return d;
+}
+const nestIcon=(svg,x,y,s)=>svg.replace('<svg ',`<svg x="${x}" y="${y}" width="${s}" height="${s}" `);
+let PICK=null; // vald nivå för nästa bana: {key, station, L}
+function showMap(scroll){
+  CUR=null;closeModal();
+  const j=S.journey;if(!j){showTitle();return;}
+  const route=j.route;
+  const P=[[60,262],[170,196],[300,96],[438,196],[574,96],[708,198],[822,100],[880,250]];
+  const nodes=route.map((k,i)=>{
+    const [x,y]=P[i+1],done=i<j.station,cur=i===j.station;
+    const fill=done?'#c9eecf':cur?'#ffd76a':'#fffaf0';
+    return `<g class="mapnode">${cur?`<circle class="pulse" cx="${x}" cy="${y}" r="44" fill="none" stroke="#ff7a1a" stroke-width="6"/>`:''}
+      <circle cx="${x}" cy="${y}" r="36" fill="${fill}" stroke="#17335b" stroke-width="5"/>${nestIcon(ICONS[k],x-22,y-22,44)}
+      ${done?`<circle cx="${x+27}" cy="${y-27}" r="13" fill="#2a8f52" stroke="#17335b" stroke-width="3"/><path d="M${x+21} ${y-27}l4 4 8-8" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`:''}
+      <text x="${x}" y="${y+58}" text-anchor="middle" font-size="18" fill="#17335b">${META[k].name}</text>
+      <text x="${x}" y="${y+79}" text-anchor="middle" font-size="16" fill="#e09c00">${starStr(S.levels[k])}</text></g>`;
+  }).join('');
+  const [tx,ty]=j.station<route.length?P[j.station+1]:P[7];
+  const mini=j.troupe.slice(0,3).map((c,i)=>`<svg x="${tx-64-i*26}" y="${ty+2-(i%2)*8}" width="32" height="34" viewBox="-3 -3 106 112">${creatureSVG(c).replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>`).join('');
+  const nextKey=route[j.station],sug=S.levels[nextKey];
+  if(!PICK||PICK.key!==nextKey||PICK.station!==j.station)PICK={key:nextKey,station:j.station,L:sug};
+  if(PICK.L>sug)PICK.L=sug;
+  const lvpick=[1,2,3,4].map(l=>`<button class="lvopt ${PICK.L===l?'on':''}" data-act="pickL" data-v="${l}" aria-pressed="${PICK.L===l}" ${l>sug?'disabled':''}><span class="st">${'★'.repeat(l)}</span><small>${LEVEL_NAMES[l]}</small>${l===sug?'<span class="sug">Föreslagen</span>':''}</button>`).join('');
+  go(`<main class="station">
+    <header class="top"><button class="btn sm" data-act="title">Lägret</button><h2>Vägen till Numeria</h2><div class="spacer"></div><button class="iconbtn" data-act="sound" aria-label="Ljud ${S.sound?'på':'av'}">${S.sound?ICONS.soundOn:ICONS.soundOff}</button></header>
+    <div class="panel mapwrap"><svg viewBox="0 0 940 340" role="img" aria-label="Resekarta. Nästa stopp: ${META[nextKey].name}">
+      <rect x="0" y="0" width="940" height="340" rx="18" fill="#a9d99f"/>
+      <path d="M0 300 C120 290 180 330 300 316 S520 280 620 312 820 336 940 300 V340 H0Z" fill="#8cc98a"/>
+      <path d="M380 0 C360 60 420 110 390 170 S350 280 400 340" fill="none" stroke="#5fb3d6" stroke-width="22" stroke-linecap="round"/>
+      <g fill="#7c8aa3" stroke="#17335b" stroke-width="3" stroke-linejoin="round"><path d="M600 40l40-34 40 34z"/><path d="M650 40l30-24 30 24z" fill="#95a2b8"/></g>
+      <g stroke="#17335b" stroke-width="3"><circle cx="110" cy="70" r="20" fill="#5aa57f"/><circle cx="140" cy="84" r="16" fill="#4e9a73"/><circle cx="520" cy="270" r="18" fill="#5aa57f"/><circle cx="760" cy="300" r="16" fill="#4e9a73"/><circle cx="240" cy="280" r="15" fill="#5aa57f"/></g>
+      <path d="${smoothPath(P)}" fill="none" stroke="#8a5a2b" stroke-width="8" stroke-dasharray="2 16" stroke-linecap="round"/>
+      ${nestIcon(ICONS.tent,30,224,60)}<text x="60" y="312" text-anchor="middle" font-size="18" font-weight="900" fill="#17335b" style="font-family:var(--font)">Lägret</text>
+      ${nestIcon(ICONS.home,846,208,68)}<text x="880" y="300" text-anchor="middle" font-size="18" font-weight="900" fill="#17335b" style="font-family:var(--font)">Numeria</text>
+      ${nodes}${mini}
+    </svg></div>
+    <section class="panel next">
+      <div class="what">
+        <div class="row">${ICONS[nextKey]}<h3>Nästa stopp: ${META[nextKey].name}</h3></div>
+        <p>${META[nextKey].blurb}</p>
+        <p class="hint">Välj nivå. ${LEVEL_NAMES[sug]} föreslås, men du kan alltid välja en lättare.</p>
+        <div class="lvpick" role="group" aria-label="Välj nivå">${lvpick}</div>
+      </div>
+      <button class="btn go big" data-act="go">Kör!</button>
+    </section>
+    <div><div class="tray-label">Din trupp (${pl(j.troupe.length,'numling','numlingar')})</div><div class="tray">${j.troupe.map(c=>crHTML(c,{sm:1})).join('')}</div></div>
+  </main>`,{title:showTitle,go:()=>startStation(j.station,PICK.L),pickL:b=>{PICK.L=Math.min(sug,+b.dataset.v);SFX.pop();showMap(false);},sound:()=>{toggleSound();showMap(false);}},scroll!==false);
+}
+
+const MILESTONES=[[5,'Första nybyggarna'],[15,'Liten by'],[30,'Livlig stad'],[60,'Stor stad'],[100,'Numeria city'],[200,'Stora Numeria']];
+function milestoneHTML(n){
+  const next=MILESTONES.find(m=>m[0]>n);
+  return `<div class="badges">${MILESTONES.map(m=>`<span class="badge ${n>=m[0]?'got':''}">${m[1]} (${m[0]})</span>`).join('')}</div>
+    ${next?`<p><b>${next[0]-n}</b> till för att nå ”${next[1]}”.</p><div class="bar" role="img" aria-label="${n} av ${next[0]}"><i style="width:${Math.min(100,n/next[0]*100).toFixed(1)}%"></i></div>`:'<p><b>Alla milstolpar klara. Numeria blomstrar!</b></p>'}`;
+}
+function showArrival(){
+  CUR=null;closeModal();
+  const j=S.journey;if(!j){showTitle();return;}
+  const arrived=j.troupe.slice();
+  S.home.push(...arrived);S.journey=null;save();
+  try{localStorage.setItem(SCORE_KEY,String(S.home.length));}catch(e){}
+  SFX.win();confetti();
+  go(`<main class="panel page" style="text-align:center;align-items:center">
+    ${ICONS.home.replace('<svg ','<svg width="90" height="90" ')}
+    <h2>Välkommen till Numeria!</h2>
+    <div class="crowd">${arrived.map((c,i)=>crHTML(c,{cls:'bob',style:`animation-delay:${(i*.12).toFixed(2)}s`})).join('')}</div>
+    <p><b>${arrived.length} av ${j.start}</b> numlingar kom hem den här resan.${j.lost?` ${pl(j.lost,'numling','numlingar')} gick tillbaka till lägret och försöker igen nästa gång.`:' Hela truppen klarade det!'}</p>
+    <p>Numeria har nu <b>${S.home.length}</b> numlingar.</p>
+    ${milestoneHTML(S.home.length)}
+    <div class="row" style="justify-content:center"><button class="btn go big" data-act="new">Starta en ny resa</button><button class="btn" data-act="home">Besök Numeria</button><button class="btn" data-act="title">Lägret</button></div>
+  </main>`,{new:showBuilder,home:showHome,title:showTitle});
+}
+function showAllBack(){
+  CUR=null;
+  go(`<main class="panel page" style="text-align:center;align-items:center">${ICONS.tent.replace('<svg ','<svg width="90" height="90" ')}
+    <h2>Tillbaka till lägret</h2><p>Inga numlingar är kvar på den här resan. Alla är trygga i lägret och redo för nästa resa.</p>
+    <div class="crowd">${S.camp.slice(-12).map(c=>crHTML(c,{sm:1})).join('')}</div>
+    <div class="row" style="justify-content:center"><button class="btn go big" data-act="new">Försök igen</button><button class="btn" data-act="title">Lägret</button></div></main>`,{new:showBuilder,title:showTitle});
+}
+function showHome(){
+  CUR=null;
+  const n=S.home.length;
+  go(`<main class="panel page">
+    <div class="row"><button class="btn sm" data-act="back">Tillbaka</button><h2>Numeria</h2></div>
+    <p>${n?`<b>${n}</b> numlingar bor här än så länge.`:'Ingen bor här än. Klara en resa för att ta hem de första numlingarna!'}</p>
+    ${milestoneHTML(n)}
+    ${n?`<div class="gallery">${S.home.slice(-300).map(c=>crHTML(c,{xs:1})).join('')}</div>`:''}
+  </main>`,{back:showTitle});
+}
+function showSettings(){
+  CUR=null;
+  go(`<main class="panel page">
+    <div class="row"><button class="btn sm" data-act="back">Tillbaka</button><h2>Inställningar</h2></div>
+    <div class="row"><b>Ljud</b><button class="btn sm" data-act="snd">${S.sound?'På':'Av'}</button></div>
+    <div><h3>Föreslagen nivå för varje bana</h3><p class="hint">En bana föreslås på en högre nivå när hela truppen klarar den. Före varje bana kan man alltid välja en lättare nivå.</p>
+    ${ALL.map(k=>`<div class="lvlrow"><span class="nm">${ICONS[k]}${META[k].name}</span>${[1,2,3,4].map(l=>`<button class="lvbtn ${S.levels[k]===l?'on':''}" data-act="lv" data-k="${k}" data-v="${l}" aria-pressed="${S.levels[k]===l}" aria-label="${META[k].name} nivå ${l}">${'★'.repeat(l)}</button>`).join('')}</div>`).join('')}
+    <div class="row" style="margin-top:10px"><span class="hint">Sätt alla till:</span>${[1,2,3,4].map(l=>`<button class="lvbtn" data-act="all" data-v="${l}" aria-label="Alla banor nivå ${l}">${'★'.repeat(l)}</button>`).join('')}</div></div>
+    <div><h3>För vuxna</h3><p class="hint">Vad varje bana tränar:</p><ul class="skills">${ALL.map(k=>`<li><b>${META[k].name}:</b> ${META[k].skill}</li>`).join('')}</ul>
+    <p class="hint" style="margin-top:8px">Framstegen sparas på den här enheten. Troféen på spelhubbens kort visar hur många numlingar som bor i Numeria. Varje resa går genom 6 av de 10 banorna, och banor som spelats minst väljs först. Hjärtan begränsar gissande: när de tar slut går de numlingar som väntar tillbaka till lägret och följer med på nästa resa, så ingen försvinner för alltid.</p></div>
+    <div class="row"><button class="btn sm" data-act="reset">Radera alla framsteg</button></div>
+  </main>`,{
+    back:showTitle,
+    snd:()=>{S.sound=!S.sound;save();showSettings();},
+    lv:b=>{S.levels[b.dataset.k]=+b.dataset.v;S.chosen=true;save();showSettings();},
+    all:b=>{ALL.forEach(k=>S.levels[k]=+b.dataset.v);S.startLevel=+b.dataset.v;S.chosen=true;save();showSettings();},
+    reset:()=>modal(`<h3>Radera allt?</h3><p>Det här tar bort Numeria, lägret, nivåerna och den pågående resan.</p><div class="row"><button class="btn go" data-m="close">Behåll mina framsteg</button><button class="btn" data-m="yes">Radera</button></div>`,{yes:()=>{S=freshState();B=null;PICK=null;save();try{localStorage.removeItem(SCORE_KEY);}catch(e){}showTitle();}})
+  });
+}
+
+showTitle();
+
+// fungerar utan internet via hubbens service worker
+if('serviceWorker' in navigator){navigator.serviceWorker.register('../sw.js').catch(function(){});}
+</script>
+<script src="../shared/guard.js" data-game="numlings"></script>
+</body>
+</html>

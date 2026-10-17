@@ -19,5 +19,13 @@ const GAMES = [
     blurb: "Build the pipe before the goo escapes!",
     file: "games/goopipes.html",
     scoreKey: "score.goopipes"
+  },
+  {
+    id: "numlings",
+    title: "Numlingarnas resa",
+    emoji: "🧮",
+    blurb: "Mattegåtor. Led numlingarna hem!",
+    file: "games/numlings.html",
+    scoreKey: "score.numlings"     // Numlings living in Numeria (grows each journey)
   }
 ];

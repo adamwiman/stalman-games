@@ -87,6 +87,7 @@ manifest.webmanifest  PWA install metadata
 shared/guard.js       playtime tracking + "time's up" lock (used by all games)
 games/2048.html       the 2048 game (fully self-contained)
 games/goopipes.html   the Goo Pipes game (fully self-contained)
+games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
 tests/                Node-runnable logic tests (node tests/goopipes.test.js)
 icons/                app icons
 ```
@@ -99,4 +100,36 @@ icons/                app icons
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 uses it) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it) |
+
+## Numlingarnas resa notes
+
+A logic and number puzzle journey in Swedish for strong young math thinkers
+(around age 7–10). Kids build a troupe of up to 10 numlingar and lead them
+to Numeria. Each journey visits 6 of the 10 puzzle stops, least-played
+first, so journeys vary:
+
+| Stop | Practices |
+| ---- | --------- |
+| Viskportarna | finding a hidden rule from examples (parity, divisibility, primes, AND/OR) |
+| Ballongfärden | exact sums; evaluating an expression first at higher levels |
+| Mönsterbäcken | number sequences |
+| Näckrosdammen | Venn-diagram sorting with secret rules |
+| Kompisflotten | arranging neighbors under a rule |
+| Ugglans dörr | code-breaking (Mastermind-style deduction) |
+| Talmaskinen | function machine: find the rule from in/out pairs |
+| Trädgårdslandet | grid with row, column and diagonal sums |
+| Bärbusken | division, remainders and reverse problems |
+| Bergsstigen | chaining +, −, ·, / to hit a target |
+
+- **Score:** the hub trophy shows how many numlingar live in Numeria. It
+  grows with every finished journey. "Reset high scores" in the hub only
+  clears the trophy; the game's own **Inställningar → Radera alla
+  framsteg** resets everything.
+- **Difficulty:** 4 levels, chosen on first play. Before each stop the map
+  suggests a level and the child may pick an easier one. A stop's
+  suggested level rises when the whole troupe clears it at that level.
+  Levels can also be set by hand in the game's settings, which also list
+  what each stop practices.
+- **Saved progress:** `state.numlings` (troupe, journey route, levels,
+  sound). Saves from the earlier English version are migrated.

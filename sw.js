@@ -3,7 +3,7 @@
    IMPORTANT: whenever you change any file (or add a game),
    bump CACHE_VERSION so devices pick up the new files.
    ============================================================ */
-const CACHE_VERSION = "game-hub-v2";
+const CACHE_VERSION = "game-hub-v3";
 
 const ASSETS = [
   "./",
@@ -18,7 +18,8 @@ const ASSETS = [
   "./icons/apple-touch-icon.png",
   // ---- games (add every new game file here) ----
   "./games/2048.html",
-  "./games/goopipes.html"
+  "./games/goopipes.html",
+  "./games/numlings.html"
 ];
 
 self.addEventListener("install", (event) => {
