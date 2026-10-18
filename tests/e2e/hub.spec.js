@@ -27,13 +27,14 @@ test("each card opens its game and the back link returns to the hub", async ({ p
 });
 
 test("cards show each game's best score from localStorage", async ({ page }) => {
-  await seedStorage(page, { "score.2048": "4096", "score.goopipes": "12", "score.numlings": "7" });
+  await seedStorage(page, { "score.2048": "4096", "score.goopipes": "12", "score.numlings": "7", "score.gangertabell": "23" });
   await page.goto("index.html");
   const chip = (title) => page.locator(".game-card", { hasText: title }).locator(".chip").first();
   // the thousands separator depends on the engine's locale
   await expect(chip("2048")).toHaveText(/4\D?096/);
   await expect(chip("Goo Pipes")).toHaveText(/12/);
   await expect(chip("Numlingarnas resa")).toHaveText(/7/);
+  await expect(chip("Gångertabellen")).toHaveText(/23/);
 });
 
 test("parent PIN: create, wrong PIN rejected, limits saved and shown on cards", async ({ page, touch }) => {

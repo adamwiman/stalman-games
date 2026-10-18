@@ -88,6 +88,7 @@ shared/guard.js       playtime tracking + "time's up" lock (used by all games)
 games/2048.html       the 2048 game (fully self-contained)
 games/goopipes.html   the Goo Pipes game (fully self-contained)
 games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
+games/gangertabell.html  Gångertabellen — times tables 1–10 practice, in Swedish (fully self-contained)
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
@@ -106,8 +107,9 @@ npx playwright install chromium webkit
 Then `npm test` runs everything:
 
 - `npm run test:unit` — plain Node, no browser:
-  `tests/goopipes.test.js` (Goo Pipes game logic) and
-  `tests/integrity.test.js` (every game is in `config.js` and precached in
+  `tests/goopipes.test.js` (Goo Pipes game logic),
+  `tests/gangertabell.test.js` (Gångertabellen question order and
+  counting) and `tests/integrity.test.js` (every game is in `config.js` and precached in
   `sw.js`, has the back link, `guard.js`, service worker and score key, and
   loads nothing from the network).
 - `npm run test:e2e` — Playwright, `tests/e2e/`: the hub, parent settings,
@@ -128,7 +130,7 @@ handing it over.
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there) |
 
 ## Numlingarnas resa notes
 
@@ -161,3 +163,27 @@ first, so journeys vary:
   what each stop practices.
 - **Saved progress:** `state.numlings` (troupe, journey route, levels,
   sound). Saves from the earlier English version are migrated.
+
+## Gångertabellen notes
+
+Times tables 1–10 practice in Swedish. The child types the answer on a big
+on-screen number pad (or a keyboard) — there is no clock and no time limit
+in the game itself. Three ways to practice:
+
+| Mode | What comes |
+| ---- | ---------- |
+| Fri träning | questions from all tables 1–10 in random order, until the child taps **Avsluta** |
+| Tabellmix | pick one or more tables; every question in them comes exactly once, shuffled (two tables = 20 questions) |
+| Tabelltrappan | pick one table and go through it in order: 7 · 1, 7 · 2 … 7 · 10 |
+
+- Questions are written with the table first (`7 · 3` is in the 7 table),
+  so in Tabellmix with the 3 and 5 tables both `3 · 5` and `5 · 3` come once.
+- Fri träning draws from a shuffled deck of all 100 questions and reshuffles
+  when it runs out, so everything comes up before anything repeats, and the
+  same question never comes twice in a row.
+- A wrong answer shows the right one, and the child taps **Nästa** to go on.
+- Questions answered, correct answers and the current run of correct answers
+  are shown during play; the end screen repeats them and lists the questions
+  to practice more.
+- **Score:** the hub trophy is the record for most correct answers in a row.
+- **Saved:** `state.gangertabell` remembers the last chosen tables.

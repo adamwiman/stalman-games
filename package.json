@@ -4,7 +4,7 @@
   "description": "Game hub test tooling (the site itself has no build step or dependencies)",
   "scripts": {
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "node tests/goopipes.test.js && node tests/integrity.test.js",
+    "test:unit": "node tests/goopipes.test.js && node tests/gangertabell.test.js && node tests/integrity.test.js",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

@@ -27,5 +27,13 @@ const GAMES = [
     blurb: "Mattegåtor. Led numlingarna hem!",
     file: "games/numlings.html",
     scoreKey: "score.numlings"     // Numlings living in Numeria (grows each journey)
+  },
+  {
+    id: "gangertabell",
+    title: "Gångertabellen",
+    emoji: "✖️",
+    blurb: "Träna tabellerna 1–10!",
+    file: "games/gangertabell.html",
+    scoreKey: "score.gangertabell" // record: most correct answers in a row
   }
 ];
