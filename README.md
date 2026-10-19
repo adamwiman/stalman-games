@@ -89,6 +89,7 @@ games/2048.html       the 2048 game (fully self-contained)
 games/goopipes.html   the Goo Pipes game (fully self-contained)
 games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
 games/gangertabell.html  Gångertabellen — times tables 1–10 practice, in Swedish (fully self-contained)
+games/detektiven.html    Detektiven — who is the criminal? Logic puzzles in Swedish (fully self-contained)
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
@@ -109,7 +110,8 @@ Then `npm test` runs everything:
 - `npm run test:unit` — plain Node, no browser:
   `tests/goopipes.test.js` (Goo Pipes game logic),
   `tests/gangertabell.test.js` (Gångertabellen question order and
-  counting) and `tests/integrity.test.js` (every game is in `config.js` and precached in
+  counting), `tests/detektiven.test.js` (Detektiven clue texts, case
+  generator, solver, difficulty and unlocking) and `tests/integrity.test.js` (every game is in `config.js` and precached in
   `sw.js`, has the back link, `guard.js`, service worker and score key, and
   loads nothing from the network).
 - `npm run test:e2e` — Playwright, `tests/e2e/`: the hub, parent settings,
@@ -130,7 +132,7 @@ handing it over.
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there; Detektiven keeps unlocked levels and the case in progress) |
 
 ## Numlingarnas resa notes
 
@@ -187,3 +189,54 @@ in the game itself. Three ways to practice:
   to practice more.
 - **Score:** the hub trophy is the record for most correct answers in a row.
 - **Saved:** `state.gangertabell` remembers the last chosen tables.
+
+## Detektiven notes
+
+A logic puzzle in Swedish. Twenty people stand in a grid, columns A–D and
+rows 1–5. Everyone is either a **skurk** (criminal) or **oskyldig**
+(innocent), and everyone tells the truth. One person starts revealed. Tapping
+somebody and choosing correctly reveals them. Only some people have a clue;
+the others just say something ("Hurra, jag är fri!"). Guessing is not
+allowed: the game only accepts what the revealed clues prove, and a guess or
+the opposite of what the clues prove counts as a **misstag** (mistake).
+
+Pick a level for every new case. A level unlocks when you have solved a case
+on the level before it.
+
+A step is as hard as the number of clues you must combine to take it. The
+game's solver plays each case, always taking the easiest step, and counts
+the steps. Averages per case:
+
+| Level    | Steps needing 2 / 3 / 4+ clues          | People with a clue | Criminals |
+| -------- | --------------------------------------- | ------------------ | --------- |
+| Lätt     | 0 / 0 / 0, and often several to pick    | 11–15              | 5–9       |
+| Mellan   | 0.8 / 0 / 0                             | 9–12               | 6–11      |
+| Svår     | 4.0 / 0 / 0                             | 10–14              | 7–14      |
+| Geni     | 4.6 / 2.4 / 0.4                         | 8–12               | 6–15      |
+| Omöjliga | 4.1 / 3.4 / 2.0                         | 10–13              | 9–16      |
+
+- **New cases are made in the game**, so they never run out. While a case is
+  made, the solver plays it through and decides for each person whether they
+  get a clue, and which one, so the case lands on the level's mix of steps.
+  Every case has exactly one answer, and whatever order you solve it in, you
+  never need more clues at once than the hardest step in the solver's order.
+- **Clues:** counts and "at least" in rows, columns, someone's grannar
+  (neighbours, diagonals included), above/below/left/right of someone,
+  between two people, on the edge, in the corners, among a job, and
+  combinations ("Klara har exakt 2 skurkgrannar som är kockar", "Det finns
+  inga kockar som är skurkar till höger om Saga"); comparisons of two areas
+  or two jobs; odd/even; "hänger ihop" (connected) and "Båda … hänger ihop";
+  "Den enda skurken till höger om Filip finns på kanten"; "… och exakt 1 av
+  dem är kock"; most/only/each for rows and columns; the job or person with
+  the most; "Bara en person i hörnen har …"; "direkt till vänster om sig".
+  Harder levels use more kinds.
+- **💡 Tips:** the first press highlights the clues to look at, the second
+  the people you can then work out. Hints are counted on the result screen.
+- **Notes:** an unknown person can get a colour mark (just for the player).
+  Tap a revealed clue to dim it when it is no longer useful.
+- **Score:** the hub trophy counts solved cases on all levels. "Reset high
+  scores" in the hub only clears the trophy, not the unlocked levels.
+- **Saved:** `state.detektiven` holds `prog` (unlocked level and solved
+  cases per level) and `game` (the case in progress: the case itself, who has
+  been revealed in which order, mistakes, hints, time, dimmed clues and marks).
+  A saved case is only used if its clues are true and give exactly its answer.

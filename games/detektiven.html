@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Detektiven</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!--
+  Detektiven — logikpussel: vem är skurk och vem är oskyldig? (spel-id: detektiven)
+  Del av spelhubben. Helt fristående: inga nätverksresurser.
+  20 personer i ett rutnät (kolumn A–D, rad 1–5). Alla är skurk eller oskyldig och alla
+  talar sanning. När man listar ut en person avslöjas hen. Man får inte gissa: spelet
+  godtar bara val som ledtrådarna bevisar. Fel val och gissningar räknas som misstag.
+  Bara en del av personerna har en ledtråd; de andra säger bara något.
+  Nya fall skapas i spelet, så de tar aldrig slut. Varje steg kontrolleras av en lösare.
+  Nivåer (ett steg är lika svårt som antalet ledtrådar man måste lägga ihop):
+    Lätt      — en ledtråd i taget räcker, ofta flera att välja på
+    Mellan    — oftast en ledtråd i taget, ibland två
+    Svår      — 3–6 gånger måste två ledtrådar kombineras
+    Geni      — kombinera två och tre ledtrådar, ibland fyra
+    Omöjliga  — flera gånger måste fyra eller fler ledtrådar vägas ihop
+  Man väljer nivå för varje nytt fall. Nästa nivå låses upp när man har löst ett fall
+  på nivån före.
+  localStorage: score.detektiven (antal lösta fall, visas på hubbens kort)
+                state.detektiven ({prog: upplåsta nivåer och lösta fall, game: pågående fall})
+-->
+<style>
+:root{
+  /* hubbens färger */
+  --sky:#ddf1ff; --ink:#17335b; --sun:#ffc63f; --coral:#ff6b6b; --mint:#38d9a9;
+  /* spelets extra färger */
+  --ink2:#4a6182; --paper:#ffffff; --hl:#1767d1;
+  --good:#1a8a5f; --goodbg:#d4f6ea; --bad:#c93a3a; --badbg:#ffe3e3;
+  --n-gul:#fff0a6; --n-bla:#cde3ff; --n-lila:#e7d7ff;
+  --font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--sky);overflow-x:hidden;font-size:17px;line-height:1.35;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+h1,h2,h3,p{margin:0}
+button{font:inherit;color:inherit;touch-action:manipulation}
+#app{max-width:1100px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;gap:12px}
+/* länk tillbaka till hubben (visas på menyn) */
+.hubnav{display:none;max-width:1100px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
+body.at-menu .hubnav{display:block}
+body.at-menu #app{padding-top:8px;min-height:0}
+.back{display:inline-block;text-decoration:none;color:var(--ink);font-weight:800;font-size:16px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 16px;box-shadow:0 3px 0 var(--ink)}
+.back:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+:focus-visible{outline:4px solid var(--hl);outline-offset:3px}
+
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:4px 5px 0 var(--ink)}
+.btn{font-weight:800;font-size:1.05rem;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.55em 1.15em;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s;line-height:1.15;min-height:48px}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.go{background:var(--sun)}
+.btn.big{font-size:1.2rem;padding:.6em 1.4em;min-height:56px}
+.btn.sm{font-size:.95rem;padding:.4em .95em;min-height:44px}
+.btn.inno{background:var(--goodbg)}
+.btn.crim{background:var(--badbg)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 4px 0 var(--ink)}
+/* hover bara med riktig muspekare (undviker "fastnade" hover efter tryck på iPad) */
+@media (hover:hover){
+  .btn:hover{background:#f0f8ff}
+  .btn.go:hover{background:#ffd466}
+  .btn.inno:hover{background:#bff0dd}
+  .btn.crim:hover{background:#ffd0d0}
+  .level:not(.locked):hover{filter:brightness(1.03);transform:translateY(-2px)}
+  .card:not(.inno):not(.crim):hover{background:#f0f8ff}
+}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.center{justify-content:center}
+.hint{color:var(--ink2);font-weight:700}
+
+/* ---------- meny ---------- */
+.menu{display:flex;flex-direction:column;gap:14px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:2px 0}
+.logo{font-size:clamp(48px,8vw,68px);line-height:1;background:#fff;border:4px solid var(--ink);border-radius:24px;box-shadow:5px 6px 0 var(--ink);padding:.12em .32em}
+h1{font-size:clamp(2rem,5vw,2.7rem);font-weight:900;letter-spacing:.3px}
+h2{font-size:clamp(1.25rem,3vw,1.7rem);font-weight:900}
+h3{font-size:1.2rem;font-weight:900}
+.sub{color:var(--ink2);font-weight:700;max-width:34em}
+.pickh{text-align:center}
+.menumsg{min-height:1.4em;text-align:center;font-weight:900;color:var(--bad)}
+.levels{display:flex;flex-direction:column;gap:10px;width:100%;max-width:680px;margin:0 auto}
+.level{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px 14px;text-align:left;border:3px solid var(--ink);border-radius:20px;box-shadow:4px 5px 0 var(--ink);padding:10px 16px;cursor:pointer;min-height:76px;transition:transform .1s,box-shadow .1s}
+.level:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--ink)}
+.level .ico{font-size:2.1rem;line-height:1;grid-row:span 2}
+.level .nm{font-size:1.35rem;font-weight:900;line-height:1.1}
+.level .ds{color:var(--ink2);font-weight:700;font-size:.95rem;grid-column:2}
+.level .tag{grid-column:3;grid-row:1 / span 2;font-size:.8rem;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 9px;white-space:nowrap}
+@media (max-width:520px){.level{grid-template-columns:auto 1fr}.level .tag{grid-column:2;grid-row:auto;justify-self:start}}
+.lv-latt{background:#dcf7ec}
+.lv-mellan{background:#fff4d1}
+.lv-svar{background:#ffe6e3}
+.lv-geni{background:#ebe3ff}
+.lv-omojliga{background:#dfe7f2}
+.level.locked{background:#eef2f7;color:#7d8ea6;border-color:#9fb0c6;box-shadow:3px 4px 0 #9fb0c6;cursor:default}
+.level.locked .ds,.level.locked .tag{color:#7d8ea6;border-color:#9fb0c6}
+.resume{display:flex;align-items:center;gap:14px;text-align:left;padding:14px 18px;cursor:pointer;background:var(--sun);font-weight:800}
+.resume:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--ink)}
+.resume .ico{font-size:2.2rem}
+.resume b{display:block;font-size:1.3rem;font-weight:900}
+.record{text-align:center;font-weight:800;font-size:1.1rem}
+
+/* ---------- letar efter ett fall ---------- */
+.loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;font-weight:900;font-size:1.3rem}
+.loading .spin{font-size:72px;animation:wobble 1s ease-in-out infinite}
+
+/* ---------- spelet ---------- */
+.play{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.bar{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.casename{flex:1;min-width:120px;display:flex;flex-direction:column;line-height:1.15}
+.casename b{font-size:1.2rem;font-weight:900}
+.casename small{font-size:.9rem;font-weight:800;color:var(--ink2)}
+.stats{display:flex;gap:8px}
+.stat{display:flex;flex-direction:column;align-items:center;min-width:72px;background:#fff;border:3px solid var(--ink);border-radius:16px;padding:2px 10px 3px;box-shadow:0 3px 0 var(--ink)}
+.stat .n{font-size:1.45rem;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .l{font-size:.8rem;font-weight:800;color:var(--ink2)}
+.stat.good{background:var(--goodbg)}
+.stat.bad .n{color:var(--bad)}
+.msg{min-height:1.5em;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:clamp(.95rem,2.2vw,1.12rem)}
+.msg.ok{color:var(--good)}
+.msg.bad{color:var(--bad)}
+.msg.tip{color:var(--hl)}
+.msg.pop{animation:pop .3s}
+.board{flex:1;min-height:0;display:grid;grid-template-columns:18px repeat(4,minmax(0,1fr));grid-template-rows:18px repeat(5,minmax(0,1fr));gap:8px}
+.lab{display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--ink2);font-size:.9rem}
+.card{position:relative;display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:1px;min-width:0;min-height:0;overflow:hidden;background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:0 3px 0 var(--ink);padding:5px 8px 6px;cursor:pointer;transition:background .15s}
+.card:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.card .who{display:flex;align-items:center;gap:5px;font-weight:900;font-size:clamp(.88rem,1.9vh,1.08rem);padding-right:22px;min-width:0}
+.card .em{font-size:1.2em;line-height:1;flex:none}
+.card .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .job{font-size:clamp(.68rem,1.35vh,.84rem);font-weight:800;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .clue{font-size:clamp(.78rem,1.6vh,.95rem);font-weight:700;line-height:1.2;margin-top:2px;overflow-wrap:break-word;transition:opacity .15s}
+.card .clue.flavor{font-style:italic;font-weight:600;color:var(--ink2)}
+.card .badge{position:absolute;top:4px;right:6px;font-size:1.15rem;line-height:1}
+.card .coord{position:absolute;bottom:2px;right:7px;font-size:.62rem;font-weight:900;color:#93a6be}
+.card.inno{background:var(--goodbg);border-color:var(--good);box-shadow:0 3px 0 var(--good)}
+.card.crim{background:var(--badbg);border-color:var(--bad);box-shadow:0 3px 0 var(--bad)}
+.card.inno .coord{color:#6fb397}.card.crim .coord{color:#d98c8c}
+.card.dim .clue{opacity:.35}
+.card.n-gul{background:var(--n-gul)}
+.card.n-bla{background:var(--n-bla)}
+.card.n-lila{background:var(--n-lila)}
+.card.hl-clue{outline:4px solid var(--hl);outline-offset:2px;animation:glow 1.3s ease-in-out infinite}
+.card.hl-cell{outline:4px dashed #d48800;outline-offset:2px}
+.card.flip{animation:flip .45s}
+.card.shake{animation:shake .4s}
+/* små skärmar: korten får växa på höjden och sidan rullar */
+@media (max-width:640px),(max-height:520px){
+  .board{flex:none;grid-template-rows:18px repeat(5,auto);gap:6px}
+  .card{min-height:92px}
+}
+@media (max-width:640px){
+  .board{grid-template-columns:14px repeat(4,minmax(0,1fr))}
+  .card{padding:4px 5px 5px;border-radius:12px}
+  .card .who{font-size:.8rem;padding-right:16px}
+  .card .clue{font-size:.7rem}
+  .card .badge{font-size:.9rem}
+  .stat{min-width:58px}
+}
+
+/* ---------- välja skurk eller oskyldig ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(23,51,91,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:500}
+.modal{max-width:470px;width:100%;max-height:calc(100dvh - 32px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.cwho{font-size:1.15rem;font-weight:800}
+.cwho b{font-size:1.4rem;font-weight:900}
+.cwho small{display:block;color:var(--ink2);font-weight:800;font-size:.95rem}
+.cbtns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.small{font-size:.9rem;font-weight:800;color:var(--ink2)}
+.modal>.btn.sm{align-self:center}
+.notes{display:flex;gap:12px;justify-content:center}
+.sw{width:48px;height:48px;border-radius:50%;border:3px solid var(--ink);cursor:pointer;font-weight:900;padding:0;background:#fff}
+.sw-gul{background:var(--n-gul)}.sw-bla{background:var(--n-bla)}.sw-lila{background:var(--n-lila)}
+.sw[aria-pressed="true"]{outline:4px solid var(--hl);outline-offset:2px}
+/* regler */
+.rules{text-align:left;max-width:560px}
+.rules h3{text-align:center}
+.rules ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-weight:700}
+.rules li b{font-weight:900}
+.rules .ex{background:var(--sky);border:2px solid var(--ink);border-radius:14px;padding:8px 12px;font-weight:700}
+
+/* ---------- löst fall ---------- */
+.page{padding:18px;display:flex;flex-direction:column;gap:14px}
+.summary{align-items:center;text-align:center}
+.medal{font-size:64px;line-height:1}
+.lead{font-size:1.2rem;font-weight:800;max-width:30em}
+.bigstats{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.big{min-width:110px;background:#fff;border:3px solid var(--ink);border-radius:20px;padding:8px 16px 10px;box-shadow:0 4px 0 var(--ink);display:flex;flex-direction:column;align-items:center}
+.big b{font-size:2.3rem;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.big span{font-weight:800;color:var(--ink2)}
+.big.good{background:var(--goodbg)}
+.big.good b{color:var(--good)}
+.unlock{font-weight:900;font-size:1.2rem;background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:.3em 1em}
+.solved{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;max-width:560px}
+.solved span{display:flex;align-items:center;gap:4px;justify-content:center;font-weight:800;font-size:.9rem;border:2px solid var(--good);background:var(--goodbg);border-radius:10px;padding:4px 2px;white-space:nowrap;overflow:hidden}
+.solved span.c{border-color:var(--bad);background:var(--badbg)}
+.solved span.miss{box-shadow:inset 0 -4px 0 var(--sun)}
+.legend{font-size:.9rem;font-weight:700;color:var(--ink2)}
+
+/* ---------- konfetti ---------- */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:600}
+.confetti i{position:absolute;top:-24px;width:11px;height:15px;border-radius:3px;animation:fall linear forwards}
+
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+@keyframes flip{0%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}
+@keyframes glow{0%,100%{outline-color:var(--hl)}50%{outline-color:#8fbaf0}}
+@keyframes wobble{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+@keyframes fall{to{transform:translateY(112vh) rotate(560deg)}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<nav class="hubnav"><a class="back" href="../index.html">← Spel</a></nav>
+<div id="app"></div>
+<noscript>Det här spelet behöver JavaScript.</noscript>
+<script>
+'use strict';
+/* =========================================================
+   Detektiven — vem är skurk och vem är oskyldig?
+   ========================================================= */
+
+/*LOGIC-START*/
+// Ren spellogik utan DOM (testas i tests/detektiven.test.js).
+// 20 personer i ett rutnät med 4 kolumner (A–D) och 5 rader (1–5).
+// Varje person är antingen skurk eller oskyldig. Alla talar sanning.
+// Ett tal m med 20 bitar beskriver vilka som är skurkar: bit i = 1 betyder skurk.
+const COLS=4,ROWS=5,N=COLS*ROWS,ALL=(1<<N)-1;
+const COL_LETTERS='ABCD';
+
+// ---------- små hjälpfunktioner ----------
+// Slumptal med frö, så att samma frö alltid ger samma pussel.
+function makeRand(seed){
+  let a=seed>>>0;
+  return function(){a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};
+}
+const randInt=(rand,n)=>Math.floor(rand()*n);
+const pick=(list,rand)=>list[randInt(rand,list.length)];
+function shuffled(list,rand){
+  const a=list.slice();
+  for(let i=a.length-1;i>0;i--){const j=randInt(rand,i+1);[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+// antal ettor i ett tal
+function pc(x){x=x-((x>>>1)&0x55555555);x=(x&0x33333333)+((x>>>2)&0x33333333);return Math.imul((x+(x>>>4))&0x0F0F0F0F,0x01010101)>>>24;}
+const ctz=x=>31-Math.clz32(x&-x);
+function bitsOf(m){const out=[];while(m){out.push(ctz(m));m&=m-1;}return out;}
+const rowOf=i=>(i/COLS)|0,colOf=i=>i%COLS;
+const cellName=i=>COL_LETTERS[colOf(i)]+(rowOf(i)+1);
+
+// ---------- rutnätet ----------
+const ROW=[],COL=[],NEI=[],ABOVE=[],BELOW=[],LEFT=[],RIGHT=[];
+let EDGE=0,CORNERS=0;
+for(let r=0;r<ROWS;r++){ROW[r]=0;for(let c=0;c<COLS;c++)ROW[r]|=1<<(r*COLS+c);}
+for(let c=0;c<COLS;c++){COL[c]=0;for(let r=0;r<ROWS;r++)COL[c]|=1<<(r*COLS+c);}
+for(let i=0;i<N;i++){
+  const r=rowOf(i),c=colOf(i);let nb=0,ab=0,be=0,le=0,ri=0;
+  for(let j=0;j<N;j++){
+    if(j===i)continue;
+    const rr=rowOf(j),cc=colOf(j),b=1<<j;
+    if(Math.abs(rr-r)<=1&&Math.abs(cc-c)<=1)nb|=b;   // grannar, även snett
+    if(cc===c&&rr<r)ab|=b;if(cc===c&&rr>r)be|=b;
+    if(rr===r&&cc<c)le|=b;if(rr===r&&cc>c)ri|=b;
+  }
+  NEI[i]=nb;ABOVE[i]=ab;BELOW[i]=be;LEFT[i]=le;RIGHT[i]=ri;
+  if(r===0||r===ROWS-1||c===0||c===COLS-1)EDGE|=1<<i;
+  if((r===0||r===ROWS-1)&&(c===0||c===COLS-1))CORNERS|=1<<i;
+}
+// personerna strikt mellan a och b i samma rad eller kolumn
+function betweenMask(a,b){
+  if(a>b)[a,b]=[b,a];
+  if(rowOf(a)===rowOf(b))return RIGHT[a]&LEFT[b];
+  if(colOf(a)===colOf(b))return BELOW[a]&ABOVE[b];
+  return 0;
+}
+// ---------- namn och yrken ----------
+const ALPHABET='ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ';
+const NAMES={
+  A:['Alma','Alva','Arvid','Axel','Agnes','Anton','Astrid','Albin'],
+  B:['Bertil','Bella','Bruno','Britta','Birger','Bodil'],
+  C:['Cecilia','Carl','Cornelia','Christer','Cleo'],
+  D:['David','Doris','Dante','Disa','Dagny'],
+  E:['Elsa','Erik','Ebba','Edvin','Emil','Ellen'],
+  F:['Filip','Frida','Folke','Freja','Fanny'],
+  G:['Greta','Gustav','Gunnar','Gun','Gertrud'],
+  H:['Hugo','Hanna','Harald','Hilda','Hampus'],
+  I:['Ingrid','Isak','Ivar','Ida','Inez'],
+  J:['Julia','Jonna','Jack','Johan','Juni'],
+  K:['Klara','Kalle','Karin','Kevin','Kerstin'],
+  L:['Ludvig','Lova','Leo','Lisa','Linnea'],
+  M:['Maja','Melvin','Molly','Majken','Mohammed'],
+  N:['Nora','Noah','Nova','Nadia','Nisse'],
+  O:['Olle','Olivia','Otto','Ottilia','Oskar'],
+  P:['Petra','Pelle','Pontus','Polly','Paula'],
+  R:['Rut','Rasmus','Ronja','Rolf','Rakel'],
+  S:['Saga','Signe','Sixten','Sune','Stina'],
+  T:['Tove','Ture','Tilda','Theo','Tyra'],
+  U:['Ulf','Ulla','Ulrika','Ubbe'],
+  V:['Vera','Viggo','Valter','Vilma','Vidar'],
+  W:['Wilma','William','Wanja','Wille'],
+  Y:['Ylva','Yngve','Yasmin','Yrsa'],
+  Z:['Zara','Zakarias','Zelda'],
+  'Å':['Åke','Åsa'],
+  'Ö':['Örjan','Östen','Ölvi']
+};
+const JOBS=[
+  {id:'polis',sg:'polis',pl:'poliser',defSg:'polisen',defPl:'poliserna',e:'👮'},
+  {id:'domare',sg:'domare',pl:'domare',defSg:'domaren',defPl:'domarna',e:'⚖️'},
+  {id:'kock',sg:'kock',pl:'kockar',defSg:'kocken',defPl:'kockarna',e:'🍳'},
+  {id:'bagare',sg:'bagare',pl:'bagare',defSg:'bagaren',defPl:'bagarna',e:'🥐'},
+  {id:'lakare',sg:'läkare',pl:'läkare',defSg:'läkaren',defPl:'läkarna',e:'🩺'},
+  {id:'larare',sg:'lärare',pl:'lärare',defSg:'läraren',defPl:'lärarna',e:'📚'},
+  {id:'bonde',sg:'bonde',pl:'bönder',defSg:'bonden',defPl:'bönderna',e:'🚜'},
+  {id:'pilot',sg:'pilot',pl:'piloter',defSg:'piloten',defPl:'piloterna',e:'✈️'},
+  {id:'malare',sg:'målare',pl:'målare',defSg:'målaren',defPl:'målarna',e:'🎨'},
+  {id:'sangare',sg:'sångare',pl:'sångare',defSg:'sångaren',defPl:'sångarna',e:'🎤'},
+  {id:'mekaniker',sg:'mekaniker',pl:'mekaniker',defSg:'mekanikern',defPl:'mekanikerna',e:'🔧'},
+  {id:'frisor',sg:'frisör',pl:'frisörer',defSg:'frisören',defPl:'frisörerna',e:'✂️'},
+  {id:'snickare',sg:'snickare',pl:'snickare',defSg:'snickaren',defPl:'snickarna',e:'🔨'},
+  {id:'brandman',sg:'brandman',pl:'brandmän',defSg:'brandmannen',defPl:'brandmännen',e:'🚒'},
+  {id:'fiskare',sg:'fiskare',pl:'fiskare',defSg:'fiskaren',defPl:'fiskarna',e:'🎣'},
+  {id:'clown',sg:'clown',pl:'clowner',defSg:'clownen',defPl:'clownerna',e:'🤡'},
+  {id:'astronaut',sg:'astronaut',pl:'astronauter',defSg:'astronauten',defPl:'astronauterna',e:'🚀'},
+  {id:'tandlakare',sg:'tandläkare',pl:'tandläkare',defSg:'tandläkaren',defPl:'tandläkarna',e:'🦷'},
+  {id:'postbud',sg:'postbud',pl:'postbud',defSg:'postbudet',defPl:'postbuden',e:'📮'},
+  {id:'programmerare',sg:'programmerare',pl:'programmerare',defSg:'programmeraren',defPl:'programmerarna',e:'💻'},
+  {id:'vakt',sg:'vakt',pl:'vakter',defSg:'vakten',defPl:'vakterna',e:'💂'},
+  {id:'detektiv',sg:'detektiv',pl:'detektiver',defSg:'detektiven',defPl:'detektiverna',e:'🔍'},
+  {id:'byggare',sg:'byggare',pl:'byggare',defSg:'byggaren',defPl:'byggarna',e:'👷'},
+  {id:'kassor',sg:'kassör',pl:'kassörer',defSg:'kassören',defPl:'kassörerna',e:'🧾'}
+];
+const JOB_BY_ID=Object.fromEntries(JOBS.map(j=>[j.id,j]));
+
+// Genitiv: "Klaras", men "Nils" och "Max" utan extra s.
+const gen=name=>/[sxz]$/i.test(name)?name:name+'s';
+
+// Personer till ett nytt pussel: 20 namn med olika begynnelsebokstav i
+// bokstavsordning (A1, B1, C1, D1, A2 …) och 6–8 yrken med 2–4 personer var.
+function makePeople(rand){
+  const letters=shuffled(Object.keys(NAMES),rand).slice(0,N)
+    .sort((a,b)=>ALPHABET.indexOf(a)-ALPHABET.indexOf(b));
+  const names=letters.map(l=>pick(NAMES[l],rand));
+  const nJobs=6+randInt(rand,3);
+  const sizes=new Array(nJobs).fill(2);
+  let left=N-2*nJobs;
+  while(left>0){const k=randInt(rand,nJobs);if(sizes[k]<4){sizes[k]++;left--;}}
+  const jobs=shuffled(JOBS,rand).slice(0,nJobs).map(j=>j.id);
+  const slots=[];sizes.forEach((s,k)=>{for(let i=0;i<s;i++)slots.push(k);});
+  const jobOf=shuffled(slots,rand);
+  return {names,jobs,jobOf};
+}
+// Bygger det som behövs för att räkna på ett pussel (yrkesmasker m.m.).
+function peopleCtx(p){
+  const jobMask=p.jobs.map(()=>0);
+  p.jobOf.forEach((k,i)=>{jobMask[k]|=1<<i;});
+  return {names:p.names,jobs:p.jobs.map(id=>JOB_BY_ID[id]),jobOf:p.jobOf,jobMask,flavorSeed:(p.seed>>>0)%997};
+}
+// ---------- områden ----------
+// R = {k:'row',a} {k:'col',a} {k:'edge'} {k:'corners'} {k:'nb',a} {k:'above',a} {k:'below',a}
+//     {k:'left',a} {k:'right',a} {k:'between',a,b} {k:'common',a,b} {k:'job',a}
+//     {k:'and',A,B} — de som finns i både område A och område B
+function regionMask(R,P){
+  switch(R.k){
+    case 'row':return ROW[R.a];
+    case 'col':return COL[R.a];
+    case 'edge':return EDGE;
+    case 'corners':return CORNERS;
+    case 'all':return ALL;
+    case 'nb':return NEI[R.a];
+    case 'above':return ABOVE[R.a];
+    case 'below':return BELOW[R.a];
+    case 'left':return LEFT[R.a];
+    case 'right':return RIGHT[R.a];
+    case 'between':return betweenMask(R.a,R.b);
+    case 'common':return NEI[R.a]&NEI[R.b]&~(1<<R.a)&~(1<<R.b);
+    case 'job':return P.jobMask[R.a];
+    case 'and':return regionMask(R.A,P)&regionMask(R.B,P);
+  }
+  throw new Error('Okänt område: '+R.k);
+}
+const regionKey=R=>R.k==='and'?'and('+regionKey(R.A)+','+regionKey(R.B)+')':R.k+(R.a!=null?':'+R.a:'')+(R.b!=null?':'+R.b:'');
+const sMask=(m,s)=>s?m:(~m&ALL);
+const cntIn=(m,R,s)=>s?pc(m&R):pc(R&~m);
+// grannar rakt upp, ner, åt vänster och åt höger (inte snett)
+const ORTH=[];
+for(let i=0;i<N;i++)ORTH[i]=NEI[i]&(ROW[rowOf(i)]|COL[colOf(i)]);
+// Hänger ihop: minst en, och man kan gå mellan alla utan att kliva snett eller utanför gruppen.
+function connected(x){
+  if(!x)return false;
+  let seen=x&-x,front=seen;
+  while(front){let nx=0;for(const i of bitsOf(front))nx|=ORTH[i];nx&=x&~seen;seen|=nx;front=nx;}
+  return seen===x;
+}
+// Personen direkt åt ett håll (l, r, u = upp, d = ner), eller -1 vid kanten.
+const DIRS={l:[0,-1],r:[0,1],u:[-1,0],d:[1,0]};
+function dirCell(i,d){const r=rowOf(i)+DIRS[d][0],c=colOf(i)+DIRS[d][1];return r>=0&&r<ROWS&&c>=0&&c<COLS?r*COLS+c:-1;}
+const lineCounts=(m,lines,s)=>(lines==='row'?ROW:COL).map(L=>cntIn(m,L,s));
+const famMasks=(fam,P)=>fam==='row'?ROW:fam==='col'?COL:fam==='nb'?NEI:P.jobMask;
+
+// ---------- ledtrådar ----------
+// En ledtråd är ett litet objekt (sp) som kan sparas som JSON.
+// clueLogic(sp) ger {scope, test}: test(m) säger om ledtråden är sann för m,
+// och läser bara bitarna i scope.
+function clueLogic(sp,P){
+  const s=sp.s;
+  switch(sp.t){
+    case 'cnt':{const R=regionMask(sp.R,P),n=sp.n;return {scope:R,test:m=>cntIn(m,R,s)===n};}
+    case 'min':{const R=regionMask(sp.R,P),n=sp.n;return {scope:R,test:m=>cntIn(m,R,s)>=n};}
+    case 'par':{const R=regionMask(sp.R,P),o=sp.odd;return {scope:R,test:m=>(cntIn(m,R,s)&1)===o};}
+    case 'cmpS':{const R=regionMask(sp.R,P);return {scope:R,test:m=>{const a=cntIn(m,R,s),b=cntIn(m,R,1-s);return sp.eq?a===b:a>b;}};}
+    case 'cmpR':{const A=regionMask(sp.R,P),B=regionMask(sp.R2,P);return {scope:A|B,test:m=>{const a=cntIn(m,A,s),b=cntIn(m,B,s);return sp.eq?a===b:a>b;}};}
+    case 'member':{const R=regionMask(sp.R,P),p=sp.p,n=sp.n;return {scope:R|(1<<p),test:m=>((m>>>p)&1)===s&&cntIn(m,R,s)===n};}
+    case 'conn':{const R=regionMask(sp.R,P);return {scope:R,test:m=>connected(sMask(m,s)&R)};}
+    case 'both':{const R=regionMask(sp.R,P);return {scope:R,test:m=>{const x=sMask(m,s)&R;return pc(x)===2&&connected(x);}};}
+    case 'allIn':{const A=regionMask(sp.R,P),B=regionMask(sp.R2,P);return {scope:A,test:m=>{const x=sMask(m,s)&A;return x!==0&&(x&~B)===0;}};}
+    case 'subcnt':{const A=regionMask(sp.R,P),B=regionMask(sp.R2,P),k=sp.k,n=sp.n;return {scope:A,test:m=>{const x=sMask(m,s)&A;return pc(x)===k&&pc(x&B)===n;}};}
+    case 'most':{const idx=sp.idx,ln=sp.lines;return {scope:ALL,test:m=>{const c=lineCounts(m,ln,s);for(let i=0;i<c.length;i++)if(i!==idx&&c[i]>=c[idx])return false;return true;}};}
+    case 'only':{const idx=sp.idx,ln=sp.lines,n=sp.n;return {scope:ALL,test:m=>{const c=lineCounts(m,ln,s);for(let i=0;i<c.length;i++)if((c[i]===n)!==(i===idx))return false;return true;}};}
+    case 'each':{const ln=sp.lines,n=sp.n;return {scope:ALL,test:m=>lineCounts(m,ln,s).every(c=>c>=n)};}
+    case 'total':{const n=sp.n;return {scope:ALL,test:m=>cntIn(m,ALL,s)===n};}
+    // ett yrke, eller en persons grannar, har flest av alla
+    case 'mostR':{const F=famMasks(sp.R.k,P),i=sp.R.a;return {scope:ALL,test:m=>{const c=cntIn(m,F[i],s);for(let j=0;j<F.length;j++)if(j!==i&&cntIn(m,F[j],s)>=c)return false;return true;}};}
+    // p är den enda som har exakt n sådana grannar
+    case 'onlyNb':{const p=sp.p,n=sp.n;return {scope:ALL,test:m=>{for(let j=0;j<N;j++)if((cntIn(m,NEI[j],s)===n)!==(j===p))return false;return true;}};}
+    // bara en rad/kolumn/person har exakt n
+    case 'oneHas':{const F=famMasks(sp.fam,P),n=sp.n;return {scope:ALL,test:m=>{let k=0;for(const M of F)if(cntIn(m,M,s)===n)k++;return k===1;}};}
+    // exakt n personer i R (som är s1) har en s2 direkt åt hållet d
+    case 'dirnb':{
+      const ps=bitsOf(regionMask(sp.R,P)).map(p=>[p,dirCell(p,sp.d)]).filter(x=>x[1]>=0),s1=sp.s1,s2=sp.s2,n=sp.n;
+      let scope=0;for(const [p,q] of ps)scope|=(s1==null?0:1<<p)|(1<<q);
+      return {scope,test:m=>{let k=0;for(const [p,q] of ps)if((s1==null||((m>>>p)&1)===s1)&&((m>>>q)&1)===s2)k++;return k===n;}};
+    }
+    // bara en person i R har exakt n sådana grannar
+    case 'onlyOneNb':{
+      const ps=bitsOf(regionMask(sp.R,P)),n=sp.n;let scope=0;for(const p of ps)scope|=NEI[p];
+      return {scope,test:m=>{let k=0;for(const p of ps)if(cntIn(m,NEI[p],s)===n)k++;return k===1;}};
+    }
+  }
+  throw new Error('Okänd ledtråd: '+sp.t);
+}
+
+// ---------- ledtrådarnas text ----------
+const SK=n=>n===1?'skurk':'skurkar';
+const OS=n=>n===1?'oskyldig':'oskyldiga';
+const ST=(s,n)=>s?SK(n):OS(n);
+const SKG=n=>n===1?'skurkgranne':'skurkgrannar';
+const OSG=n=>n===1?'oskyldig granne':'oskyldiga grannar';
+const STG=(s,n)=>s?SKG(n):OSG(n);
+const STP=s=>s?'skurkar':'oskyldiga';
+const STGP=s=>s?'skurkgrannar':'oskyldiga grannar';
+const LINE_SG={row:'rad',col:'kolumn'},LINE_DEF={row:'raden',col:'kolumnen'};
+const lineName=(lines,i)=>lines==='row'?'Rad '+(i+1):'Kolumn '+COL_LETTERS[i];
+const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+const DIR_TXT={l:'direkt till vänster om sig',r:'direkt till höger om sig',u:'direkt ovanför sig',d:'direkt nedanför sig'};
+const DIRK={above:1,below:1,left:1,right:1};
+
+// Fraser till personer som inte har någon ledtråd.
+const FLAVOR_INNO=['Tack för att du trodde på mig!','Jag visste att du skulle fatta!','Hurra, jag är fri!','Du är en riktig detektiv!','Puh, vilken tur!','Snyggt löst!','Jag sa ju att jag var snäll!','Toppen, tack!'];
+const FLAVOR_CRIM=['Åh nej, jag blev påkommen!','Hur kunde du veta det?','Det var inte meningen!','Jag ger mig!','Attans, avslöjad!','Nästa gång lurar jag dig!'];
+function flavorText(P,p,crim){const L=crim?FLAVOR_CRIM:FLAVOR_INNO;return L[(p*7+(P.flavorSeed||0))%L.length];}
+
+function clueText(sp,P){
+  const nm=i=>P.names[i];
+  const size=R=>pc(regionMask(R,P));
+  const where=R=>{switch(R.k){
+    case 'row':return 'i rad '+(R.a+1);
+    case 'col':return 'i kolumn '+COL_LETTERS[R.a];
+    case 'edge':return 'på kanten';
+    case 'corners':return 'i hörnen';
+    case 'above':return 'ovanför '+nm(R.a);
+    case 'below':return 'nedanför '+nm(R.a);
+    case 'left':return 'till vänster om '+nm(R.a);
+    case 'right':return 'till höger om '+nm(R.a);
+    case 'between':return 'mellan '+nm(R.a)+' och '+nm(R.b);
+  }return '?';};
+  // "är …" om ett område, i singular, plural och nekat
+  const pred=R=>{switch(R.k){
+    case 'nb':return {sg:'är granne till '+nm(R.a),pl:'är grannar till '+nm(R.a),neg:'är inte granne till '+nm(R.a)};
+    case 'job':{const J=P.jobs[R.a];return {sg:'är '+J.sg,pl:'är '+J.pl,neg:'är inte '+J.sg};}
+  }const w=where(R);return {sg:'finns '+w,pl:'finns '+w,neg:'finns inte '+w};};
+  // Hur många: {n} exakt, {min} minst, {odd} udda/jämnt. Ger en hel mening.
+  function count(R,s,q){
+    const exact=q.n!=null,mn=q.min!=null,par=q.odd!=null,n=exact?q.n:mn?q.min:2;
+    const qty=exact?(n===0?'inga':'exakt '+n):mn?'minst '+n:'ett '+(q.odd?'udda':'jämnt')+' antal';
+    const many=par||n!==1;
+    switch(R.k){
+      case 'nb':{
+        const X=nm(R.a);
+        if(exact&&n===size(R))return `Alla ${gen(X)} grannar är ${STP(s)}.`;
+        return `${X} har ${qty} ${many?STGP(s):STG(s,1)}.`;
+      }
+      case 'job':{
+        const J=P.jobs[R.a],sz=size(R);
+        if(exact&&n===0)return `Ingen av ${J.defPl} är ${s?'skurk':'oskyldig'}.`;
+        if(exact&&n===sz)return `Alla ${J.defPl} är ${STP(s)}.`;
+        if(exact)return `Exakt ${n} av de ${sz} ${J.defPl} är ${ST(s,n)}.`;
+        if(mn)return `Minst ${n} av ${J.defPl} är ${ST(s,n)}.`;
+        return `Ett ${q.odd?'udda':'jämnt'} antal av ${J.defPl} är ${STP(s)}.`;
+      }
+      case 'common':{
+        const X=nm(R.a),Y=nm(R.b),g=many?'gemensamma':'gemensam';
+        return `${X} och ${Y} har ${qty} ${g} ${many?STGP(s):STG(s,1)}.`;
+      }
+      case 'and':{
+        const A=R.A,B=R.B;
+        if(A.k==='nb'){
+          const X=nm(A.a),tail=B.k==='job'?'som är '+(many?P.jobs[B.a].pl:P.jobs[B.a].sg):where(B);
+          return `${X} har ${qty} ${many?STGP(s):STG(s,1)} ${tail}.`;
+        }
+        if(A.k==='corners'){
+          const w='i hörnen '+where(B);
+          if(exact&&n===0)return `Ingen av de två ${w} är ${s?'skurk':'oskyldig'}.`;
+          if(exact&&n===2)return `Båda ${w} är ${STP(s)}.`;
+          return `Exakt en av de två ${w} är ${s?'skurk':'oskyldig'}.`;
+        }
+        if(DIRK[A.k]&&B.k==='job'){
+          const J=P.jobs[B.a];
+          return `Det finns ${qty} ${many?J.pl:J.sg} som är ${many?STP(s):ST(s,1)} ${where(A)}.`;
+        }
+        return '?';
+      }
+    }
+    const w=where(R),sz=size(R);
+    if(exact&&n===sz&&sz>1)return `Alla ${w} är ${STP(s)}.`;
+    return `Det finns ${qty} ${many?STP(s):ST(s,1)} ${w}.`;
+  }
+  // "skurkarna i rad 3" som subjekt, i plural ("Alla …") och för exakt två ("Båda …")
+  const group=(R,s)=>{
+    if(R.k==='nb')return {all:`Alla ${gen(nm(R.a))} ${STGP(s)}`,both:`Båda ${gen(nm(R.a))} ${STGP(s)}`,one:`${gen(nm(R.a))} enda ${s?'skurkgranne':'oskyldiga granne'}`};
+    if(R.k==='job'){const J=P.jobs[R.a];return {all:s?`Alla ${J.pl} som är skurkar`:`Alla oskyldiga ${J.pl}`,both:s?`Båda ${J.defPl} som är skurkar`:`Båda de oskyldiga ${J.defPl}`,one:s?`Den enda ${J.defSg} som är skurk`:`Den enda oskyldiga ${J.defSg}`};}
+    const w=where(R);
+    return {all:`Alla ${STP(s)} ${w}`,both:`Båda ${s?'skurkarna':'de oskyldiga'} ${w}`,one:`Den enda ${s?'skurken':'oskyldiga'} ${w}`};
+  };
+  const s=sp.s,R=sp.R;
+  switch(sp.t){
+    case 'cnt':return count(R,s,{n:sp.n});
+    case 'min':return count(R,s,{min:sp.n});
+    case 'par':return count(R,s,{odd:sp.odd});
+    case 'cmpS':{
+      const a=STP(s),b=STP(1-s);
+      if(R.k==='nb'){
+        const X=nm(R.a);
+        if(sp.eq)return `Hälften av ${gen(X)} grannar är skurkar.`;
+        return `${X} har fler ${STGP(s)} än ${STGP(1-s)}.`;
+      }
+      if(R.k==='job'){
+        const J=P.jobs[R.a];
+        if(sp.eq)return `Hälften av ${J.defPl} är skurkar.`;
+        return `Fler av ${J.defPl} är ${a} än ${b}.`;
+      }
+      if(sp.eq)return `Det finns lika många skurkar som oskyldiga ${where(R)}.`;
+      return `Det finns fler ${a} än ${b} ${where(R)}.`;
+    }
+    case 'cmpR':{
+      const R2=sp.R2;
+      if(R.k==='nb'){
+        if(sp.eq)return `${nm(R.a)} och ${nm(R2.a)} har lika många ${STGP(s)}.`;
+        return `${nm(R.a)} har fler ${STGP(s)} än ${nm(R2.a)}.`;
+      }
+      if(R.k==='job'){
+        const A=P.jobs[R.a],B=P.jobs[R2.a];
+        if(sp.eq)return `Lika många ${A.pl} som ${B.pl} är ${STP(s)}.`;
+        return `Fler ${A.pl} än ${B.pl} är ${STP(s)}.`;
+      }
+      if(sp.eq)return `Det finns lika många ${STP(s)} ${where(R)} som ${where(R2)}.`;
+      return `Det finns fler ${STP(s)} ${where(R)} än ${where(R2)}.`;
+    }
+    case 'member':{
+      const X=nm(sp.p),n=sp.n;
+      if(R.k==='nb'){
+        const Y=nm(R.a);
+        if(n===1)return s?`${X} är ${gen(Y)} enda skurkgranne.`:`${X} är ${gen(Y)} enda oskyldiga granne.`;
+        return `${X} är en av ${gen(Y)} ${n} ${STG(s,n)}.`;
+      }
+      if(R.k==='job'){
+        const J=P.jobs[R.a];
+        if(n===1)return s?`${X} är den enda ${J.defSg} som är skurk.`:`${X} är den enda oskyldiga ${J.defSg}.`;
+        return s?`${X} är en av ${n} ${J.pl} som är skurkar.`:`${X} är en av ${n} oskyldiga ${J.pl}.`;
+      }
+      if(n===1)return `${X} är den enda ${s?'skurken':'oskyldiga'} ${where(R)}.`;
+      return `${X} är en av ${n} ${ST(s,n)} ${where(R)}.`;
+    }
+    case 'conn':return `${group(R,s).all} hänger ihop.`;
+    case 'both':return `${group(R,s).both} hänger ihop.`;
+    case 'allIn':return `${group(R,s).all} ${pred(sp.R2).pl}.`;
+    case 'subcnt':{
+      const k=sp.k,n=sp.n,pr=pred(sp.R2),g=group(R,s);
+      if(k===1)return `${cap(g.one)} ${n?pr.sg:pr.neg}.`;
+      if(k===2&&n===2)return `${g.both} ${pr.pl}.`;
+      let lead;
+      if(R.k==='nb')lead=`${nm(R.a)} har exakt ${k} ${STG(s,k)}`;
+      else if(R.k==='job'){const J=P.jobs[R.a];lead=`Exakt ${k} av ${J.defPl} är ${ST(s,k)}`;}
+      else lead=`Det finns exakt ${k} ${ST(s,k)} ${where(R)}`;
+      if(n===0)return `${lead}, men ingen av dem ${pr.sg}.`;
+      if(n===k)return `${lead}, och alla ${pr.pl}.`;
+      return `${lead}, och exakt ${n} av dem ${n===1?pr.sg:pr.pl}.`;
+    }
+    case 'most':return `${lineName(sp.lines,sp.idx)} har flest ${STP(s)}.`;
+    case 'only':{
+      const L=lineName(sp.lines,sp.idx),d=LINE_DEF[sp.lines];
+      if(sp.n===0)return `${L} är den enda ${d} utan ${STP(s)}.`;
+      return `${L} är den enda ${d} med exakt ${sp.n} ${ST(s,sp.n)}.`;
+    }
+    case 'each':return `Varje ${LINE_SG[sp.lines]} har minst ${sp.n} ${ST(s,sp.n)}.`;
+    case 'total':return `Det finns totalt ${sp.n} ${ST(s,sp.n)}.`;
+    case 'mostR':{
+      if(R.k==='nb')return `${nm(R.a)} har flest ${STGP(s)} av alla.`;
+      return `${cap(P.jobs[R.a].defPl)} har flest ${STP(s)} av alla yrken.`;
+    }
+    case 'onlyNb':{
+      const X=nm(sp.p),n=sp.n;
+      if(n===0)return `${X} är den enda som inte har några ${STGP(s)}.`;
+      return `${X} är den enda som har exakt ${n} ${STG(s,n)}.`;
+    }
+    case 'oneHas':{
+      const n=sp.n;
+      if(sp.fam==='nb')return n===0?`Bara en person har inga ${STGP(s)}.`:`Bara en person har exakt ${n} ${STG(s,n)}.`;
+      const w=LINE_SG[sp.fam];
+      return n===0?`Bara en ${w} saknar ${STP(s)}.`:`Bara en ${w} har exakt ${n} ${ST(s,n)}.`;
+    }
+    case 'dirnb':{
+      const n=sp.n,who=s=>s?'skurk':'oskyldig',d=DIR_TXT[sp.d];
+      let sg,pl;
+      if(R.k==='job'){const J=P.jobs[R.a];sg=J.sg;pl=J.pl;}
+      else if(sp.s1==null){sg='person '+where(R);pl='personer '+where(R);}
+      else{sg=who(sp.s1)+' '+where(R);pl=STP(sp.s1)+' '+where(R);}
+      const obj=`en ${who(sp.s2)} ${d}`;
+      if(n===0)return `Ingen ${sg} har ${obj}.`;
+      if(n===1)return `Bara en ${sg} har ${obj}.`;
+      return `Exakt ${n} ${pl} har ${obj}.`;
+    }
+    case 'onlyOneNb':{
+      const n=sp.n,has=n===0?`inga ${STGP(s)}`:`exakt ${n} ${STG(s,n)}`;
+      if(R.k==='job')return `Bara en av ${P.jobs[R.a].defPl} har ${has}.`;
+      return `Bara en person ${where(R)} har ${has}.`;
+    }
+  }
+  return '?';
+}
+function buildClue(sp,P){if(!sp)return null;const L=clueLogic(sp,P);return {sp,scope:L.scope,test:L.test};}
+// ---------- alla sanna ledtrådar för en lösning ----------
+// Varje post: {sp, key, cx}. key är samma för påståenden som betyder samma sak
+// (t.ex. "2 skurkar i rad 3" och "2 oskyldiga i rad 3"), så att ett pussel aldrig
+// får samma ledtråd två gånger. cx = hur krånglig ledtråden är (1–4).
+const REGION_CX={row:1,col:1,nb:1,edge:2,corners:2,above:2,below:2,left:2,right:2,between:2,job:2,common:3,and:3};
+const cheb=(a,b)=>Math.max(Math.abs(rowOf(a)-rowOf(b)),Math.abs(colOf(a)-colOf(b)));
+function makePool(truth,P){
+  const pool=[];
+  const add=(sp,key,cx)=>pool.push({sp,key,cx});
+  const M=R=>regionMask(R,P);
+  const cnt=(R,s)=>cntIn(truth,M(R),s);
+  const lines=[];
+  for(let r=0;r<ROWS;r++)lines.push({k:'row',a:r});
+  for(let c=0;c<COLS;c++)lines.push({k:'col',a:c});
+  const big=[{k:'edge'},{k:'corners'}];
+  const nbs=[],dir=[],dir2=[],betw=[],commons=[],ands=[];
+  for(let p=0;p<N;p++){
+    nbs.push({k:'nb',a:p});
+    for(const k of ['above','below','left','right']){const R={k,a:p},n=pc(M(R));if(n)dir.push(R);if(n>=2)dir2.push(R);}
+  }
+  for(let a=0;a<N;a++)for(let b=a+1;b<N;b++){
+    if(pc(betweenMask(a,b))>=1)betw.push({k:'between',a,b});
+    const d=cheb(a,b);
+    if(d>=1&&d<=2&&pc(M({k:'common',a,b}))>=2)commons.push({k:'common',a,b});
+  }
+  const jobsR=P.jobs.map((_,j)=>({k:'job',a:j}));
+  // snitt: en persons grannar i en rad/kolumn/på kanten/i hörnen/med ett yrke,
+  // hörnen i en rad eller kolumn, och ett yrke ovanför/nedanför/till vänster/till höger om någon
+  for(let p=0;p<N;p++){
+    const A={k:'nb',a:p},a=M(A);
+    for(const B of [...lines,...big,...jobsR]){const x=a&M(B);if(pc(x)>=2&&x!==a)ands.push({k:'and',A,B});}
+  }
+  for(const B of [{k:'row',a:0},{k:'row',a:ROWS-1},{k:'col',a:0},{k:'col',a:COLS-1}])ands.push({k:'and',A:{k:'corners'},B});
+  for(const A of dir2)for(const B of jobsR){const x=M(A)&M(B);if(x&&x!==M(A))ands.push({k:'and',A,B});}
+
+  // antal i ett område
+  for(const R of [...lines,...big,...nbs,...dir,...betw,...jobsR,...commons,...ands]){
+    const key='cnt|'+regionKey(R),cx=REGION_CX[R.k];
+    for(const s of [1,0])add({t:'cnt',R,s,n:cnt(R,s)},key,cx);
+  }
+  // minst n
+  for(const R of [...lines,...big,...nbs,...dir2,...jobsR,...ands.filter(R=>R.A.k!=='corners')]){
+    const sz=pc(M(R));
+    for(const s of [1,0]){
+      const c=cnt(R,s);
+      if(c>=1&&c<sz)add({t:'min',R,s,n:c},'min|'+regionKey(R)+'|'+s,REGION_CX[R.k]);
+      if(c>=2)add({t:'min',R,s,n:c-1},'min|'+regionKey(R)+'|'+s,REGION_CX[R.k]);
+    }
+  }
+  // X är en av n … i ett område där X finns
+  for(let p=0;p<N;p++){
+    const s=(truth>>>p)&1,b=1<<p;
+    const rs=[{k:'row',a:rowOf(p)},{k:'col',a:colOf(p)},{k:'job',a:P.jobOf[p]}];
+    if(EDGE&b)rs.push({k:'edge'});
+    if(CORNERS&b)rs.push({k:'corners'});
+    for(const q of bitsOf(NEI[p]))rs.push({k:'nb',a:q});
+    for(const R of dir)if(M(R)&b&&pc(M(R))>=2)rs.push(R);
+    for(const R of rs){
+      const n=cnt(R,s);
+      add({t:'member',p,R,s,n},'member|'+p+'|'+regionKey(R),R.k==='row'||R.k==='col'||R.k==='nb'?1:2);
+    }
+  }
+  // fler skurkar än oskyldiga (eller lika många) i ett område
+  for(const R of [...lines,...big,...nbs,...jobsR]){
+    const sz=pc(M(R));if(sz<2)continue;
+    const c1=cnt(R,1),c0=sz-c1;
+    add(c1===c0?{t:'cmpS',R,s:1,eq:true}:{t:'cmpS',R,s:c1>c0?1:0,eq:false},'cmpS|'+regionKey(R),2);
+  }
+  // udda/jämnt antal
+  for(const R of [...lines,...big,...nbs,...jobsR,...commons,...ands.filter(R=>R.A.k==='nb'&&R.B.k!=='job')]){
+    if(pc(M(R))<2)continue;
+    const cx=R.k==='common'||R.k==='and'?4:3;
+    for(const s of [1,0]){const n=cnt(R,s);if(n===0)continue;add({t:'par',R,s,odd:n&1},'par|'+regionKey(R),cx);}
+  }
+  // jämför två områden
+  const cmpPairs=[];
+  for(let a=0;a<ROWS;a++)for(let b=a+1;b<ROWS;b++)cmpPairs.push([{k:'row',a},{k:'row',a:b},2]);
+  for(let a=0;a<COLS;a++)for(let b=a+1;b<COLS;b++)cmpPairs.push([{k:'col',a},{k:'col',a:b},2]);
+  for(let a=0;a<ROWS;a++)for(let b=0;b<COLS;b++)cmpPairs.push([{k:'row',a},{k:'col',a:b},3]);
+  for(const R of lines)cmpPairs.push([{k:'corners'},R,3]);
+  for(let a=0;a<P.jobs.length;a++)for(let b=a+1;b<P.jobs.length;b++)cmpPairs.push([{k:'job',a},{k:'job',a:b},3]);
+  for(let a=0;a<N;a++)for(let b=a+1;b<N;b++){
+    if(cheb(a,b)<=2||rowOf(a)===rowOf(b)||colOf(a)===colOf(b))cmpPairs.push([{k:'nb',a},{k:'nb',a:b},3]);
+  }
+  for(let p=0;p<N;p++){
+    if(ABOVE[p]&&BELOW[p])cmpPairs.push([{k:'above',a:p},{k:'below',a:p},3]);
+    if(LEFT[p]&&RIGHT[p])cmpPairs.push([{k:'left',a:p},{k:'right',a:p},3]);
+  }
+  for(const [A,B,cx] of cmpPairs){
+    const same=pc(M(A))===pc(M(B));
+    for(const s of [1,0]){
+      const a=cnt(A,s),b=cnt(B,s),key='cmpR|'+regionKey(A)+'|'+regionKey(B)+'|'+(same?'':s);
+      if(a===b)add({t:'cmpR',R:A,R2:B,s,eq:true},key,cx);
+      else if(a>b)add({t:'cmpR',R:A,R2:B,s,eq:false},key,cx);
+      else add({t:'cmpR',R:B,R2:A,s,eq:false},key,cx);
+    }
+  }
+  // hänger ihop: alla (minst två) eller exakt två
+  for(const R of [...lines,...dir2,...betw.filter(R=>pc(M(R))>=2),{k:'edge'},...jobsR]){
+    const sz=pc(M(R));
+    for(const s of [1,0]){
+      const x=sMask(truth,s)&M(R),n=pc(x);
+      if(n===2&&connected(x))add({t:'both',R,s},'both|'+regionKey(R)+'|'+s,R.k==='job'?3:2);
+      if(R.k!=='job'&&n>=3&&n<sz&&connected(x))add({t:'conn',R,s},'conn|'+regionKey(R)+'|'+s,3);
+    }
+  }
+  // "Alla skurkar i rad 3 är Nils grannar", "Den enda skurken till höger om Frank finns på kanten"
+  // och "Det finns exakt 3 …, och exakt 1 av dem är kock"
+  const firsts=[...lines,...nbs,...jobsR,...dir2];
+  const seconds=R1=>{
+    const out=[{k:'edge'},{k:'corners'}];
+    if(R1.k!=='job')for(let j=0;j<P.jobs.length;j++)out.push({k:'job',a:j});
+    for(let q=0;q<N;q++)out.push({k:'nb',a:q});
+    if(R1.k==='nb'||R1.k==='job'){for(let r=0;r<ROWS;r++)out.push({k:'row',a:r});for(let c=0;c<COLS;c++)out.push({k:'col',a:c});}
+    if(R1.k==='nb')for(const R of dir2)out.push(R);
+    return out;
+  };
+  for(const R1 of firsts){
+    const A=M(R1);
+    for(const s of [1,0]){
+      const x=sMask(truth,s)&A,k=pc(x);
+      if(!k)continue;
+      for(const R2 of seconds(R1)){
+        const B=M(R2),inter=A&B;
+        if(!inter||(A&~B)===0)continue;          // inget gemensamt, eller självklart
+        if(R2.k==='nb'&&R1.k===R2.k&&R1.a===R2.a)continue;
+        if(R2.k==='nb'&&(A>>>R2.a)&1&&R1.k!=='job')continue; // personen själv ingår i området
+        if(R2.k==='nb'&&R1.a===R2.a&&R1.k!=='row'&&R1.k!=='col'&&R1.k!=='job')continue; // "… nedanför Freja är grannar till Freja"
+        if(DIRK[R2.k]&&R2.a===R1.a)continue;
+        const n=pc(x&B),key='sub|'+regionKey(R1)+'|'+s+'|'+regionKey(R2);
+        if(n===k&&k>=2)add({t:'allIn',R:R1,s,R2},'allIn|'+key,3);
+        if(k===1)add({t:'subcnt',R:R1,s,k,R2,n},'one|'+key,3);
+        if(k>=2)add({t:'subcnt',R:R1,s,k,R2,n},'subcnt|'+key,k===2&&n===2?3:4);
+      }
+    }
+  }
+  // rader och kolumner jämförda med varandra, och totalen
+  for(const ln of ['row','col']){
+    const LS=ln==='row'?ROW:COL,size=pc(LS[0]);
+    for(const s of [1,0]){
+      const c=lineCounts(truth,ln,s),mx=Math.max(...c),mn=Math.min(...c);
+      if(c.filter(v=>v===mx).length===1)add({t:'most',lines:ln,s,idx:c.indexOf(mx)},'most|'+ln+'|'+s,4);
+      for(let n=0;n<=size;n++){
+        const w=c.map((v,i)=>v===n?i:-1).filter(i=>i>=0);
+        if(w.length===1){
+          add({t:'only',lines:ln,s,n,idx:w[0]},'only|'+ln+'|'+(s?n:size-n),4);
+          add({t:'oneHas',fam:ln,s,n},'oneHas|'+ln+'|'+(s?n:size-n),4);
+        }
+      }
+      if(mn>=1)add({t:'each',lines:ln,s,n:mn},'each|'+ln+'|'+s,4);
+    }
+  }
+  for(const s of [1,0])add({t:'total',s,n:cntIn(truth,ALL,s)},'total',2);
+  // flest av alla yrken, flest grannar av alla, ensam om ett antal grannar
+  for(const s of [1,0]){
+    for(const fam of ['job','nb']){
+      const F=famMasks(fam,P),c=F.map(m=>cntIn(truth,m,s)),mx=Math.max(...c);
+      if(c.filter(v=>v===mx).length===1)add({t:'mostR',R:{k:fam,a:c.indexOf(mx)},s},'mostR|'+fam+'|'+s,4);
+    }
+    const nc=NEI.map(m=>cntIn(truth,m,s));
+    for(let p=0;p<N;p++)if(nc.filter(v=>v===nc[p]).length===1){
+      add({t:'onlyNb',p,s,n:nc[p]},'onlyNb|'+p+'|'+s,4);
+      add({t:'oneHas',fam:'nb',s,n:nc[p]},'oneHas|nb|'+s+'|'+nc[p],4);
+    }
+    // bara en person i hörnen/raden/kolumnen/yrket har exakt n sådana grannar
+    for(const R of [{k:'corners'},...lines,...jobsR]){
+      const cs=bitsOf(M(R)).map(p=>nc[p]);
+      for(const n of new Set(cs))if(cs.filter(v=>v===n).length===1&&cs.length>=2)add({t:'onlyOneNb',R,s,n},'onlyOneNb|'+regionKey(R)+'|'+s+'|'+n,4);
+    }
+  }
+  // exakt n personer i en rad/kolumn/på kanten/med ett yrke har en skurk direkt åt ett håll
+  for(const R of [...lines,{k:'edge'},...jobsR]){
+    for(const d of ['l','r','u','d']){
+      const ps=bitsOf(M(R)).filter(p=>dirCell(p,d)>=0);
+      if(ps.length<2)continue;
+      for(const s1 of R.k==='job'?[null]:[null,1,0])for(const s2 of [1,0]){
+        let n=0;for(const p of ps)if((s1==null||((truth>>>p)&1)===s1)&&((truth>>>dirCell(p,d))&1)===s2)n++;
+        add({t:'dirnb',R,s1,d,s2,n},'dirnb|'+regionKey(R)+'|'+d+'|'+(s1==null?'-':s1+'|'+s2),4);
+      }
+    }
+  }
+  return pool;
+}
+// ---------- lösaren ----------
+// För varje avslöjad ledtråd sparas U (okända celler i ledtrådens område) och
+// subs: alla sätt att fylla U som gör ledtråden sann, givet dem vi redan vet om.
+function localSolve(clue,known,vals){
+  const U=clue.scope&~known,base=vals&known,test=clue.test,out=[];
+  let sub=0;
+  do{if(test(base|sub))out.push(sub);sub=(sub-U)&U;}while(sub!==0);
+  return {clue,U,subs:out,owner:-1};
+}
+function narrow(st,known,vals){
+  const nk=st.U&known;if(!nk)return;
+  const want=vals&nk,out=[];
+  for(const x of st.subs)if((x&nk)===want)out.push(x&~nk);
+  st.subs=out;st.U&=~nk;
+}
+const isUseless=st=>st.subs.length===2**pc(st.U);
+// Det en enda ledtråd avgör.
+function forced1(st){
+  let a=-1,o=0;for(const x of st.subs){a&=x;o|=x;}
+  return {crim:a&st.U,inno:st.U&~o};
+}
+function bucket(st,S){
+  const m=new Map();
+  for(const x of st.subs){const k=x&S,e=m.get(k);if(e){e[0]&=x;e[1]|=x;}else m.set(k,[x,x]);}
+  return m;
+}
+// Det två ledtrådar avgör tillsammans (de måste dela minst en okänd cell).
+function forced2(A,B){
+  const S=A.U&B.U;if(!S)return null;
+  const ma=bucket(A,S),mb=bucket(B,S);let a=-1,o=0,any=false;
+  for(const [k,ea] of ma){const eb=mb.get(k);if(!eb)continue;any=true;a&=ea[0]|eb[0];o|=ea[1]|eb[1];}
+  if(!any)return null;
+  const U=A.U|B.U;return {crim:a&U,inno:U&~o};
+}
+function join(A,B,cap){
+  const S=A.U&B.U,mb=new Map();
+  for(const y of B.subs){const k=y&S;let l=mb.get(k);if(!l)mb.set(k,l=[]);l.push(y);}
+  const out=[];
+  for(const x of A.subs){const l=mb.get(x&S);if(!l)continue;for(const y of l)out.push(x|y);if(out.length>cap)return null;}
+  return {U:A.U|B.U,subs:out};
+}
+// Det tre ledtrådar avgör tillsammans.
+function forced3(A,B,C,cap){
+  let X,Y,Z;
+  if(A.U&B.U){X=A;Y=B;Z=C;}else if(A.U&C.U){X=A;Y=C;Z=B;}else if(B.U&C.U){X=B;Y=C;Z=A;}else return null;
+  if(!((X.U|Y.U)&Z.U))return null;
+  const J=join(X,Y,cap||60000);if(!J)return null;
+  return forced2(J,Z);
+}
+// Allt som går att avgöra med alla ledtrådar tillsammans (exakt logik).
+// Ledtrådar som inte delar celler räknas var för sig. null om det blir för stort.
+function exactForced(states,cap){
+  cap=cap||300000;
+  const live=states.filter(st=>st.U);
+  const used=new Array(live.length).fill(false);
+  let crim=0,inno=0;
+  for(let i=0;i<live.length;i++){
+    if(used[i])continue;
+    used[i]=true;const comp=[live[i]];let U=live[i].U,grew=true;
+    while(grew){grew=false;for(let j=0;j<live.length;j++)if(!used[j]&&(live[j].U&U)){used[j]=true;comp.push(live[j]);U|=live[j].U;grew=true;}}
+    comp.sort((a,b)=>a.subs.length-b.subs.length);
+    let J={U:comp[0].U,subs:comp[0].subs};
+    const rest=comp.slice(1);
+    while(rest.length){
+      let bi=0,bs=-1;
+      for(let k=0;k<rest.length;k++){const sc=pc(rest[k].U&J.U)*1000-rest[k].subs.length;if((rest[k].U&J.U)&&sc>bs){bs=sc;bi=k;}}
+      if(bs<0)bi=0;
+      J=join(J,rest.splice(bi,1)[0],cap);
+      if(!J)return null;
+    }
+    let a=-1,o=0;for(const x of J.subs){a&=x;o|=x;}
+    if(!J.subs.length)return {crim:0,inno:0,contra:true};
+    crim|=a&J.U;inno|=J.U&~o;
+  }
+  return {crim,inno};
+}
+// Långsam reserv om exactForced blir för stor: prövar alla möjligheter.
+function bruteForced(states,known,vals){
+  let U=0;for(const st of states)U|=st.U;
+  U&=~known;
+  const tests=states.filter(st=>st.U).map(st=>st.clue.test),base=vals&known;
+  let a=-1,o=0,sub=0;
+  do{const m=base|sub;let ok=true;for(const t of tests)if(!t(m)){ok=false;break;}if(ok){a&=sub;o|=sub;}sub=(sub-U)&U;}while(sub!==0);
+  return {crim:a&U,inno:U&~o};
+}
+
+// ---------- svårighetsgrad ----------
+// Nivå 1: en ledtråd räcker. Nivå 2: två ledtrådar tillsammans. Nivå 3: tre.
+// Nivå 4: det krävs fler ledtrådar samtidigt.
+function solverOf(P){return {P,known:0,vals:0,states:[]};}
+function solverIdentify(S,p,v){
+  S.known|=1<<p;S.vals|=(v&1)<<p;
+  for(const st of S.states)narrow(st,S.known,S.vals);
+}
+function solverReveal(S,p,clue){
+  const st=localSolve(clue,S.known,S.vals);st.owner=p;S.states.push(st);return st;
+}
+// Alla slutsatser på en viss nivå, med vilka ledtrådar (ägare) som ger dem.
+function deductions(S,tier,limit){
+  const out=[],st=S.states.filter(x=>x.U&&!isUseless(x)),unk=ALL&~S.known;
+  const push=(f,owners)=>{if(!f)return;const cells=(f.crim|f.inno)&unk;if(cells)out.push({crim:f.crim&cells,inno:f.inno&cells,cells,owners});};
+  if(tier===1)for(const a of st)push(forced1(a),[a.owner]);
+  else if(tier===2){for(let i=0;i<st.length;i++)for(let j=i+1;j<st.length;j++){push(forced2(st[i],st[j]),[st[i].owner,st[j].owner]);if(limit&&out.length>=limit)return out;}}
+  else if(tier===3){for(let i=0;i<st.length;i++)for(let j=i+1;j<st.length;j++)for(let k=j+1;k<st.length;k++){push(forced3(st[i],st[j],st[k]),[st[i].owner,st[j].owner,st[k].owner]);if(limit&&out.length>=limit)return out;}}
+  else{
+    const f=exactForced(S.states)||bruteForced(S.states,S.known,S.vals);
+    push(f,S.states.map(x=>x.owner));
+  }
+  return out;
+}
+function unionCells(ds){let crim=0,inno=0;for(const d of ds){crim|=d.crim;inno|=d.inno;}return {crim,inno,cells:crim|inno};}
+// Den lättaste nivån där man kan komma vidare.
+function nextStep(S,maxTier){
+  for(let t=1;t<=maxTier;t++){
+    const u=unionCells(deductions(S,t));
+    if(u.cells)return {tier:t,...u};
+  }
+  return null;
+}
+// ---------- nivåer ----------
+// Ett steg är lika svårt som antalet ledtrådar man måste lägga ihop för att ta det
+// (1, 2, 3, eller 4 = fyra eller fler). quota[t] = [minst, högst] antal steg av svårighet t.
+// clues = hur många personer som har en ledtråd (resten säger bara något).
+// types = hur ofta varje ledtrådstyp väljs, maxCx = krångligaste typen.
+const LEVELS=[
+  {id:'latt',name:'Lätt',icon:'🐣',crim:[5,9],clues:[11,15],maxCx:2,maxTier:1,minOptions:2,maxNew:4,quota:{},
+    types:{cnt:5,member:2,min:1,both:1.2,total:.2},
+    kid:'Bra att börja med. En ledtråd i taget räcker, och det finns ofta flera att ta.'},
+  {id:'mellan',name:'Mellan',icon:'🔎',crim:[6,11],clues:[9,12],maxCx:3,maxTier:2,minOptions:1,maxNew:3,quota:{2:[0,3]},hardChance:.7,
+    types:{cnt:4,member:1.5,min:1,both:1.2,cmpS:1,cmpR:1,conn:.6,allIn:.7,subcnt:1,total:.3},
+    kid:'Fler sorters ledtrådar. Ibland behöver du lägga ihop två.'},
+  {id:'svar',name:'Svår',icon:'🕵️',crim:[7,14],clues:[10,14],maxCx:4,maxTier:2,weak:true,quota:{2:[3,6]},hardChance:.4,
+    types:{cnt:3,member:1.2,min:.8,both:1,cmpS:1,cmpR:1.2,conn:.8,allIn:1,subcnt:1.3,par:.8,most:.4,only:.4,oneHas:.4,each:.3,total:.3,mostR:.3,dirnb:.4,onlyNb:.2,onlyOneNb:.2},
+    kid:'Flera gånger måste du lägga ihop två ledtrådar.'},
+  {id:'geni',name:'Geni',icon:'🧠',crim:[6,15],clues:[8,12],maxCx:4,maxTier:4,weak:true,quota:{2:[2,9],3:[2,8],4:[0,1]},hardChance:.6,
+    types:{cnt:2.5,member:1,min:.8,both:.8,cmpS:1,cmpR:1.3,conn:1,allIn:1.1,subcnt:1.5,par:1,most:.5,only:.5,oneHas:.5,each:.4,total:.3,mostR:.4,dirnb:.6,onlyNb:.3,onlyOneNb:.3},
+    kid:'Lägg ihop två eller tre ledtrådar för att komma vidare.'},
+  {id:'omojliga',name:'Omöjliga',icon:'💀',crim:[9,16],clues:[10,13],maxCx:4,maxTier:4,weak:true,quota:{2:[2,8],3:[3,6],4:[2,4]},hardChance:.6,
+    types:{cnt:2,member:1,min:.8,both:.8,cmpS:1,cmpR:1.4,conn:1.1,allIn:1.1,subcnt:1.7,par:1.2,most:.6,only:.6,oneHas:.6,each:.5,total:.3,mostR:.5,dirnb:.7,onlyNb:.4,onlyOneNb:.4},
+    kid:'För de modigaste. Ibland måste fyra ledtrådar eller fler vägas ihop.'}
+];
+const MAX_SCOPE_UNKNOWN=14;  // ledtrådar med fler okända celler än så väljs inte (blir för tunga)
+const MAX_EXACT_UNKNOWN=17;  // svårighet 4 räknas bara när högst så många är okända
+
+function makeTruth(rand,L){
+  const k=L.crim[0]+randInt(rand,L.crim[1]-L.crim[0]+1);
+  let m=0;for(const i of shuffled([...Array(N).keys()],rand).slice(0,k))m|=1<<i;
+  return m;
+}
+
+// Spelar igenom pusslet som en detektiv som alltid tar det lättaste steget först,
+// och bestämmer för varje person som blir avslöjad om hen ska ha en ledtråd, och vilken.
+function simulate(P,truth,L,rand){
+  const pool=makePool(truth,P).filter(e=>e.cx<=L.maxCx&&L.types[e.sp.t]);
+  const byType={};for(const e of pool)(byType[e.sp.t]||(byType[e.sp.t]=[])).push(e);
+  const types=Object.keys(byType),tw=types.map(t=>L.types[t]),twSum=tw.reduce((a,b)=>a+b,0);
+  const used=new Set();
+  const sample=()=>{
+    for(let tries=0;tries<30;tries++){
+      let r=rand()*twSum,i=0;while(r>=tw[i]&&i<tw.length-1){r-=tw[i];i++;}
+      const e=pick(byType[types[i]],rand);
+      if(!used.has(e.key))return e;
+    }
+    return null;
+  };
+  const S=solverOf(P);
+  const clues=new Array(N).fill(null),tiers=[],count={1:0,2:0,3:0,4:0};
+  const canHard=t=>t<=L.maxTier&&(!L.quota[t]||count[t]<L.quota[t][1]);
+  const tierCap=()=>pc(ALL&~S.known)>MAX_EXACT_UNKNOWN?Math.min(3,L.maxTier):L.maxTier;
+  const target=L.clues[0]+randInt(rand,L.clues[1]-L.clues[0]+1);
+  let given=0;
+
+  function choose(atStart){
+    const unk=ALL&~S.known,nUnk=pc(unk);
+    const base1=unionCells(deductions(S,1)).cells;
+    const opts0=pc(base1),choke=opts0===0;
+    let want=1;
+    if(choke&&!atStart){
+      const need=[];for(let t=2;t<=L.maxTier;t++)if(L.quota[t]&&count[t]<L.quota[t][0])need.push(t);
+      if(need.length&&rand()<.8)want=Math.max(...need);
+      else if(L.maxTier>1&&rand()<(L.hardChance||0)){const h=[];for(let t=2;t<=L.maxTier;t++)if(canHard(t))h.push(t);if(h.length)want=pick(h,rand);}
+    }
+    let base2=null,base3=null;
+    const tierOf=st=>{
+      if(L.maxTier<2)return 0;
+      if(!base2)base2=unionCells(deductions(S,2)).cells;
+      if(base2)return 2;
+      for(const o of S.states){if(!o.U)continue;const f=forced2(st,o);if(f&&((f.crim|f.inno)&unk))return 2;}
+      if(L.maxTier<3)return 0;
+      if(base3===null)base3=unionCells(deductions(S,3)).cells;
+      if(base3)return 3;
+      const os=S.states.filter(o=>o.U);
+      for(let i=0;i<os.length;i++)for(let j=i+1;j<os.length;j++){const f=forced3(st,os[i],os[j]);if(f&&((f.crim|f.inno)&unk))return 3;}
+      if(L.maxTier<4||nUnk>MAX_EXACT_UNKNOWN)return 0;
+      const f=exactForced(S.states.concat([st]));
+      return f&&((f.crim|f.inno)&unk)?4:0;
+    };
+    let best=null,bestScore=-1;const later=[];
+    for(let tries=0;tries<70;tries++){
+      const e=sample();if(!e)break;
+      const clue=buildClue(e.sp,P),su=pc(clue.scope&unk);
+      if(!su||su>MAX_SCOPE_UNKNOWN)continue;
+      const st=localSolve(clue,S.known,S.vals);
+      if(isUseless(st))continue;
+      const f=forced1(st),nw=(f.crim|f.inno)&unk&~base1,nn=pc(nw),opts=opts0+nn;
+      const cand={e,clue,st};
+      if(!choke||atStart){
+        if(atStart&&!nn)continue;                     // första ledtråden måste ge något
+        let score;
+        if(L.weak&&!atStart)score=nn===0?10:nn===1?6:Math.max(0,4-nn);
+        else score=(opts>=L.minOptions?6:0)+(nn>=1&&nn<=L.maxNew?4:0)+(nn>L.maxNew?-1:0);
+        if(score>=10)return cand;
+        if(score>bestScore){bestScore=score;best=cand;}
+        continue;
+      }
+      // vid en flaskhals: vilken svårighet krävs efter den här ledtråden?
+      if(nn){
+        if(want===1&&opts>=L.minOptions)return cand;
+        const sc=want===1?5:1;if(sc>bestScore){bestScore=sc;best=cand;}
+        continue;
+      }
+      later.push(cand);
+      if(want>1&&later.length<=25){
+        const t=tierOf(st);cand.tier=t;
+        if(t===want)return cand;
+        if(t&&canHard(t)){const sc=L.quota[t]&&count[t]<L.quota[t][0]?4:3;if(sc>bestScore){bestScore=sc;best=cand;}}
+      }
+    }
+    if(best&&bestScore>0)return best;
+    if(choke)for(const cand of later.slice(0,25)){
+      const t=cand.tier!==undefined?cand.tier:tierOf(cand.st);
+      if(t&&canHard(t))return cand;
+    }
+    return best;
+  }
+  const take=(c,p)=>{used.add(c.e.key);clues[p]=c.e.sp;S.states.push(Object.assign(c.st,{owner:p}));given++;};
+
+  const start=randInt(rand,N);
+  solverIdentify(S,start,(truth>>>start)&1);
+  const c0=choose(true);
+  if(!c0)return null;
+  take(c0,start);
+  while(S.known!==ALL){
+    const step=nextStep(S,tierCap());
+    if(!step)return null;
+    const unk=ALL&~S.known;
+    if(step.tier===1&&L.minOptions>1&&pc(step.cells)<L.minOptions&&pc(unk)>3)return null;
+    tiers.push(step.tier);count[step.tier]++;
+    if(L.quota[step.tier]&&count[step.tier]>L.quota[step.tier][1])return null;
+    if(step.tier>L.maxTier)return null;
+    const p=pick(bitsOf(step.cells),rand);
+    solverIdentify(S,p,(truth>>>p)&1);
+    const left=pc(ALL&~S.known);
+    if(!left)break;                                   // den sista behöver ingen ledtråd
+    // klarar man sig vidare utan en ny ledtråd?
+    const opts1=pc(unionCells(deductions(S,1)).cells);
+    let noneOK;
+    if(opts1)noneOK=!(L.minOptions>1&&opts1<L.minOptions&&left>3);
+    else{const nx=nextStep(S,tierCap());noneOK=!!nx&&canHard(nx.tier);}
+    const need=target-given;
+    const wantClue=need>0&&rand()<need/Math.max(1,left-1);
+    if(noneOK&&!wantClue)continue;
+    const c=choose(false);
+    if(c)take(c,p);
+    else if(!noneOK)return null;
+  }
+  for(const t in L.quota){if(count[t]<L.quota[t][0]||count[t]>L.quota[t][1])return null;}
+  if(given<L.clues[0]||given>L.clues[1])return null;
+  return {start,clues,tiers};
+}
+
+function generatePuzzle(level,seed,maxAttempts){
+  const L=LEVELS[level],rand=makeRand(seed);
+  for(let attempt=1;attempt<=(maxAttempts||400);attempt++){
+    const people=makePeople(rand),P=peopleCtx(people),truth=makeTruth(rand,L);
+    const r=simulate(P,truth,L,rand);
+    if(r)return {v:2,level,seed,names:people.names,jobs:people.jobs,jobOf:people.jobOf,truth,start:r.start,clues:r.clues,tiers:r.tiers,attempts:attempt};
+  }
+  return null;
+}
+// ---------- ett pågående fall ----------
+function newGame(pz){
+  const P=peopleCtx(pz);
+  const G={pz,P,S:solverOf(P),clues:pz.clues.map(sp=>sp?buildClue(sp,P):null),order:[],mistakes:0,hints:0,missOn:new Array(N).fill(0),done:false};
+  reveal(G,pz.start);
+  return G;
+}
+function reveal(G,p){
+  solverIdentify(G.S,p,(G.pz.truth>>>p)&1);
+  if(G.clues[p])solverReveal(G.S,p,G.clues[p]);   // alla har inte en ledtråd
+  G.order.push(p);
+  if(G.S.known===ALL)G.done=true;
+}
+const isKnown=(G,p)=>((G.S.known>>>p)&1)===1;
+const isCriminal=(G,p)=>((G.pz.truth>>>p)&1)===1;
+// Vilka som går att bevisa just nu (exakt, med alla avslöjade ledtrådar).
+function provable(G){
+  const f=exactForced(G.S.states)||bruteForced(G.S.states,G.S.known,G.S.vals);
+  const unk=ALL&~G.S.known;
+  return {crim:f.crim&unk,inno:f.inno&unk};
+}
+// Spelaren säger att p är skurk (s=1) eller oskyldig (s=0).
+// 'ok' = bevisat och rätt, 'wrong' = ledtrådarna säger motsatsen,
+// 'unproven' = går inte att bevisa än (gissning). Båda de senare räknas som misstag.
+function mark(G,p,s){
+  if(G.done||isKnown(G,p))return 'known';
+  const f=provable(G),c=(f.crim>>>p)&1,i=(f.inno>>>p)&1;
+  if(s?c:i){reveal(G,p);return 'ok';}
+  G.mistakes++;G.missOn[p]++;
+  return c||i?'wrong':'unproven';
+}
+// Tips: vilka ledtrådar man ska titta på (owners) och vilka personer de avslöjar (cells).
+function findHint(G){
+  if(G.done)return null;
+  for(let t=1;t<=3;t++){
+    const ds=deductions(G.S,t,t>1?60:0);
+    if(ds.length){
+      ds.sort((a,b)=>pc(b.cells)-pc(a.cells)||Math.max(...b.owners.map(o=>G.order.indexOf(o)))-Math.max(...a.owners.map(o=>G.order.indexOf(o))));
+      const d=ds[0];
+      return {tier:t,owners:d.owners.slice().sort((a,b)=>a-b),cells:bitsOf(d.cells)};
+    }
+  }
+  const f=provable(G),cells=bitsOf(f.crim|f.inno);
+  if(!cells.length)return null;
+  const x=cells[0],forces=set=>{const g=exactForced(set)||bruteForced(set,G.S.known,G.S.vals);return (((g.crim|g.inno)>>>x)&1)===1;};
+  let set=G.S.states.filter(st=>st.U);
+  for(const st of set.slice().sort((a,b)=>b.subs.length-a.subs.length)){
+    const rest=set.filter(o=>o!==st);
+    if(forces(rest))set=rest;
+  }
+  const g=exactForced(set)||bruteForced(set,G.S.known,G.S.vals);
+  return {tier:4,owners:set.map(st=>st.owner).sort((a,b)=>a-b),cells:bitsOf((g.crim|g.inno)&~G.S.known)};
+}
+
+// ---------- sparat fall ----------
+// Ett pussel från localStorage kontrolleras innan det används.
+function validPuzzle(pz){
+  try{
+    if(!pz||pz.v!==2||!Number.isInteger(pz.level)||pz.level<0||pz.level>=LEVELS.length)return false;
+    if(!Array.isArray(pz.names)||pz.names.length!==N||!pz.names.every(s=>typeof s==='string'&&s.length&&s.length<20))return false;
+    if(!Array.isArray(pz.jobs)||!pz.jobs.every(id=>JOB_BY_ID[id]))return false;
+    if(!Array.isArray(pz.jobOf)||pz.jobOf.length!==N||!pz.jobOf.every(k=>Number.isInteger(k)&&k>=0&&k<pz.jobs.length))return false;
+    if(!Number.isInteger(pz.truth)||pz.truth<0||pz.truth>ALL)return false;
+    if(!Number.isInteger(pz.start)||pz.start<0||pz.start>=N)return false;
+    if(!Array.isArray(pz.clues)||pz.clues.length!==N||!pz.clues[pz.start])return false;
+    const P=peopleCtx(pz);
+    const tests=[];
+    for(const sp of pz.clues){
+      if(sp===null)continue;
+      const c=buildClue(sp,P),t=clueText(sp,P);
+      if(!c.test(pz.truth)||typeof t!=='string'||t.includes('?'))return false;
+      tests.push(c.test);
+    }
+    // alla ledtrådar tillsammans (och startpersonen) ska bara passa just den här lösningen
+    const sb=1<<pz.start,base=pz.truth&sb,free=ALL&~sb;
+    let sub=0;
+    do{
+      const m=base|sub;
+      if(m!==pz.truth){let ok=true;for(const t of tests)if(!t(m)){ok=false;break;}if(ok)return false;}
+      sub=(sub-free)&free;
+    }while(sub!==0);
+    return true;
+  }catch(e){return false;}
+}
+// Återskapar ett fall från det sparade: pusslet och i vilken ordning man avslöjat folk.
+function restoreGame(saved){
+  if(!saved||!validPuzzle(saved.pz))return null;
+  const G=newGame(saved.pz);
+  for(const p of Array.isArray(saved.order)?saved.order.slice(1):[]){
+    if(!Number.isInteger(p)||p<0||p>=N||isKnown(G,p))return null;
+    const f=provable(G);
+    if(!(((f.crim|f.inno)>>>p)&1))return null;
+    reveal(G,p);
+  }
+  G.mistakes=Math.max(0,Math.floor(Number(saved.mistakes))||0);
+  G.hints=Math.max(0,Math.floor(Number(saved.hints))||0);
+  if(Array.isArray(saved.missOn)&&saved.missOn.length===N)G.missOn=saved.missOn.map(n=>Math.max(0,Math.floor(Number(n))||0));
+  return G;
+}
+function saveGame(G){return {pz:G.pz,order:G.order.slice(),mistakes:G.mistakes,hints:G.hints,missOn:G.missOn.slice()};}
+
+// ---------- nivåer man låst upp ----------
+// unlocked = högsta nivån man får välja. Klarar man ett fall på en nivå låses nästa upp.
+function cleanProgress(x){
+  x=x&&typeof x==='object'?x:{};
+  const solved=LEVELS.map((_,i)=>{const n=Math.floor(Number(Array.isArray(x.solved)?x.solved[i]:0));return n>0?n:0;});
+  let unlocked=Math.floor(Number(x.unlocked));
+  if(!(unlocked>=0))unlocked=0;
+  unlocked=Math.min(unlocked,LEVELS.length-1);
+  solved.forEach((n,i)=>{if(n>0)unlocked=Math.max(unlocked,Math.min(i+1,LEVELS.length-1));});
+  return {unlocked,solved};
+}
+// Returnerar nivån som just låstes upp, eller -1.
+function recordSolved(prog,level){
+  prog.solved[level]=(prog.solved[level]||0)+1;
+  if(level+1<LEVELS.length&&prog.unlocked<level+1){prog.unlocked=level+1;return level+1;}
+  return -1;
+}
+const totalSolved=prog=>prog.solved.reduce((a,b)=>a+b,0);
+const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
+/*LOGIC-END*/
+
+// ---------- spelets id och sparade värden ----------
+const GAME_ID='detektiven';
+const SCORE_KEY='score.'+GAME_ID;   // hubbens trofé: antal lösta fall (alla nivåer)
+const SAVE_KEY='state.'+GAME_ID;    // upplåsta nivåer, lösta fall och pågående fall (hubbens konvention: state.<id>)
+const NOTES=[{id:'gul',label:'gul'},{id:'bla',label:'blå'},{id:'lila',label:'lila'}];
+const PRAISE=['Rätt!','Snyggt!','Bra slutsats!','Precis!','Helt rätt!'];
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// [a, b, c] → "a, b och c"
+const listSv=xs=>xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+' och '+xs[xs.length-1];
+const fmtTime=s=>{s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+
+function readSave(){
+  try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&typeof s==='object'?s:{};}catch(e){return {};}
+}
+// Det som bara gäller vyn: tonade ledtrådar, färgmärkningar, tips och tid.
+function viewFrom(s){
+  s=s&&typeof s==='object'?s:{};
+  const okP=p=>Number.isInteger(p)&&p>=0&&p<N;
+  const dims=new Set((Array.isArray(s.dims)?s.dims:[]).filter(okP));
+  const notes={};
+  if(s.notes&&typeof s.notes==='object')for(const k of Object.keys(s.notes)){const p=Number(k);if(okP(p)&&NOTES.some(n=>n.id===s.notes[k]))notes[p]=s.notes[k];}
+  const el=Number(s.elapsed);
+  return {dims,notes,elapsed:el>0?el:0,hint:null,hintStage:0,last:0};
+}
+const SAVED=readSave();
+let PROG=cleanProgress(SAVED.prog);
+let G=restoreGame(SAVED.game);   // fallet man håller på med, eller null
+let VIEW=viewFrom(G?SAVED.game:null);
+let ACT={};
+let timer=0;
+const app=document.getElementById('app');
+
+function persist(){
+  const data={prog:PROG};
+  if(G&&!G.done)data.game=Object.assign(saveGame(G),{elapsed:Math.round(VIEW.elapsed),dims:[...VIEW.dims],notes:VIEW.notes});
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}
+}
+function writeScore(){const n=totalSolved(PROG);if(n>0)try{localStorage.setItem(SCORE_KEY,String(n));}catch(e){}}
+
+// ---------- skärmar ----------
+function go(html,acts,bodyClass){
+  closeModal();
+  document.body.className=bodyClass||'';
+  app.innerHTML=html;ACT=acts||{};
+  window.scrollTo(0,0);
+}
+
+function showMenu(msg){
+  stopTimer();
+  const resume=G&&!G.done,total=totalSolved(PROG);
+  go(`<main class="menu">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">🕵️</div>
+      <h1>Detektiven</h1>
+      <p class="sub">Vem är skurk och vem är oskyldig? Lös fallet med hjälp av ledtrådarna – utan att gissa!</p>
+    </header>
+    ${resume?`<button class="resume panel" data-act="resume"><span class="ico" aria-hidden="true">${LEVELS[G.pz.level].icon}</span><span><b>Fortsätt fallet</b>${LEVELS[G.pz.level].name} · ${pc(G.S.known)} av 20 avslöjade</span></button>`:''}
+    <h2 class="pickh">${resume?'Eller välj nivå för ett nytt fall':'Välj nivå för ett nytt fall'}</h2>
+    <p class="menumsg" role="status">${msg?esc(msg):''}</p>
+    <div class="levels">${LEVELS.map(levelButton).join('')}</div>
+    <div class="row center"><button class="btn" data-act="rules">📖 Så spelar du</button></div>
+    <p class="record">${total?`🏆 Lösta fall: <b>${total}</b>`:'🏆 Lös ditt första fall!'}</p>
+  </main>`,{
+    resume:()=>renderPlay(),
+    level:b=>chooseLevel(+b.dataset.lvl),
+    rules:showRules
+  },'at-menu');
+}
+function levelButton(L,i){
+  const locked=i>PROG.unlocked,n=PROG.solved[i];
+  return `<button class="level lv-${L.id}${locked?' locked':''}" data-act="level" data-lvl="${i}">
+    <span class="ico" aria-hidden="true">${locked?'🔒':L.icon}</span>
+    <span class="nm">${L.name}</span>
+    <span class="ds">${locked?`Lös ett fall på ${LEVELS[i-1].name} för att låsa upp.`:L.kid}</span>
+    <span class="tag">${locked?'Låst':n?plural(n,'löst fall','lösta fall'):'Inget löst fall än'}</span>
+  </button>`;
+}
+function chooseLevel(i){
+  if(i>PROG.unlocked){
+    const m=app.querySelector('.menumsg');
+    if(m){m.textContent=`${LEVELS[i].name} är låst. Lös ett fall på ${LEVELS[i-1].name} först!`;}
+    return;
+  }
+  if(G&&!G.done&&G.order.length>1){
+    modal(`<h3>Börja ett nytt fall?</h3>
+      <p>Du har ett fall på <b>${LEVELS[G.pz.level].name}</b> som inte är löst. Det försvinner om du börjar ett nytt.</p>
+      <div class="row center"><button class="btn go" data-m="close">Fortsätt det gamla</button><button class="btn" data-m="new">Börja nytt</button></div>`,
+      {close:()=>renderPlay(),new:()=>startLevel(i)});
+    return;
+  }
+  startLevel(i);
+}
+// Ett nytt fall skapas i små bitar, så att sidan inte fryser på svåra nivåer.
+async function makeCase(level){
+  const seed=((Date.now()&0x7fffffff)^Math.floor(Math.random()*0x7fffffff))>>>0;
+  let last=Date.now();
+  for(let i=0;i<600;i++){
+    const pz=generatePuzzle(level,(seed+i*7919)>>>0,1);
+    if(pz)return pz;
+    if(Date.now()-last>40){await new Promise(r=>setTimeout(r,0));last=Date.now();}
+  }
+  return null;
+}
+let making=0;
+function startLevel(i){
+  stopTimer();
+  const ticket=++making;
+  go(`<main class="loading" role="status"><div class="spin" aria-hidden="true">🔎</div><p>Detektiven letar efter ett nytt fall …</p></main>`,{},'loading');
+  // låt skärmen ritas innan fallet skapas
+  setTimeout(async()=>{
+    const pz=await makeCase(i);
+    if(ticket!==making)return;            // man hann lämna skärmen
+    if(!pz){showMenu('Det gick inte att hitta ett fall. Försök igen!');return;}
+    G=newGame(pz);VIEW=viewFrom(null);
+    persist();renderPlay();
+  },60);
+}
+
+// ---------- spelplanen ----------
+function renderPlay(){
+  if(!G)return showMenu();
+  const L=LEVELS[G.pz.level];
+  let cells='<span class="lab" aria-hidden="true"></span>'+[...COL_LETTERS].map(c=>`<span class="lab" aria-hidden="true">${c}</span>`).join('');
+  for(let r=0;r<ROWS;r++){
+    cells+=`<span class="lab" aria-hidden="true">${r+1}</span>`;
+    for(let c=0;c<COLS;c++)cells+=`<button class="card" data-act="card" data-p="${r*COLS+c}"></button>`;
+  }
+  go(`<main class="play">
+    <header class="bar">
+      <button class="btn sm" data-act="menu">Meny</button>
+      <div class="casename"><b><span aria-hidden="true">${L.icon}</span> ${L.name}</b><small>Fall ${PROG.solved[G.pz.level]+1}</small></div>
+      <div class="stats">
+        <div class="stat good" data-stat="found"><span class="n"></span><span class="l">av 20</span></div>
+        <div class="stat bad" data-stat="mistakes"><span class="n"></span><span class="l">misstag</span></div>
+      </div>
+      <button class="btn sm" data-act="hint">💡 Tips</button>
+      <button class="btn sm" data-act="rules" aria-label="Så spelar du">📖</button>
+    </header>
+    <p class="msg" role="status" aria-live="polite"></p>
+    <section class="board" aria-label="De misstänkta">${cells}</section>
+  </main>`,{
+    menu:()=>{persist();showMenu();},
+    hint:useHint,
+    rules:showRules,
+    card:b=>tapCard(+b.dataset.p)
+  });
+  refreshBoard();
+  if(VIEW.hint)showHintMsg();
+  else setMsg(G.order.length===1?`Börja med ledtråden från ${G.P.names[G.pz.start]}. Tryck på en person när du vet vad hen är.`:'');
+  startTimer();
+}
+// Ledtråden, eller det personen säger om hen inte har någon ledtråd.
+const cardText=p=>G.pz.clues[p]?clueText(G.pz.clues[p],G.P):flavorText(G.P,p,isCriminal(G,p));
+function cardInner(p){
+  const P=G.P,J=P.jobs[P.jobOf[p]],known=isKnown(G,p),crim=isCriminal(G,p);
+  return `<span class="who"><span class="em" aria-hidden="true">${J.e}</span><span class="nm">${esc(P.names[p])}</span></span>
+    <span class="job">${J.sg}</span>
+    ${known?`<span class="clue${G.pz.clues[p]?'':' flavor'}">${esc(cardText(p))}</span><span class="badge" aria-hidden="true">${crim?'🦹':'😇'}</span>`:''}
+    <span class="coord" aria-hidden="true">${cellName(p)}</span>`;
+}
+function refreshCard(p,anim){
+  const b=app.querySelector(`.card[data-p="${p}"]`);if(!b)return;
+  const known=isKnown(G,p),crim=isCriminal(G,p),h=VIEW.hint;
+  const cls=['card'];
+  if(known)cls.push(crim?'crim':'inno');else if(VIEW.notes[p])cls.push('n-'+VIEW.notes[p]);
+  if(known&&VIEW.dims.has(p))cls.push('dim');
+  if(h&&VIEW.hintStage>=1&&h.owners.includes(p))cls.push('hl-clue');
+  if(h&&VIEW.hintStage>=2&&h.cells.includes(p))cls.push('hl-cell');
+  if(anim)cls.push(anim);
+  const html=cardInner(p);
+  if(b.dataset.html!==html){b.innerHTML=html;b.dataset.html=html;}
+  b.className=cls.join(' ');
+  const J=G.P.jobs[G.P.jobOf[p]];
+  b.setAttribute('aria-label',`${G.P.names[p]}, ${J.sg}, ${cellName(p)}: ${known?(crim?'skurk':'oskyldig')+'. '+(G.pz.clues[p]?'':'Ingen ledtråd: ')+cardText(p):'inte avslöjad'}`);
+  if(anim)setTimeout(()=>b.classList.remove(anim),500);
+}
+function refreshBoard(anim){
+  for(let p=0;p<N;p++)refreshCard(p,anim&&anim.p===p?anim.cls:null);
+  const f=app.querySelector('[data-stat="found"] .n'),m=app.querySelector('[data-stat="mistakes"] .n');
+  if(f)f.textContent=pc(G.S.known);
+  if(m)m.textContent=G.mistakes;
+  const hb=app.querySelector('[data-act="hint"]');
+  if(hb)hb.disabled=!!(VIEW.hint&&VIEW.hintStage>=2);
+}
+function setMsg(text,kind){
+  const m=app.querySelector('.msg');if(!m)return;
+  m.textContent=text;m.className='msg'+(kind?' '+kind:'');
+  if(kind){void m.offsetWidth;m.classList.add('pop');}
+}
+
+function tapCard(p){
+  if(!G||G.done)return;
+  if(isKnown(G,p)){
+    // tryck på en avslöjad ledtråd för att tona ner den när den inte behövs längre
+    if(VIEW.dims.has(p))VIEW.dims.delete(p);else VIEW.dims.add(p);
+    refreshCard(p);persist();
+    return;
+  }
+  openChoice(p);
+}
+function openChoice(p){
+  const P=G.P,J=P.jobs[P.jobOf[p]],note=VIEW.notes[p]||'';
+  modal(`<p class="cwho"><span aria-hidden="true">${J.e}</span> <b>${esc(P.names[p])}</b><small>${J.sg} · ${cellName(p)}</small></p>
+    <h3>Vad är ${esc(P.names[p])}?</h3>
+    <div class="cbtns"><button class="btn big inno" data-m="inno">😇 Oskyldig</button><button class="btn big crim" data-m="crim">🦹 Skurk</button></div>
+    <p class="small">Färgmärk bara för dig själv:</p>
+    <div class="notes">${NOTES.map(n=>`<button class="sw sw-${n.id}" data-m="note" data-note="${n.id}" aria-pressed="${note===n.id}" aria-label="Märk ${n.label}"></button>`).join('')}<button class="sw" data-m="note" data-note="" aria-pressed="${!note}" aria-label="Ingen märkning">✕</button></div>
+    <button class="btn sm" data-m="close">Avbryt</button>`,
+    {inno:()=>decide(p,0),crim:()=>decide(p,1),note:b=>{const v=b.dataset.note;if(v)VIEW.notes[p]=v;else delete VIEW.notes[p];refreshCard(p);persist();}},
+    {o:'inno',s:'crim'});
+}
+function decide(p,s){
+  const res=mark(G,p,s),name=G.P.names[p];
+  if(res==='known')return;
+  if(res==='ok'){
+    delete VIEW.notes[p];
+    VIEW.hint=null;VIEW.hintStage=0;
+    refreshBoard({p,cls:'flip'});
+    if(G.done){finishCase();return;}
+    setMsg(`${pick(PRAISE,Math.random)} ${name} är ${s?'skurk 🦹':'oskyldig 😇'}.`,'ok');
+  }else{
+    refreshBoard({p,cls:'shake'});
+    if(res==='wrong')setMsg(`Hoppsan! Ledtrådarna säger något annat om ${name}. Det blev ett misstag.`,'bad');
+    else setMsg(`Det går inte att bevisa än vad ${name} är. Det blev ett misstag – leta efter fler ledtrådar!`,'bad');
+  }
+  persist();
+}
+
+// ---------- tips ----------
+// Första trycket: vilka ledtrådar man ska titta på. Andra: vem man kan lista ut.
+function useHint(){
+  if(!G||G.done)return;
+  if(!VIEW.hint){VIEW.hint=findHint(G);VIEW.hintStage=0;}
+  if(!VIEW.hint||VIEW.hintStage>=2)return;
+  VIEW.hintStage++;G.hints++;
+  refreshBoard();showHintMsg();persist();
+}
+function showHintMsg(){
+  const h=VIEW.hint,names=xs=>listSv(xs.map(p=>G.P.names[p]));
+  if(VIEW.hintStage===1)setMsg(h.owners.length===1?`💡 Titta noga på ledtråden från ${names(h.owners)}.`:`💡 Lägg ihop ledtrådarna från ${names(h.owners)}.`,'tip');
+  else setMsg(`💡 Nu kan du lista ut vad ${names(h.cells)} är.`,'tip');
+}
+
+// ---------- tid ----------
+function startTimer(){
+  stopTimer();VIEW.last=Date.now();
+  timer=setInterval(()=>{
+    const now=Date.now();
+    if(document.visibilityState==='visible'&&G&&!G.done)VIEW.elapsed+=Math.min(5,(now-VIEW.last)/1000);
+    VIEW.last=now;
+  },1000);
+}
+function stopTimer(){if(timer){clearInterval(timer);timer=0;}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&G)persist();});
+window.addEventListener('pagehide',()=>{if(G)persist();});
+
+// ---------- löst fall ----------
+function finishCase(){
+  stopTimer();
+  const D=G,level=D.pz.level,unlocked=recordSolved(PROG,level),time=VIEW.elapsed;
+  G=null;persist();writeScore();
+  setTimeout(()=>showSummary(D,unlocked,time),reduceMotion()?0:650);
+}
+function showSummary(D,unlocked,time){
+  const L=LEVELS[D.pz.level],crims=pc(D.pz.truth),P=D.P;
+  const title=!D.mistakes&&!D.hints?'Perfekt detektivarbete!':!D.mistakes?'Fallet är löst – utan misstag!':'Fallet är löst!';
+  const grid=[...Array(N).keys()].map(p=>{const c=(D.pz.truth>>>p)&1;return `<span class="${c?'c':''}${D.missOn[p]?' miss':''}">${c?'🦹':'😇'} ${esc(P.names[p])}</span>`;}).join('');
+  go(`<main class="panel page summary">
+    <div class="medal" aria-hidden="true">${!D.mistakes&&!D.hints?'🏅':'🎉'}</div>
+    <h2>${title}</h2>
+    <p class="lead">Du hittade alla ${crims} skurkarna på nivå ${L.name}.</p>
+    <div class="bigstats">
+      <div class="big${D.mistakes?'':' good'}" data-sum="mistakes"><b>${D.mistakes}</b><span>misstag</span></div>
+      <div class="big" data-sum="hints"><b>${D.hints}</b><span>tips</span></div>
+      <div class="big" data-sum="time"><b>${fmtTime(time)}</b><span>tid</span></div>
+    </div>
+    ${unlocked>=0?`<p class="unlock">🔓 Du har låst upp ${LEVELS[unlocked].icon} ${LEVELS[unlocked].name}!</p>`:''}
+    <div class="row center">
+      <button class="btn go big" data-act="new">Nytt fall</button>
+      <button class="btn big" data-act="same">Ett till på ${L.name}</button>
+    </div>
+    <div class="solved" aria-label="Lösningen">${grid}</div>
+    ${D.mistakes?'<p class="legend">Gul kant = där det blev misstag.</p>':''}
+  </main>`,{
+    new:()=>showMenu(),
+    same:()=>startLevel(D.pz.level)
+  });
+  confetti();
+}
+
+// ---------- regler ----------
+function showRules(){
+  modal(`<div class="rules">
+    <h3>📖 Så spelar du</h3>
+    <ul>
+      <li>Alla 20 personer är antingen <b>skurk 🦹</b> eller <b>oskyldig 😇</b>. Lista ut vem som är vad!</li>
+      <li><b>Alla talar sanning</b> – även skurkarna.</li>
+      <li>Alla har inte en ledtråd. Vissa säger bara något när du har listat ut dem.</li>
+      <li>Tryck på en person och välj Oskyldig eller Skurk. Har du rätt får du se personens ledtråd.</li>
+      <li><b>Du får inte gissa.</b> Spelet godtar bara det som ledtrådarna bevisar. Väljer du fel, eller något som inte går att bevisa än, blir det ett misstag.</li>
+      <li>Yrket säger inget om man är skurk, om inte en ledtråd säger det.</li>
+    </ul>
+    <h3>Orden i ledtrådarna</h3>
+    <ul>
+      <li><b>Rader</b> går åt sidan (1–5). <b>Kolumner</b> går uppifrån och ner (A–D).</li>
+      <li><b>Grannar</b> är de upp till 8 personerna runt omkring, även snett. En <b>skurkgranne</b> är en granne som är skurk.</li>
+      <li><b>Ovanför</b> och <b>nedanför</b> betyder i samma kolumn. <b>Till vänster</b> och <b>till höger</b> betyder i samma rad.</li>
+      <li><b>Mellan</b> är de som står mellan två personer, inte de två själva.</li>
+      <li><b>Kanten</b> är de 14 personerna längs ytterkanten. <b>Hörnen</b> är de fyra i hörnen.</li>
+      <li><b>Hänger ihop</b> betyder att man kan gå mellan dem utan att hoppa över någon.</li>
+      <li><b>Direkt till vänster om sig</b> (eller höger, ovanför, nedanför) betyder grannen precis bredvid åt det hållet.</li>
+      <li><b>Båda</b> betyder exakt två. <b>Alla</b> betyder att det finns minst en. <b>Flest</b> betyder fler än alla andra. <b>Minst 2</b> betyder 2 eller fler.</li>
+      <li>Siffror är exakta: <b>2 skurkar</b> betyder exakt 2.</li>
+      <li><b>Udda</b> är 1, 3, 5 … och <b>jämnt</b> är 0, 2, 4 …</li>
+    </ul>
+    <p class="ex">💡 <b>Tips:</b> Första trycket visar vilka ledtrådar du ska titta på. Andra trycket visar vem du kan lista ut. Tryck på en avslöjad ledtråd för att tona ner den.</p>
+    <div class="row center"><button class="btn go" data-m="close">Nu kör vi!</button></div>
+  </div>`);
+}
+
+// ---------- dialog och konfetti ----------
+let modalKeys=null;
+function modal(html,handlers,keys){
+  closeModal();
+  const back=document.createElement('div');back.className='modal-back';
+  back.innerHTML=`<div class="modal panel" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(back);
+  modalKeys={handlers:handlers||{},keys:keys||{}};
+  back.addEventListener('click',e=>{
+    const b=e.target.closest('[data-m]');
+    if(b){const fn=modalKeys&&modalKeys.handlers[b.dataset.m];closeModal();if(fn)fn(b);}
+    else if(e.target===back)closeModal();
+  });
+  const f=back.querySelector('.btn.go')||back.querySelector('button');if(f)f.focus({preventScroll:true});
+}
+function closeModal(){
+  const open=document.querySelectorAll('.modal-back');
+  open.forEach(m=>m.remove());modalKeys=null;
+  if(open.length&&document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
+}
+function confetti(){
+  if(reduceMotion())return;
+  const box=document.createElement('div');box.className='confetti';box.setAttribute('aria-hidden','true');
+  const cols=['#ff6b6b','#3d8be0','#ffc63f','#9a6ad6','#38d9a9'];
+  for(let i=0;i<70;i++){
+    const p=document.createElement('i');
+    p.style.left=Math.random()*100+'%';p.style.background=cols[i%cols.length];
+    p.style.animationDelay=(Math.random()*.6)+'s';p.style.animationDuration=(1.7+Math.random()*1.5)+'s';
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);setTimeout(()=>box.remove(),3800);
+}
+
+// ---------- inmatning ----------
+app.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]');
+  if(a&&!a.disabled){const fn=ACT[a.dataset.act];if(fn){e.preventDefault();fn(a,e);}}
+});
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  if(modalKeys){
+    if(e.key==='Escape'){e.preventDefault();closeModal();return;}
+    const k=modalKeys.keys[e.key.toLowerCase()];
+    if(k){e.preventDefault();const fn=modalKeys.handlers[k];closeModal();if(fn)fn();}
+  }
+});
+
+showMenu();
+
+// fungerar utan internet via hubbens service worker
+if('serviceWorker' in navigator){navigator.serviceWorker.register('../sw.js').catch(function(){});}
+</script>
+<script src="../shared/guard.js" data-game="detektiven"></script>
+</body>
+</html>

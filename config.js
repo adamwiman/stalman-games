@@ -35,5 +35,13 @@ const GAMES = [
     blurb: "Träna tabellerna 1–10!",
     file: "games/gangertabell.html",
     scoreKey: "score.gangertabell" // record: most correct answers in a row
+  },
+  {
+    id: "detektiven",
+    title: "Detektiven",
+    emoji: "🕵️",
+    blurb: "Vem är skurk? Lös fallet med ledtrådar!",
+    file: "games/detektiven.html",
+    scoreKey: "score.detektiven"   // solved cases, all levels together
   }
 ];
