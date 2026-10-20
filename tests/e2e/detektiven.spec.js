@@ -143,11 +143,13 @@ test("a whole Lätt case through the UI: guesses and wrong answers are mistakes,
   await expect(page.locator('[data-act="hint"]')).toBeEnabled();
 
   // play the rest
+  // the game clears G as soon as the case is solved; the board stays until the summary replaces it
+  const solved = () => page.evaluate(() => !G);
   for (let i = 0; i < 20; i++) {
-    if (!(await page.locator(".card").count())) break;
+    if (await solved()) break;
     const next = await provableOne(page);
     await choose(page, touch, next.p, next.s);
-    if (!(await page.locator(".card").count())) break;
+    if (await solved()) break;
     await expect(card(page, next.p)).toHaveClass(next.s ? /crim/ : /inno/);
   }
   await expect(page.locator(".summary h2")).toHaveText("Fallet är löst!");
