@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Goo Pipes</title>
+<title>Slemrören</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
   :root {
-    --bg:#17181c; --panel:#212429; --slot:#1e2126; --line:#2c3037;
-    --ink:#d3d7de; --dim:#8a8f98; --accent:#ffc63f; --goo:#3fe44b;
+    --bg:#ffffff; --panel:#f4f6f9; --line:#d6dce4;
+    --ink:#17335b; --dim:#5f6f86; --accent:#ffc63f; --accent-ink:#a86f00;
+    --goo:#22b33a; --hot:#d9480f;
   }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body {
@@ -30,8 +31,13 @@
     padding:8px 16px;
   }
   .back:active { opacity:.7; }
-  h1 { font-size:30px; margin:0; font-weight:800; letter-spacing:1px; }
+  h1 { font-size:30px; margin:0; font-weight:800; letter-spacing:1px; display:flex; align-items:center; gap:10px; }
   h1 .goo { color:var(--goo); }
+  #diff {
+    font-size:13px; letter-spacing:1px; color:var(--dim);
+    background:var(--panel); border:2px solid var(--line); border-radius:999px; padding:2px 10px;
+  }
+  #diff:empty { display:none; }
 
   .bar { display:flex; gap:8px; margin-bottom:10px; }
   .box {
@@ -47,26 +53,26 @@
     display:flex; align-items:center; gap:8px;
     background:var(--panel); border:2px solid var(--line); border-radius:12px; padding:4px 10px;
   }
-  .qlbl { font-size:10px; font-weight:800; letter-spacing:1.5px; color:var(--accent); writing-mode:vertical-rl; transform:rotate(180deg); }
+  .qlbl { font-size:10px; font-weight:800; letter-spacing:1.5px; color:var(--accent-ink); writing-mode:vertical-rl; transform:rotate(180deg); }
   #queue { display:block; }
   .status {
     flex:1; display:flex; align-items:center; justify-content:center;
     background:var(--panel); border:2px solid var(--line); border-radius:12px;
     font-size:15px; font-weight:800; letter-spacing:1px; padding:4px 10px; min-width:110px;
   }
-  .status.hot { color:var(--accent); border-color:var(--accent); }
+  .status.hot { color:var(--hot); border-color:var(--hot); }
   .btn {
     font:inherit; font-weight:800; font-size:15px; color:var(--ink);
     background:var(--panel); border:2px solid var(--line); border-radius:12px;
     padding:6px 14px; cursor:pointer;
   }
   .btn:active { opacity:.7; }
-  #fast.on { color:#17181c; background:var(--goo); border-color:var(--goo); }
+  #fast.on { color:#fff; background:var(--goo); border-color:var(--goo); }
 
   .board-outer { display:flex; justify-content:center; }
   #boardWrap { position:relative; }
   #board {
-    display:block; background:var(--panel);
+    display:block; background:#fff;
     border:2px solid var(--line); border-radius:12px;
     touch-action:none;
   }
@@ -74,37 +80,46 @@
 
   .modal {
     position:absolute; inset:0; border-radius:12px; z-index:10;
-    background:rgba(13,14,17,.9);
+    background:rgba(255,255,255,.94);
     display:none; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:20px;
   }
   .modal.show { display:flex; }
   .modal h2 { font-size:30px; margin:0 0 6px; }
   .modal p { margin:0 0 20px; color:var(--dim); font-weight:700; }
+  #modalBtns { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
   .modal button {
-    font:inherit; font-weight:800; font-size:17px; color:#17181c;
+    font:inherit; font-weight:800; font-size:17px; color:var(--ink);
     background:var(--accent); border:none; border-radius:12px;
-    padding:10px 24px; cursor:pointer; margin:0 6px;
+    padding:10px 24px; cursor:pointer; min-height:48px;
   }
+  .modal button.alt { background:var(--panel); border:2px solid var(--line); }
+  /* svårighetsvalet */
+  .modal button.diff {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    min-width:150px; padding:12px 18px; background:var(--panel); border:3px solid var(--line);
+  }
+  .modal button.diff small { font-size:13px; font-weight:700; color:var(--dim); }
+  .modal button.diff.pref { border-color:var(--accent-ink); background:#fff4d1; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="back" href="../index.html">← Games</a>
-    <h1>GOO <span class="goo">PIPES</span></h1>
+    <a class="back" href="../index.html">← Spel</a>
+    <h1><span>SLEM<span class="goo">RÖREN</span></span><span id="diff"></span></h1>
   </div>
   <div class="bar">
-    <div class="box"><div class="lbl">SCORE</div><div class="val" id="score">0</div></div>
-    <div class="box"><div class="lbl">BEST</div><div class="val" id="best">0</div></div>
-    <div class="box"><div class="lbl">LEVEL</div><div class="val" id="level">1</div></div>
-    <div class="box"><div class="lbl">PIPE</div><div class="val" id="dist">0/8</div></div>
+    <div class="box"><div class="lbl">POÄNG</div><div class="val" id="score">0</div></div>
+    <div class="box"><div class="lbl">REKORD</div><div class="val" id="best">0</div></div>
+    <div class="box"><div class="lbl">NIVÅ</div><div class="val" id="level">1</div></div>
+    <div class="box"><div class="lbl">RÖR</div><div class="val" id="dist">0/8</div></div>
   </div>
   <div class="ctrl">
-    <div class="qwrap"><span class="qlbl">NEXT</span><canvas id="queue"></canvas></div>
+    <div class="qwrap"><span class="qlbl">NÄSTA</span><canvas id="queue"></canvas></div>
     <div class="status" id="status"></div>
-    <button class="btn" id="fast">⏩ Fast</button>
-    <button class="btn" id="new">New game</button>
+    <button class="btn" id="fast">⏩ Snabbt</button>
+    <button class="btn" id="new">Nytt spel</button>
   </div>
   <div class="board-outer">
     <div id="boardWrap">
@@ -117,8 +132,9 @@
     </div>
   </div>
   <p class="hint">
-    Tap a square to lay the next pipe before the goo gets there — build a pipe at least as long
-    as the PIPE goal! Keyboard: arrows move, Enter places, Space = fast goo (bonus points).
+    Tryck på en ruta för att lägga nästa rör innan slemmet kommer dit – bygg ett rör som är
+    minst lika långt som målet under RÖR! Tangentbord: pilarna flyttar, Enter lägger röret,
+    mellanslag = snabbt slem (bonuspoäng).
   </p>
 </div>
 
@@ -218,15 +234,45 @@ function roundOutcome(distance, required) { return distance >= required ? "level
 // 50/segment, 100 for the second pass through a cross, +50 while fast-forwarding
 function segmentScore(secondPass, fast) { return (secondPass ? 100 : 50) + (fast ? 50 : 0); }
 
-function levelParams(level) {
+// Difficulty is picked when a game starts. Each one sets how long a pipe the
+// first level needs and how slow the goo starts; every level after that needs
+// a longer pipe, a faster goo and a shorter countdown. "svar" is the original game.
+var DIFFICULTIES = {
+  latt:   { name: "Lätt",   kid: "Långsamt slem och korta rör",
+            required: [5, 1, 16],   fill: [4400, 0.94, 1600], countdown: [20, 10] },
+  mellan: { name: "Mellan", kid: "Lite snabbare slem",
+            required: [6, 1.5, 20], fill: [3400, 0.91, 1100], countdown: [16, 6] },
+  svar:   { name: "Svår",   kid: "Snabbt slem och långa rör",
+            required: [8, 2, 24],   fill: [2600, 0.88, 700],  countdown: [12, 4] }
+};
+var DIFFICULTY_ORDER = ["latt", "mellan", "svar"];
+
+function levelParams(level, difficulty) {
+  var d = DIFFICULTIES[difficulty] || DIFFICULTIES.svar, n = level - 1;
   return {
-    required: Math.min(8 + (level - 1) * 2, 24),
-    fillMs: Math.max(700, Math.round(2600 * Math.pow(0.88, level - 1))),
-    countdownMs: Math.max(4, 13 - level) * 1000,
+    required: Math.min(d.required[0] + Math.floor(n * d.required[1]), d.required[2]),
+    fillMs: Math.max(d.fill[2], Math.round(d.fill[0] * Math.pow(d.fill[1], n))),
+    countdownMs: Math.max(d.countdown[1], d.countdown[0] - n) * 1000,
     fastMs: 110
   };
 }
 function randomType(rand) { return PIECE_TYPES[Math.floor(rand() * PIECE_TYPES.length)]; }
+// The queue draws from a shuffled bag holding each piece once, refilled when
+// empty: every piece turns up regularly and the same piece never comes three
+// times in a row (at most twice, where one bag ends and the next begins).
+function makePieceBag(rand) {
+  var bag = [];
+  return function () {
+    if (!bag.length) {
+      bag = PIECE_TYPES.slice();
+      for (var i = bag.length - 1; i > 0; i--) {
+        var j = Math.floor(rand() * (i + 1)), t = bag[i];
+        bag[i] = bag[j]; bag[j] = t;
+      }
+    }
+    return bag.pop();
+  };
+}
 // Start piece anywhere, any direction, as long as it doesn't face the board edge.
 function randomStart(rand) {
   for (;;) {
@@ -251,6 +297,7 @@ function makeRand(seed) {
 
 // ================= rendering & game shell =================
 var SCORE_KEY = "score.goopipes";
+var STATE_KEY = "state.goopipes";   // { difficulty } — the last one picked
 var REPLACE_PENALTY = 50, REPLACE_MS = 500, DIST_BONUS = 100, STUB_MS = 450;
 
 var boardCv = document.getElementById("board");
@@ -265,8 +312,8 @@ var statusEl = document.getElementById("status");
 var fastBtn = document.getElementById("fast");
 var modal = document.getElementById("modal");
 
-var EDGE = "#43474e", BODY = "#8b919b", CHANNEL = "#141519", GOO = "#3fe44b";
-var SLOT = "#1e2126", LINE = "#31353d", ACCENT = "#ffc63f";
+var EDGE = "#4f5966", BODY = "#b8c0cb", CHANNEL = "#2b3139", GOO = "#35d045";
+var SLOT = "#f1f4f8", LINE = "#d6dce4", ACCENT = "#f0a400", REPLACE = "#e8590c";
 // piece geometry: polylines between cell-side midpoints ("C" = center)
 var PATHS = {
   H: [["L", "C", "R"]], V: [["U", "C", "D"]],
@@ -277,6 +324,10 @@ var DIR_ANGLE = { U: 0, R: Math.PI / 2, D: Math.PI, L: -Math.PI / 2 };
 
 var game = null;
 var cursor = { r: 3, c: 4 };
+// The cursor and the preview of the next piece only show for the mouse and the
+// keyboard. With a finger the cursor would stay on the square just tapped and
+// draw the next piece on top of the one that was just laid there.
+var cursorOn = false;
 var cellPx = 48, dpr = 1;
 
 function sidePoint(side, s) {
@@ -399,10 +450,10 @@ function resize() {
 
 // ---------- HUD ----------
 function syncScore() {
-  scoreEl.textContent = game.score.toLocaleString();
+  scoreEl.textContent = game.score.toLocaleString("sv-SE");
   var best = Number(localStorage.getItem(SCORE_KEY) || 0);
   if (game.score > best) { best = game.score; localStorage.setItem(SCORE_KEY, String(best)); }
-  bestEl.textContent = best.toLocaleString();
+  bestEl.textContent = best.toLocaleString("sv-SE");
 }
 function addScore(delta) {
   game.score = Math.max(0, game.score + delta);
@@ -415,13 +466,13 @@ function syncDist() {
 function syncStatus() {
   if (game.phase === "countdown") {
     var s = Math.ceil(game.countLeft / 1000);
-    statusEl.textContent = "GOO IN " + s + "s";
+    statusEl.textContent = "SLEMMET KOMMER OM " + s + " s";
     statusEl.classList.toggle("hot", s <= 3);
   } else if (game.phase === "flow") {
-    statusEl.textContent = game.fast ? "FAST! ⏩" : "GOO FLOWING…";
+    statusEl.textContent = game.fast ? "SNABBT! ⏩" : "SLEMMET RINNER…";
     statusEl.classList.remove("hot");
   } else {
-    statusEl.textContent = "ROUND OVER";
+    statusEl.textContent = "RUNDAN ÄR SLUT";
     statusEl.classList.remove("hot");
   }
 }
@@ -434,21 +485,60 @@ function showModal(title, text, buttons) {
     var btn = document.createElement("button");
     btn.textContent = b[0];
     btn.onclick = b[1];
+    if (b[2]) btn.className = b[2];
     wrap.appendChild(btn);
   });
   modal.classList.add("show");
 }
 function hideModal() { modal.classList.remove("show"); }
 
+function readState() {
+  try { var s = JSON.parse(localStorage.getItem(STATE_KEY)); return s && typeof s === "object" ? s : {}; }
+  catch (e) { return {}; }
+}
+function lastDifficulty() {
+  var d = readState().difficulty;
+  return DIFFICULTIES[d] ? d : "latt";
+}
+// Shown when the page opens and for "Nytt spel". A round in progress waits
+// behind it (update() pauses while a modal shows) and "Fortsätt" goes back to it.
+function showPicker() {
+  var pref = game ? game.difficulty : lastDifficulty();
+  var playing = game && game.phase !== "done";
+  showModal("Välj svårighet", "Hur snabbt ska slemmet rinna?", []);
+  var wrap = document.getElementById("modalBtns");
+  DIFFICULTY_ORDER.forEach(function (id) {
+    var d = DIFFICULTIES[id];
+    var btn = document.createElement("button");
+    btn.className = "diff" + (id === pref ? " pref" : "");
+    btn.dataset.diff = id;
+    btn.innerHTML = "<span></span><small></small>";
+    btn.firstChild.textContent = d.name;
+    btn.lastChild.textContent = d.kid;
+    btn.onclick = function () { newGame(id); };
+    wrap.appendChild(btn);
+  });
+  if (playing) {
+    var back = document.createElement("button");
+    back.className = "alt";
+    back.textContent = "Fortsätt";
+    back.onclick = hideModal;
+    wrap.appendChild(back);
+  }
+}
+
 // ---------- game state ----------
-function newGame() {
-  game = { level: 1, score: 0 };
+function newGame(difficulty) {
+  difficulty = DIFFICULTIES[difficulty] ? difficulty : (game ? game.difficulty : lastDifficulty());
+  try { localStorage.setItem(STATE_KEY, JSON.stringify({ difficulty: difficulty })); } catch (e) {}
+  game = { level: 1, score: 0, difficulty: difficulty, nextPiece: makePieceBag(Math.random) };
+  document.getElementById("diff").textContent = DIFFICULTIES[difficulty].name.toUpperCase();
   hideModal();
   startLevel();
   syncScore();
 }
 function startLevel() {
-  game.params = levelParams(game.level);
+  game.params = levelParams(game.level, game.difficulty);
   game.board = emptyBoard();
   game.dist = 0;
   game.phase = "countdown";
@@ -461,7 +551,7 @@ function startLevel() {
   game.startPos = randomStart(Math.random);
   game.board[game.startPos.r][game.startPos.c] = makeStart(game.startPos.dir);
   game.queue = [];
-  for (var i = 0; i < 5; i++) game.queue.push(randomType(Math.random));
+  for (var i = 0; i < 5; i++) game.queue.push(game.nextPiece());
   fastBtn.classList.remove("on");
   levelEl.textContent = game.level;
   hideModal();
@@ -474,7 +564,7 @@ function nextLevel() {
 }
 function takeQueue() {
   var t = game.queue.shift();
-  game.queue.push(randomType(Math.random));
+  game.queue.push(game.nextPiece());
   return t;
 }
 function tryPlace(r, c) {
@@ -554,24 +644,24 @@ function endRound(res) {
     addScore(bonus);
     setTimeout(function () {
       if (game !== g) return;
-      showModal("Level " + g.level + " complete! 🎉",
-        "Pipe length " + g.dist + " (needed " + g.params.required + ")" +
-        (bonus ? " — distance bonus +" + bonus : "") + ". The goo gets faster…",
-        [["Next level", nextLevel]]);
+      showModal("Nivå " + g.level + " klar! 🎉",
+        "Röret blev " + g.dist + " långt (målet var " + g.params.required + ")" +
+        (bonus ? " – längdbonus +" + bonus : "") + ". Nu blir slemmet snabbare …",
+        [["Nästa nivå", nextLevel]]);
     }, 700);
   } else {
     setTimeout(function () {
       if (game !== g) return;
-      showModal("Game over ☠️",
-        "The goo escaped! Pipe length " + g.dist + " of " + g.params.required + " needed.",
-        [["Try again", newGame]]);
+      showModal("Slemmet rann ut! ☠️",
+        "Röret blev " + g.dist + " långt, men målet var " + g.params.required + ".",
+        [["Försök igen", function () { newGame(g.difficulty); }], ["Byt svårighet", showPicker, "alt"]]);
     }, 700);
   }
 }
 
 // ---------- main loop ----------
 function update(dt) {
-  if (!game) return;
+  if (!game || modal.classList.contains("show")) return;
   if (game.phase === "countdown") {
     game.countLeft -= dt;
     syncStatus();
@@ -625,18 +715,20 @@ function render(now) {
     drawPiece(bctx, s, piece, now);
     bctx.restore();
   }
-  // ghost preview of the next piece at the cursor
-  if (game.phase !== "done" && !game.pending && !modal.classList.contains("show") &&
-      placement(game.board, cursor.r, cursor.c)) {
-    bctx.save();
-    bctx.translate(cursor.c * s, cursor.r * s);
-    bctx.globalAlpha = 0.30;
-    drawPiece(bctx, s, makePiece(game.queue[0]), now);
-    bctx.restore();
+  // the cursor, with a faint preview of the next piece on an empty square;
+  // over a pipe that would be replaced the cursor turns orange instead
+  var aim = cursorAim();
+  if (aim) {
+    if (aim.mode === "place") {
+      bctx.save();
+      bctx.translate(aim.c * s, aim.r * s);
+      bctx.globalAlpha = 0.30;
+      drawPiece(bctx, s, makePiece(game.queue[0]), now);
+      bctx.restore();
+    }
+    bctx.strokeStyle = aim.mode === "place" ? ACCENT : REPLACE; bctx.lineWidth = 3;
+    bctx.strokeRect(aim.c * s + 2, aim.r * s + 2, s - 4, s - 4);
   }
-  // cursor
-  bctx.strokeStyle = ACCENT; bctx.lineWidth = 3;
-  bctx.strokeRect(cursor.c * s + 2, cursor.r * s + 2, s - 4, s - 4);
   // debris from replaced pieces
   game.fx.forEach(function (f) {
     var age = now - f.start, p = age / 520;
@@ -671,6 +763,12 @@ function render(now) {
     }
   }
   renderQueue(now);
+}
+// Where the cursor is drawn and what a click there would do, or null when it is hidden.
+function cursorAim() {
+  if (!cursorOn || !game || game.phase === "done" || game.pending || modal.classList.contains("show")) return null;
+  var mode = placement(game.board, cursor.r, cursor.c);
+  return mode ? { r: cursor.r, c: cursor.c, mode: mode } : null;
 }
 function renderQueue(now) {
   qctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -711,6 +809,7 @@ boardCv.addEventListener("pointerdown", function (e) {
   var r = Math.floor((e.clientY - rect.top) / cellPx);
   if (!inBounds(r, c)) return;
   cursor.r = r; cursor.c = c;
+  cursorOn = e.pointerType === "mouse";
   tryPlace(r, c);
 });
 boardCv.addEventListener("pointermove", function (e) {
@@ -718,13 +817,13 @@ boardCv.addEventListener("pointermove", function (e) {
   var rect = boardCv.getBoundingClientRect();
   var c = Math.floor((e.clientX - rect.left) / cellPx);
   var r = Math.floor((e.clientY - rect.top) / cellPx);
-  if (inBounds(r, c)) { cursor.r = r; cursor.c = c; }
+  if (inBounds(r, c)) { cursor.r = r; cursor.c = c; cursorOn = true; }
 });
 window.addEventListener("keydown", function (e) {
   if (modal.classList.contains("show")) {
     if (e.key === "Enter") {
       e.preventDefault();
-      var btn = document.querySelector("#modalBtns button");
+      var btn = document.querySelector("#modalBtns button.pref") || document.querySelector("#modalBtns button");
       if (btn) btn.click();
     }
     return;
@@ -732,6 +831,7 @@ window.addEventListener("keydown", function (e) {
   var moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
   if (moves[e.key]) {
     e.preventDefault();
+    cursorOn = true;
     cursor.r = Math.max(0, Math.min(ROWS - 1, cursor.r + moves[e.key][0]));
     cursor.c = Math.max(0, Math.min(COLS - 1, cursor.c + moves[e.key][1]));
   } else if (e.key === "Enter") {
@@ -743,12 +843,13 @@ window.addEventListener("keydown", function (e) {
   }
 });
 fastBtn.addEventListener("click", setFast);
-document.getElementById("new").addEventListener("click", newGame);
+document.getElementById("new").addEventListener("click", showPicker);
 window.addEventListener("resize", resize);
 
 // ---------- boot ----------
 resize();
-newGame();
+bestEl.textContent = Number(localStorage.getItem(SCORE_KEY) || 0).toLocaleString("sv-SE");
+showPicker();
 requestAnimationFrame(frame);
 
 if ("serviceWorker" in navigator) {

@@ -12,7 +12,7 @@ PIN-protected daily time limits per game.
 | Game | Language | What it is |
 | ---- | -------- | ---------- |
 | 🔢 [2048](#2048-notes) | English | slide and merge tiles to reach 2048 |
-| 🧪 [Goo Pipes](#goo-pipes-notes) | English | lay pipes before the goo starts flowing |
+| 🧪 [Slemrören](#slemrören-notes) | Swedish | lay pipes before the goo starts flowing, three difficulties |
 | 🧮 [Numlingarnas resa](#numlingarnas-resa-notes) | Swedish | logic and number puzzles on a journey to Numeria |
 | ✖️ [Gångertabellen](#gångertabellen-notes) | Swedish | times tables 1–10 practice |
 | 🕵️ [Detektiven](#detektiven-notes) | Swedish | who is the criminal? Logic puzzles with clues |
@@ -103,7 +103,7 @@ sw.js                 offline cache — keep ASSETS + CACHE_VERSION updated
 manifest.webmanifest  PWA install metadata
 shared/guard.js       playtime tracking + "time's up" lock (used by all games)
 games/2048.html       the 2048 game (fully self-contained)
-games/goopipes.html   the Goo Pipes game (fully self-contained)
+games/goopipes.html   Slemrören (formerly Goo Pipes) — pipe-laying game, in Swedish (fully self-contained)
 games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
 games/gangertabell.html  Gångertabellen — times tables 1–10 practice, in Swedish (fully self-contained)
 games/detektiven.html    Detektiven — who is the criminal? Logic puzzles in Swedish (fully self-contained)
@@ -125,7 +125,7 @@ npx playwright install chromium webkit
 Then `npm test` runs everything:
 
 - `npm run test:unit` — plain Node, no browser:
-  `tests/goopipes.test.js` (Goo Pipes game logic),
+  `tests/goopipes.test.js` (Slemrören game logic, difficulties and piece bag),
   `tests/gangertabell.test.js` (Gångertabellen question order and
   counting), `tests/detektiven.test.js` (Detektiven clue texts, case
   generator, solver, difficulty and unlocking) and `tests/integrity.test.js` (every game is in `config.js` and precached in
@@ -149,7 +149,7 @@ handing it over.
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there; Detektiven keeps unlocked levels and the case in progress) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress) |
 
 ## 2048 notes
 
@@ -162,21 +162,38 @@ the 2048 tile to win, and keep going for a higher score if you like.
   reached, so leaving and coming back continues the same game. It is cleared
   when the game is over. **New game** starts over.
 
-## Goo Pipes notes
+## Slemrören notes
 
-A Pipe Mania style game, in English. Goo starts flowing from the pump after
-a countdown. Tap squares to lay the next pipe from the queue of five, and
-build a pipe at least as long as the level's goal before the goo reaches an
-open end.
+A pipe-laying game in Swedish (it was called Goo Pipes; the id, file
+name and `score.goopipes` are unchanged, so old records still count). Slime
+starts flowing from the pump after a countdown. Tap squares to lay the next
+pipe from the queue of five (**NÄSTA**), and build a pipe at least as long as
+the level's goal (**RÖR**) before the slime reaches an open end.
 
-- Pieces: straight, four corners and a cross (the goo can pass a cross
-  twice, once in each direction, for extra points).
-- Tapping a pipe the goo has not reached yet replaces it (costs 50 points).
-- **⏩ Fast** makes the goo flow fast for the rest of the round, for bonus
-  points per pipe.
-- Each level needs a longer pipe, the goo flows faster and the countdown is
-  shorter. A pipe longer than the goal gives a distance bonus.
-- **Score:** the hub trophy is the best score.
+Pick a difficulty when the game starts (and with **Nytt spel**; the round in
+progress waits behind the picker and **Fortsätt** goes back to it):
+
+| Difficulty | Level 1: pipe goal / time per pipe / countdown | Gets harder per level until |
+| ---------- | ---------------------------------------------- | --------------------------- |
+| Lätt       | 5 / 4.4 s / 20 s                               | 16 pipes, 1.6 s, 10 s       |
+| Mellan     | 6 / 3.4 s / 16 s                               | 20 pipes, 1.1 s, 6 s        |
+| Svår       | 8 / 2.6 s / 12 s (the original game)           | 24 pipes, 0.7 s, 4 s        |
+
+- Pieces: straight, four corners and a cross (the slime can pass a cross
+  twice, once in each direction, for extra points). The queue draws from a
+  shuffled bag holding each of the seven pieces once, so every piece turns
+  up at least once in every 13, and the same piece never comes three times
+  in a row (plain random picks did that about once every 50 pieces).
+- Tapping a pipe the slime has not reached yet replaces it (costs 50 points).
+- **⏩ Snabbt** makes the slime flow fast for the rest of the round, for
+  bonus points per pipe. A pipe longer than the goal gives a distance bonus.
+- The cursor and the faint preview of the next piece only show with a mouse
+  or the keyboard, and the preview only on an empty square (over a pipe that
+  would be replaced the cursor turns orange). With a finger nothing is drawn
+  over the board, so the next piece is never shown on top of one just laid.
+- **Score:** the hub trophy is the best score, on any difficulty.
+- **Saved:** `state.goopipes` remembers the last difficulty, which the picker
+  suggests next time.
 
 ## Numlingarnas resa notes
 

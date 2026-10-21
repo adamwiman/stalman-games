@@ -1,4 +1,4 @@
-// 2048 and Goo Pipes: real input (keyboard on desktop, touch on iPad),
+// 2048 and Slemrören (Goo Pipes): real input (keyboard on desktop, touch on iPad),
 // scores reaching the hub, saved games, and layout.
 "use strict";
 const { test, expect, press, swipe, expectNoHorizontalOverflow } = require("./fixtures");
@@ -61,11 +61,57 @@ test.describe("2048", () => {
   });
 });
 
-test.describe("Goo Pipes", () => {
+test.describe("Slemrören (Goo Pipes)", () => {
   const boardCount = (page) => page.evaluate(() => game.board.flat().filter((p) => p && p.type !== "S").length);
+  const diffButton = (page, id) => page.locator(`#modalBtns button.diff[data-diff="${id}"]`);
+  async function pick(page, touch, id) {
+    await press(diffButton(page, id), touch);
+    await expect(page.locator("#modal.show")).toHaveCount(0);
+  }
 
-  test("fits the screen with the whole board visible", async ({ page }) => {
+  test("is in Swedish on a white background, and asks for a difficulty first", async ({ page, touch }) => {
     await page.goto("games/goopipes.html");
+    await expect(page.locator("html")).toHaveAttribute("lang", "sv");
+    await expect(page).toHaveTitle("Slemrören");
+    await expect(page.locator("a.back")).toHaveText("← Spel");
+    await expect(page.locator(".box .lbl")).toHaveText(["POÄNG", "REKORD", "NIVÅ", "RÖR"]);
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(255, 255, 255)");
+
+    // the picker: Lätt is suggested the first time, nothing runs until you pick
+    await expect(page.locator("#modalTitle")).toHaveText("Välj svårighet");
+    await expect(page.locator("#modalBtns button.diff span")).toHaveText(["Lätt", "Mellan", "Svår"]);
+    await expect(diffButton(page, "latt")).toHaveClass(/pref/);
+    await expect(page.locator("#modalBtns button", { hasText: "Fortsätt" })).toHaveCount(0);
+    expect(await page.evaluate(() => game)).toBeNull();
+
+    await pick(page, touch, "mellan");
+    await expect(page.locator("#diff")).toHaveText("MELLAN");
+    await expect(page.locator("#dist")).toHaveText("0/6");
+    await expect(page.locator("#status")).toHaveText(/^SLEMMET KOMMER OM 1[56] s$/);
+    expect(await page.evaluate(() => game.params)).toEqual({ required: 6, fillMs: 3400, countdownMs: 16000, fastMs: 110 });
+
+    // Nytt spel opens the picker and the round waits behind it; Fortsätt goes back
+    await press(page.locator("#new"), touch);
+    await expect(diffButton(page, "mellan")).toHaveClass(/pref/);
+    const left = await page.evaluate(() => game.countLeft);
+    await page.waitForTimeout(600);
+    expect(await page.evaluate(() => game.countLeft)).toBe(left);
+    await press(page.locator("#modalBtns button", { hasText: "Fortsätt" }), touch);
+    await expect(page.locator("#modal.show")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => game.countLeft)).toBeLessThan(left);
+
+    // the last choice is remembered
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("state.goopipes")))).toEqual({ difficulty: "mellan" });
+    await page.reload();
+    await expect(diffButton(page, "mellan")).toHaveClass(/pref/);
+    await pick(page, touch, "svar");
+    await expect(page.locator("#dist")).toHaveText("0/8");
+  });
+
+  test("fits the screen with the whole board visible", async ({ page, touch }) => {
+    await page.goto("games/goopipes.html");
+    await expectNoHorizontalOverflow(page, "goopipes picker");
+    await pick(page, touch, "latt");
     await expectNoHorizontalOverflow(page, "goopipes");
     const box = await page.locator("#board").boundingBox();
     const vp = page.viewportSize();
@@ -78,6 +124,7 @@ test.describe("Goo Pipes", () => {
 
   test("places pipes by tapping/clicking squares and by keyboard", async ({ page, touch }) => {
     await page.goto("games/goopipes.html");
+    await pick(page, touch, "latt");
     const box = await page.locator("#board").boundingBox();
     const cell = await page.evaluate(() => cellPx);
     const start = await page.evaluate(() => game.startPos);
@@ -89,6 +136,9 @@ test.describe("Goo Pipes", () => {
       if (touch) await page.touchscreen.tap(x, y);
       else await page.mouse.click(x, y);
       expect(await page.evaluate(([r, c]) => game.board[r][c] && game.board[r][c].type, [r, c])).toBe(nextType);
+      // with a finger nothing is drawn over the pipe just laid; with the mouse the
+      // cursor stays there and shows it would be replaced, without a preview piece
+      expect(await page.evaluate(() => cursorAim())).toEqual(touch ? null : { r, c, mode: "replace" });
     }
     expect(await boardCount(page)).toBe(targets.length);
 
@@ -97,18 +147,31 @@ test.describe("Goo Pipes", () => {
       await page.evaluate(() => { cursor.r = 3; cursor.c = 0; });
       if (start.r === 3 && start.c === 1) await page.keyboard.press("ArrowDown");
       else await page.keyboard.press("ArrowRight");
+      const aim = await page.evaluate(() => cursorAim());
+      expect(aim.mode).toBe("place");
       await page.keyboard.press("Enter");
       expect(await boardCount(page)).toBe(targets.length + 1);
     }
   });
 
-  test("a round ends when the goo escapes, and New game restarts", async ({ page, touch }) => {
+  test("a round ends when the goo escapes: Försök igen keeps the difficulty, Byt svårighet asks again", async ({ page, touch }) => {
     await page.goto("games/goopipes.html");
+    await pick(page, touch, "latt");
     await press(page.locator("#fast"), touch); // fast goo, no pipes laid → spills almost at once
     await expect(page.locator("#modal.show")).toBeVisible({ timeout: 20000 });
-    await expect(page.locator("#modalBtns button").first()).toBeVisible();
+    await expect(page.locator("#modalTitle")).toHaveText("Slemmet rann ut! ☠️");
+    await expect(page.locator("#status")).toHaveText("RUNDAN ÄR SLUT");
+    await expect(page.locator("#modalBtns button")).toHaveText(["Försök igen", "Byt svårighet"]);
     await press(page.locator("#modalBtns button").first(), touch);
     await expect(page.locator("#modal.show")).toHaveCount(0);
-    expect(await page.evaluate(() => game.phase)).not.toBe("done");
+    expect(await page.evaluate(() => [game.phase, game.difficulty])).toEqual(["countdown", "latt"]);
+
+    await press(page.locator("#fast"), touch);
+    await expect(page.locator("#modal.show")).toBeVisible({ timeout: 20000 });
+    await press(page.locator("#modalBtns button", { hasText: "Byt svårighet" }), touch);
+    await expect(page.locator("#modalTitle")).toHaveText("Välj svårighet");
+    await expect(page.locator("#modalBtns button", { hasText: "Fortsätt" })).toHaveCount(0);
+    await pick(page, touch, "svar");
+    expect(await page.evaluate(() => [game.phase, game.difficulty, game.level, game.score])).toEqual(["countdown", "svar", 1, 0]);
   });
 });

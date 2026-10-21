@@ -15,7 +15,7 @@ const L = new Function(m[1] + `
   return { COLS, ROWS, SIDES, OPPOSITE, DELTA, CONNECT, PIECE_TYPES,
     exitSide, axisOf, inBounds, emptyBoard, makePiece, makeStart, isFlooded,
     placement, tryEnter, advanceFlow, simulateFlow, roundOutcome, segmentScore,
-    levelParams, randomType, randomStart, makeRand };
+    levelParams, DIFFICULTIES, DIFFICULTY_ORDER, randomType, makePieceBag, randomStart, makeRand };
 `)();
 
 let passed = 0, failed = 0;
@@ -194,6 +194,61 @@ eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
   check("goo speeds up per level", p1.fillMs > p5.fillMs && p5.fillMs >= p20.fillMs && p20.fillMs >= 700);
   check("countdown shrinks but never below 4s",
     p1.countdownMs > p5.countdownMs && p20.countdownMs >= 4000);
+}
+
+// ---- 11. difficulties ----
+{
+  eq("three difficulties, easiest first", L.DIFFICULTY_ORDER, ["latt", "mellan", "svar"]);
+  eq("difficulty names are Swedish", L.DIFFICULTY_ORDER.map((d) => L.DIFFICULTIES[d].name), ["Lätt", "Mellan", "Svår"]);
+  eq("Svår is the original game", L.levelParams(1, "svar"), { required: 8, fillMs: 2600, countdownMs: 12000, fastMs: 110 });
+  eq("no difficulty means Svår", L.levelParams(7), L.levelParams(7, "svar"));
+  eq("Lätt level 1: short pipe, slow goo, long countdown", L.levelParams(1, "latt"),
+    { required: 5, fillMs: 4400, countdownMs: 20000, fastMs: 110 });
+  for (const d of L.DIFFICULTY_ORDER) {
+    let prev = null;
+    for (let lv = 1; lv <= 30; lv++) {
+      const p = L.levelParams(lv, d);
+      check(`${d} L${lv}: whole numbers`, [p.required, p.fillMs, p.countdownMs].every(Number.isInteger));
+      check(`${d} L${lv}: at least 3 s of countdown and 0.7 s per pipe`, p.countdownMs >= 3000 && p.fillMs >= 700);
+      if (prev) {
+        check(`${d} L${lv}: never easier than the level before`,
+          p.required >= prev.required && p.fillMs <= prev.fillMs && p.countdownMs <= prev.countdownMs);
+      }
+      prev = p;
+    }
+  }
+  for (let lv = 1; lv <= 30; lv++) {
+    const [a, b, c] = L.DIFFICULTY_ORDER.map((d) => L.levelParams(lv, d));
+    check(`L${lv}: Lätt ≤ Mellan ≤ Svår in pipe length`, a.required <= b.required && b.required <= c.required);
+    check(`L${lv}: Lätt ≥ Mellan ≥ Svår in time per pipe`, a.fillMs >= b.fillMs && b.fillMs >= c.fillMs);
+    check(`L${lv}: Lätt ≥ Mellan ≥ Svår in countdown`, a.countdownMs >= b.countdownMs && b.countdownMs >= c.countdownMs);
+  }
+}
+
+// ---- 12. the piece bag: every piece regularly, never three alike in a row ----
+{
+  for (const seed of [1, 2, 3, 99, 2026]) {
+    const next = L.makePieceBag(L.makeRand(seed));
+    const seq = Array.from({ length: 7000 }, next);
+    check(`seed ${seed}: only known pieces`, seq.every((t) => L.PIECE_TYPES.includes(t)));
+    let triples = 0;
+    for (let i = 2; i < seq.length; i++) if (seq[i] === seq[i - 1] && seq[i] === seq[i - 2]) triples++;
+    eq(`seed ${seed}: never three alike in a row`, triples, 0);
+    let fullBags = true;
+    for (let i = 0; i < seq.length; i += 7) {
+      if ([...seq.slice(i, i + 7)].sort().join() !== [...L.PIECE_TYPES].sort().join()) fullBags = false;
+    }
+    check(`seed ${seed}: each run of 7 holds every piece once`, fullBags);
+    // a piece never waits longer than 12 draws (end of one bag to the end of the next)
+    let longest = 0;
+    for (const t of L.PIECE_TYPES) {
+      let lastAt = -1;
+      seq.forEach((x, i) => { if (x === t) { longest = Math.max(longest, i - lastAt); lastAt = i; } });
+    }
+    check(`seed ${seed}: no piece is missing for more than 13 draws`, longest <= 13);
+  }
+  const a = L.makePieceBag(L.makeRand(5)), b = L.makePieceBag(L.makeRand(5));
+  eq("same seed, same pieces", Array.from({ length: 30 }, a), Array.from({ length: 30 }, b));
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

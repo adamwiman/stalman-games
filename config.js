@@ -14,9 +14,9 @@ const GAMES = [
   },
   {
     id: "goopipes",
-    title: "Goo Pipes",
+    title: "Slemrören",
     emoji: "🧪",
-    blurb: "Build the pipe before the goo escapes!",
+    blurb: "Bygg röret innan slemmet rinner ut!",
     file: "games/goopipes.html",
     scoreKey: "score.goopipes"
   },

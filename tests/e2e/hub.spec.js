@@ -32,7 +32,7 @@ test("cards show each game's best score from localStorage", async ({ page }) => 
   const chip = (title) => page.locator(".game-card", { hasText: title }).locator(".chip").first();
   // the thousands separator depends on the engine's locale
   await expect(chip("2048")).toHaveText(/4\D?096/);
-  await expect(chip("Goo Pipes")).toHaveText(/12/);
+  await expect(chip("Slemrören")).toHaveText(/12/);
   await expect(chip("Numlingarnas resa")).toHaveText(/7/);
   await expect(chip("Gångertabellen")).toHaveText(/23/);
 });
@@ -61,7 +61,7 @@ test("parent PIN: create, wrong PIN rejected, limits saved and shown on cards", 
   await press(page.locator("#close"), touch);
 
   await expect(page.locator(".game-card", { hasText: "Numlingarnas resa" }).locator(".chip.time")).toHaveText("⏱ 20 min left");
-  await expect(page.locator(".game-card", { hasText: "Goo Pipes" }).locator(".chip.time.low")).toHaveText("⏱ 3 min left");
+  await expect(page.locator(".game-card", { hasText: "Slemrören" }).locator(".chip.time.low")).toHaveText("⏱ 3 min left");
   await expect(page.locator(".game-card", { hasText: "2048" }).locator(".chip.time")).toHaveCount(0);
 
   // reopen: wrong PIN, then right one
