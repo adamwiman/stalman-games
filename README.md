@@ -1,24 +1,40 @@
-# Game Hub
+# stalman-games
 
 An ad-free, offline-capable game collection for kids' iPads. One web app,
 installed via "Add to Home Screen", with on-device high scores and
 PIN-protected daily time limits per game.
 
+- **Play:** <https://adamwiman.github.io/stalman-games/>
+- **Repository:** <https://github.com/adamwiman/stalman-games>
+
+## The games
+
+| Game | Language | What it is |
+| ---- | -------- | ---------- |
+| 🔢 [2048](#2048-notes) | English | slide and merge tiles to reach 2048 |
+| 🧪 [Goo Pipes](#goo-pipes-notes) | English | lay pipes before the goo starts flowing |
+| 🧮 [Numlingarnas resa](#numlingarnas-resa-notes) | Swedish | logic and number puzzles on a journey to Numeria |
+| ✖️ [Gångertabellen](#gångertabellen-notes) | Swedish | times tables 1–10 practice |
+| 🕵️ [Detektiven](#detektiven-notes) | Swedish | who is the criminal? Logic puzzles with clues |
+
+Every game works offline, saves its best score for the hub card and obeys
+the daily time limits. Notes on each game are at the end of this file.
+
 ## Publish on GitHub Pages
 
-1. Create a repository (e.g. `game-hub`) and push these files to the root
-   of the `main` branch.
-2. In the repo: **Settings → Pages → Source: Deploy from a branch**,
-   select `main` / `(root)`, save.
-3. After a minute the site is live at
-   `https://<username>.github.io/game-hub/`.
+The site is published from this repository with GitHub Pages:
+**Settings → Pages → Source: Deploy from a branch**, `main` / `(root)`.
+Every push to `main` is live at
+<https://adamwiman.github.io/stalman-games/> a minute later.
 
 All paths in the project are relative, so it works at any URL, including
-project subpaths.
+project subpaths (and a fork works the same way at
+`https://<username>.github.io/stalman-games/`).
 
 ## Install on the kids' iPads
 
-1. Open the URL in **Safari** (must be Safari for home-screen install).
+1. Open <https://adamwiman.github.io/stalman-games/> in **Safari** (must be
+   Safari for home-screen install).
 2. Tap the share button → **Add to Home Screen**.
 3. Open it once from the home screen icon **while online** — this installs
    the offline cache. After that it works with no internet.
@@ -43,7 +59,8 @@ Three steps:
    template below) and save it as `games/<id>.html`.
 2. Add an entry to `GAMES` in **config.js**.
 3. Add `"./games/<id>.html"` to `ASSETS` in **sw.js** and bump
-   `CACHE_VERSION` (e.g. `game-hub-v2`). Commit and push.
+   `CACHE_VERSION` (e.g. `game-hub-v5` → `game-hub-v6`; the cache name
+   keeps the `game-hub-` prefix). Commit and push.
 
 Devices pick up new files the next time the app is opened with internet.
 
@@ -133,6 +150,33 @@ handing it over.
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
 | `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there; Detektiven keeps unlocked levels and the case in progress) |
+
+## 2048 notes
+
+The classic sliding-tile game, in English. Swipe on the iPad (or use the
+arrow keys) to slide all tiles; two equal tiles merge into their sum. Reach
+the 2048 tile to win, and keep going for a higher score if you like.
+
+- **Score:** the hub trophy is the best score.
+- **Saved:** `state.2048` holds the board, score and whether 2048 has been
+  reached, so leaving and coming back continues the same game. It is cleared
+  when the game is over. **New game** starts over.
+
+## Goo Pipes notes
+
+A Pipe Mania style game, in English. Goo starts flowing from the pump after
+a countdown. Tap squares to lay the next pipe from the queue of five, and
+build a pipe at least as long as the level's goal before the goo reaches an
+open end.
+
+- Pieces: straight, four corners and a cross (the goo can pass a cross
+  twice, once in each direction, for extra points).
+- Tapping a pipe the goo has not reached yet replaces it (costs 50 points).
+- **⏩ Fast** makes the goo flow fast for the rest of the round, for bonus
+  points per pipe.
+- Each level needs a longer pipe, the goo flows faster and the countdown is
+  shorter. A pipe longer than the goal gives a distance bonus.
+- **Score:** the hub trophy is the best score.
 
 ## Numlingarnas resa notes
 
