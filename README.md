@@ -291,6 +291,15 @@ the steps. Averages per case:
   dem är kock"; most/only/each for rows and columns; the job or person with
   the most; "Bara en person i hörnen har …"; "direkt till vänster om sig".
   Harder levels use more kinds.
+- **Cards:** everything on a card is centred: name, job,
+  and then the job's emoji (not revealed yet) or the clue. The coordinate and
+  😇/🦹 sit in the top corners. Each card is a CSS container, so the layout
+  follows the card's own width: on narrow cards (phones) the corners get a
+  row of their own above the name, long names shrink to fit and long words
+  in clues are hyphenated. Names are never cut off. The spacing between
+  cards grows with the screen. On phones (e.g. iPhone 15 Pro) and other
+  small screens the cards grow taller and the page scrolls; on iPads and
+  desktops the whole board fits on the screen.
 - **💡 Tips:** the first press highlights the clues to look at, the second
   the people you can then work out. Hints are counted on the result screen.
 - **Notes:** an unknown person can get a colour mark (just for the player).

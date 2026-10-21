@@ -3,7 +3,7 @@
    IMPORTANT: whenever you change any file (or add a game),
    bump CACHE_VERSION so devices pick up the new files.
    ============================================================ */
-const CACHE_VERSION = "game-hub-v6";
+const CACHE_VERSION = "game-hub-v7";
 
 const ASSETS = [
   "./",

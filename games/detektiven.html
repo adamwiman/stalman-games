@@ -122,18 +122,32 @@ h3{font-size:1.2rem;font-weight:900}
 .msg.bad{color:var(--bad)}
 .msg.tip{color:var(--hl)}
 .msg.pop{animation:pop .3s}
-.board{flex:1;min-height:0;display:grid;grid-template-columns:18px repeat(4,minmax(0,1fr));grid-template-rows:18px repeat(5,minmax(0,1fr));gap:8px}
+.board{flex:1;min-height:0;display:grid;grid-template-columns:20px repeat(4,minmax(0,1fr));grid-template-rows:20px repeat(5,minmax(0,1fr));gap:clamp(8px,1.25vh,14px) clamp(8px,1.6vw,16px)}
 .lab{display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--ink2);font-size:.9rem}
-.card{position:relative;display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:1px;min-width:0;min-height:0;overflow:hidden;background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:0 3px 0 var(--ink);padding:5px 8px 6px;cursor:pointer;transition:background .15s}
+/* Ett kort: namn och yrke överst, i mitten antingen yrkets emoji (inte avslöjad) eller
+   ledtråden. Allt är centrerat. Koordinaten och 😇/🦹 ligger i de övre hörnen.
+   Kortet är en container: smala kort lägger hörnen på en egen rad ovanför namnet. */
+.card{position:relative;container-type:inline-size;display:flex;flex-direction:column;align-items:center;text-align:center;gap:1px;min-width:0;min-height:0;overflow:hidden;background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:0 3px 0 var(--ink);padding:7px 8px 8px;cursor:pointer;transition:background .15s}
 .card:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
-.card .who{display:flex;align-items:center;gap:5px;font-weight:900;font-size:clamp(.88rem,1.9vh,1.08rem);padding-right:22px;min-width:0}
-.card .em{font-size:1.2em;line-height:1;flex:none}
-.card .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.card .job{font-size:clamp(.68rem,1.35vh,.84rem);font-weight:800;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .clue{font-size:clamp(.78rem,1.6vh,.95rem);font-weight:700;line-height:1.2;margin-top:2px;overflow-wrap:break-word;transition:opacity .15s}
+.card .who{max-width:100%;font-weight:900;font-size:clamp(.88rem,1.9vh,1.1rem);line-height:1.15;white-space:nowrap;margin-top:14px}
+.card .job{max-width:100%;font-size:clamp(.68rem,1.35vh,.84rem);font-weight:800;color:var(--ink2);line-height:1.15}
+.card .job .em{font-size:1.15em;margin-right:.2em}
+.card .face{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-size:clamp(1.3rem,22cqi,2.8rem);line-height:1;padding-top:2px}
+.card .clue{flex:1 1 auto;width:100%;display:flex;align-items:center;justify-content:center;font-size:clamp(.78rem,1.6vh,.98rem);font-size:clamp(.74rem,min(1.6vh,9.6cqi),.98rem);font-weight:700;line-height:1.22;margin-top:4px;overflow-wrap:break-word;transition:opacity .15s}
 .card .clue.flavor{font-style:italic;font-weight:600;color:var(--ink2)}
-.card .badge{position:absolute;top:4px;right:6px;font-size:1.15rem;line-height:1}
-.card .coord{position:absolute;bottom:2px;right:7px;font-size:.62rem;font-weight:900;color:#93a6be}
+.card .badge{position:absolute;top:4px;right:6px;font-size:1.05rem;line-height:1}
+.card .coord{position:absolute;top:6px;left:8px;font-size:.62rem;font-weight:900;color:#93a6be;line-height:1}
+/* bredare kort: hörnen ligger bredvid namnet, som får 20 px luft på varje sida */
+@container (min-width:118px){
+  .card .who{margin-top:0;padding:0 20px}
+  .card .who.long{font-size:min(clamp(.88rem,1.9vh,1.1rem),calc((100cqi - 40px) / 6.2))}
+}
+/* smala kort (mobil): långa sammansatta ord avstavas i stället för att brytas mitt i */
+@container (max-width:110px){
+  .card .job .em{display:none}
+  .card .clue{-webkit-hyphens:auto;hyphens:auto}
+  .card .who.long{font-size:min(.8rem,15.5cqi)}   /* Mohammed, Zakarias … på de smalaste korten */
+}
 .card.inno{background:var(--goodbg);border-color:var(--good);box-shadow:0 3px 0 var(--good)}
 .card.crim{background:var(--badbg);border-color:var(--bad);box-shadow:0 3px 0 var(--bad)}
 .card.inno .coord{color:#6fb397}.card.crim .coord{color:#d98c8c}
@@ -147,15 +161,22 @@ h3{font-size:1.2rem;font-weight:900}
 .card.shake{animation:shake .4s}
 /* små skärmar: korten får växa på höjden och sidan rullar */
 @media (max-width:640px),(max-height:520px){
-  .board{flex:none;grid-template-rows:18px repeat(5,auto);gap:6px}
-  .card{min-height:92px}
+  .board{flex:none;grid-template-rows:20px repeat(5,auto);gap:10px}
+  .card{min-height:96px}
 }
+/* mobil (t.ex. iPhone 15 Pro, 393 px): smalare marginaler så att namnen får plats */
 @media (max-width:640px){
-  .board{grid-template-columns:14px repeat(4,minmax(0,1fr))}
-  .card{padding:4px 5px 5px;border-radius:12px}
-  .card .who{font-size:.8rem;padding-right:16px}
-  .card .clue{font-size:.7rem}
-  .card .badge{font-size:.9rem}
+  #app{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+  .board{grid-template-columns:12px repeat(4,minmax(0,1fr));grid-template-rows:16px repeat(5,auto);gap:8px 6px}
+  .lab{font-size:.78rem}
+  .card{padding:5px 3px 7px;border-radius:12px}
+  .card .who{font-size:.8rem}
+  .card .job{font-size:.66rem}
+  .card .clue{font-size:.72rem;line-height:1.2}
+  .card .who{margin-top:12px}
+  .card .badge{font-size:.8rem;top:3px;right:4px}
+  .card .coord{font-size:.55rem;top:4px;left:5px}
+  .bar{gap:6px 8px}
   .stat{min-width:58px}
 }
 
@@ -1379,12 +1400,15 @@ function renderPlay(){
 }
 // Ledtråden, eller det personen säger om hen inte har någon ledtråd.
 const cardText=p=>G.pz.clues[p]?clueText(G.pz.clues[p],G.P):flavorText(G.P,p,isCriminal(G,p));
+// Långa yrken får ett mjukt bindestreck så att de kan brytas på smala kort.
+const JOB_SHY={programmerare:'program\u00admerare',tandlakare:'tand\u00adläkare',astronaut:'astro\u00adnaut',mekaniker:'meka\u00adniker'};
 function cardInner(p){
   const P=G.P,J=P.jobs[P.jobOf[p]],known=isKnown(G,p),crim=isCriminal(G,p);
-  return `<span class="who"><span class="em" aria-hidden="true">${J.e}</span><span class="nm">${esc(P.names[p])}</span></span>
-    <span class="job">${J.sg}</span>
-    ${known?`<span class="clue${G.pz.clues[p]?'':' flavor'}">${esc(cardText(p))}</span><span class="badge" aria-hidden="true">${crim?'🦹':'😇'}</span>`:''}
-    <span class="coord" aria-hidden="true">${cellName(p)}</span>`;
+  return `<span class="coord" aria-hidden="true">${cellName(p)}</span>
+    ${known?`<span class="badge" aria-hidden="true">${crim?'🦹':'😇'}</span>`:''}
+    <span class="who${P.names[p].length>=7?' long':''}"><span class="nm">${esc(P.names[p])}</span></span>
+    <span class="job">${known?`<span class="em" aria-hidden="true">${J.e}</span>`:''}${JOB_SHY[J.id]||J.sg}</span>
+    ${known?`<span class="clue${G.pz.clues[p]?'':' flavor'}">${esc(cardText(p))}</span>`:`<span class="face" aria-hidden="true">${J.e}</span>`}`;
 }
 function refreshCard(p,anim){
   const b=app.querySelector(`.card[data-p="${p}"]`);if(!b)return;
