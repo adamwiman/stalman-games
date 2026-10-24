@@ -43,5 +43,13 @@ const GAMES = [
     blurb: "Vem är skurk? Lös fallet med ledtrådar!",
     file: "games/detektiven.html",
     scoreKey: "score.detektiven"   // solved cases, all levels together
+  },
+  {
+    id: "jordenrunt",
+    title: "Jorden runt",
+    emoji: "🌍",
+    blurb: "Flaggor, huvudstäder och länder!",
+    file: "games/jordenrunt.html",
+    scoreKey: "score.jordenrunt"   // countries stamped in the passport
   }
 ];

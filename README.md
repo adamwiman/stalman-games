@@ -16,6 +16,7 @@ PIN-protected daily time limits per game.
 | 🧮 [Numlingarnas resa](#numlingarnas-resa-notes) | Swedish | logic and number puzzles on a journey to Numeria |
 | ✖️ [Gångertabellen](#gångertabellen-notes) | Swedish | times tables 1–10 practice |
 | 🕵️ [Detektiven](#detektiven-notes) | Swedish | who is the criminal? Logic puzzles with clues |
+| 🌍 [Jorden runt](#jorden-runt-notes) | Swedish | geography: flags, capitals, sizes and continents of all 195 countries |
 
 Every game works offline, saves its best score for the hub card and obeys
 the daily time limits. Notes on each game are at the end of this file.
@@ -107,6 +108,7 @@ games/goopipes.html   Slemrören (formerly Goo Pipes) — pipe-laying game, in S
 games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
 games/gangertabell.html  Gångertabellen — times tables 1–10 practice, in Swedish (fully self-contained)
 games/detektiven.html    Detektiven — who is the criminal? Logic puzzles in Swedish (fully self-contained)
+games/jordenrunt.html    Jorden runt — geography games in Swedish, flags and country data inside the file (fully self-contained)
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
@@ -127,7 +129,9 @@ Then `npm test` runs everything:
 - `npm run test:unit` — plain Node, no browser:
   `tests/goopipes.test.js` (Slemrören game logic, difficulties and piece bag),
   `tests/gangertabell.test.js` (Gångertabellen question order and
-  counting), `tests/detektiven.test.js` (Detektiven clue texts, case
+  counting), `tests/jordenrunt.test.js` (Jorden runt country data, flags,
+  questions on every level and area, scoring, unlocking and the passport),
+  `tests/detektiven.test.js` (Detektiven clue texts, case
   generator, solver, difficulty and unlocking) and `tests/integrity.test.js` (every game is in `config.js` and precached in
   `sw.js`, has the back link, `guard.js`, service worker and score key, and
   loads nothing from the network).
@@ -149,7 +153,7 @@ handing it over.
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, last choices and duel names) |
 
 ## 2048 notes
 
@@ -310,3 +314,73 @@ the steps. Averages per case:
   cases per level) and `game` (the case in progress: the case itself, who has
   been revealed in which order, mistakes, hints, time, dimmed clues and marks).
   A saved case is only used if its clues are true and give exactly its answer.
+
+## Jorden runt notes
+
+Geography in Swedish: six small games about the 195 countries (the 193 UN
+members plus the Vatican and Palestine, the two UN observer states).
+
+| Game | What comes | A level is cleared with |
+| ---- | ---------- | ----------------------- |
+| Flaggor | flag → country, country → flag, or both mixed | 8 of 10 right |
+| Huvudstäder | country → capital, capital → country (flag and name), or mixed | 8 of 10 right |
+| Storleksordning | tap the countries in order, by population or area (or mixed) | 4 of 5 in exactly the right order |
+| Världsdelar | put each country in its continent's basket | 8 of 10 right |
+| Högre eller lägre | which of two countries is bigger? Until the first wrong answer | 10 in a row |
+| Mysterielandet | guess the country from clues, one at a time | 4 of 5 countries found |
+
+Before playing you pick **where in the world** (the whole world, one continent,
+or **Mina missar**: countries answered wrong, once there are at least six)
+and a **level**. Each game unlocks its own levels, one at a time:
+
+| Level | Countries | Answers to pick from | Sorting | Higher or lower | Mysterielandet |
+| ----- | --------- | -------------------- | ------- | --------------- | -------------- |
+| Lätt | the 41 best known | 3 | 3 countries, at least 2× apart | at least 3× apart | 4 countries |
+| Mellan | 110 well known | 4 | 4, at least 1.6× apart | at least 2× | 6 |
+| Svår | 157 | 5, half from the same continent | 4, 1.35× | 1.5–6× | 8 |
+| Geni | all 195 | 6, two lookalike flags or neighbours | 5, 1.2× | 1.25–3× | 12 |
+| Omöjliga | all 195 | 6 lookalike flags, or the neighbours' capitals | 6, 1.1× | 1.08–1.6× | type the name |
+
+- When an area has too few countries for a level (Oceania on Lätt), less
+  known countries from that area are added until there are enough.
+- Two flags that look the same in the game's 4:3 format (Indonesia/Monaco,
+  Chad/Romania) never come in the same question.
+- Countries in two continents (Russia, Turkey, Kazakhstan, Georgia, Armenia,
+  Azerbaijan, Cyprus, Egypt) only come in Världsdelar from Svår, and then both
+  continents are right. Capitals with the country's own name (Monaco, Kuwait …)
+  and the disputed ones (Israel, Palestine) are left out of Huvudstäder.
+- **Mysterielandet:** eight clues, from vague to clear: continent, population,
+  area (compared with Sweden), coast and number of neighbours, flag colours,
+  a neighbour, the capital's first letter, the name's length and first letter.
+  Finding the country after one clue gives 8 points; every extra clue or wrong
+  guess costs one.
+- After every answer a country card shows the flag, capital, continent,
+  population and area; sorting and higher/lower also say how many times
+  bigger one country is than the other.
+- **Passport:** a country gets a stamp after 3 right answers about it, in any
+  game. Wrong answers are remembered as misses and come back more often.
+- **Duel:** two players take turns on the same screen, each on their own
+  level (all levels are open in a duel). Duels do not unlock levels.
+- **Score:** the hub trophy is the number of stamps in the passport.
+- **Saved:** `state.jordenrunt` holds `prog` (unlocked level, best score and
+  cleared rounds per game), `pass`, `miss`, `pref` (last area, direction and
+  comparison per game), `names` and `duel` (the duel players and settings).
+  A round in progress is not saved.
+
+**Data and licences** (also in the comment at the top of the file and under
+📖 Om spelet):
+
+- Flags: [flag-icons](https://github.com/lipis/flag-icons) (MIT), all in the
+  same 4:3 format, optimised with svgo to about 600 kB together.
+- Population: World Bank, World Development Indicators 2025 (CC BY 4.0), via
+  [datasets/population](https://github.com/datasets/population). The Vatican:
+  about 800.
+- Area, neighbours and coast: [mledoze/countries](https://github.com/mledoze/countries)
+  (ODbL 1.0). The country table in the game is a derived database and may be
+  used under the same licence.
+- Swedish country and capital names follow Swedish style rules and Isof
+  (Helsingfors, Köpenhamn, Kyjiv …). Equatorial Guinea's capital is Ciudad de
+  la Paz since January 2026.
+- Flag colours (for the clues) and lookalike flags were worked out from the
+  rendered flags, then checked by hand; how well known a country is was set
+  by hand.
