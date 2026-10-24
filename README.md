@@ -153,7 +153,7 @@ handing it over.
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, last choices and duel names) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, and last choices) |
 
 ## 2048 notes
 
@@ -359,19 +359,22 @@ and a **level**. Each game unlocks its own levels, one at a time:
   bigger one country is than the other.
 - **Passport:** a country gets a stamp after 3 right answers about it, in any
   game. Wrong answers are remembered as misses and come back more often.
-- **Duel:** two players take turns on the same screen, each on their own
-  level (all levels are open in a duel). Duels do not unlock levels.
 - **Score:** the hub trophy is the number of stamps in the passport.
 - **Saved:** `state.jordenrunt` holds `prog` (unlocked level, best score and
   cleared rounds per game), `pass`, `miss`, `pref` (last area, direction and
-  comparison per game), `names` and `duel` (the duel players and settings).
-  A round in progress is not saved.
+  comparison per game). A round in progress is not saved. Saves from the
+  first version, which had a two-player duel, still load; their duel
+  settings are dropped.
 
 **Data and licences** (also in the comment at the top of the file and under
 📖 Om spelet):
 
 - Flags: [flag-icons](https://github.com/lipis/flag-icons) (MIT), all in the
-  same 4:3 format, optimised with svgo to about 600 kB together.
+  same 4:3 format, optimised with svgo to about 1.2 MB together, most of it
+  coats of arms. Each optimised flag was compared pixel by pixel with the
+  original and none differs visibly. (Rounding to whole numbers would halve
+  the size, but it bends stars and emblems drawn small and scaled up, such as
+  China's stars.)
 - Population: World Bank, World Development Indicators 2025 (CC BY 4.0), via
   [datasets/population](https://github.com/datasets/population). The Vatican:
   about 800.

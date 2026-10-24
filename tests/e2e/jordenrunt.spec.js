@@ -1,6 +1,7 @@
 // Jorden runt: every mode through the real UI (taps on iPad, clicks on desktop),
-// levels unlocking, wrong answers, Mina missar, the passport, the duel, the hub
-// trophy, and that the screens fit without sideways scrolling.
+// levels unlocking, wrong answers, Mina missar, the passport, the hub trophy,
+// that the flags look like the originals, and that the screens fit without
+// sideways scrolling.
 "use strict";
 const { test, expect, press, seedStorage, expectNoHorizontalOverflow } = require("./fixtures");
 
@@ -72,7 +73,7 @@ test("menu is in Swedish, shows the six games and links back to the hub", async 
   await expect(page.locator(".mode .nm")).toHaveText(["Flaggor", "Huvudstäder", "Storleksordning", "Världsdelar", "Högre eller lägre", "Mysterielandet"]);
   await expect(page.locator(".mode .tag")).toHaveText(Array(6).fill("🐣 Lätt"));
   await expect(page.locator(".hubnav a.back")).toHaveText("← Spel");
-  await expect(page.locator(".tools .btn")).toHaveText(["🛂 Mitt pass", "⚔️ Duell", "📖 Om spelet"]);
+  await expect(page.locator(".tools .btn")).toHaveText(["🛂 Mitt pass", "📖 Om spelet"]);
   await expectNoHorizontalOverflow(page, "menu");
   await expectTapTargets(page, ".mode, .tools .btn, a.back");
 });
@@ -358,41 +359,45 @@ test("the passport shows stamps per continent, and the hub trophy counts them", 
   await expect(page.locator(".game-card", { hasText: "Jorden runt" }).locator(".chip").first()).toHaveText("🏆 4");
 });
 
-test("duel: two players take turns on their own levels, and the winner is shown", async ({ page, touch }) => {
+// Points that the old, too-rounded flags drew wrong (China's stars, Myanmar's star), with the
+// colour each has in the flag-icons original. Drawn at 160×120.
+const FLAG_POINTS = {
+  cn: [[67, 13, "#ee1c25"], [75, 18, "#ee1c25"], [18, 26, "#ffff00"], [37, 26, "#ffff00"]],
+  mm: [[79, 27, "#ffffff"], [76, 37, "#ffffff"], [84, 42, "#ffffff"], [73, 48, "#ffffff"]]
+};
+test("flags are drawn like the originals: China's and Myanmar's stars keep their shape", async ({ page }) => {
   await page.goto(GAME);
-  await press(page.locator('[data-act="duel"]'), touch);
-  await expect(page.locator(".pcard")).toHaveCount(2);
-  await page.locator("#pn0").fill("Alva");
-  await page.locator("#pn1").fill("Pappa");
-  await press(page.locator('[data-act="plv"][data-i="1"][data-v="4"]'), touch);   // Pappa plays Omöjliga
-  await expect(page.locator("#pn0")).toHaveValue("Alva");                          // names survive the redraw
-  await press(page.locator('[data-act="dmode"][data-v="varldsdelar"]'), touch);
-  await expect(page.locator(".rules")).toHaveText("ℹ️ Var och en får 6 frågor. Flest rätt vinner.");
-  await expectNoHorizontalOverflow(page, "duel setup");
-  await press(page.locator('[data-act="start"]'), touch);
-  for (let i = 0; i < 12; i++) {
-    const turn = await page.evaluate(() => D.turn);
-    expect(turn).toBe(i % 2);
-    await expect(page.locator(".turn")).toContainText(i % 2 ? "Pappas tur · 💀 Omöjliga" : "Alvas tur · 🐣 Lätt");
-    if (turn === 0 && i < 6) await answerRight(page, touch);   // Alva gets the first three right, then misses
-    else if (turn === 1) await answerRight(page, touch);
-    else {
-      const q = await question(page);
-      const wrong = ["eu", "as", "af", "na", "sa", "oc"].find((k) => k !== q.k && !(BY_X[q.target] || []).includes(k));
-      await press(page.locator(`[data-act="cont"][data-k="${wrong}"]`), touch);
+  const got = await page.evaluate(async (pts) => {
+    const c = document.createElement("canvas"); c.width = 160; c.height = 120;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    const out = {};
+    for (const code of Object.keys(pts)) {
+      const im = new Image(); im.src = flagSrc(code); await im.decode();
+      g.clearRect(0, 0, 160, 120); g.drawImage(im, 0, 0, 160, 120);
+      out[code] = pts[code].map(([x, y]) => [...g.getImageData(x, y, 1, 1).data.slice(0, 3)]);
     }
-    if (i === 0) await expectNoHorizontalOverflow(page, "duel play");
-    await next(page, touch);
-  }
-  await expect(page.locator(".summary h2")).toHaveText("Pappa vinner!");
-  await expect(page.locator('[data-sum="p0"] b')).toHaveText("3");
-  await expect(page.locator('[data-sum="p1"] b')).toHaveText("6");
-  expect((await saved(page)).names).toEqual(["Alva", "Pappa"]);
-  // a duel never unlocks levels
-  expect((await saved(page)).prog.varldsdelar.u).toBe(0);
+    return out;
+  }, FLAG_POINTS);
+  for (const [code, list] of Object.entries(FLAG_POINTS)) list.forEach(([x, y, hex], i) => {
+    const want = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16));
+    const off = want.reduce((n, v, j) => n + Math.abs(v - got[code][i][j]), 0);
+    expect(off, `${code} at ${x},${y}: got rgb(${got[code][i]}), want ${hex}`).toBeLessThan(60);
+  });
 });
-// second continents, for picking a surely wrong basket above
-const BY_X = { ru: ["as"], tr: ["eu"], kz: ["eu"], az: ["eu"], ge: ["eu"], am: ["eu"], cy: ["as"], eg: ["as"] };
+
+test("a save from the build with the duel keeps its progress", async ({ page, touch }) => {
+  await seedStorage(page, { [STATE]: { prog: { flaggor: { u: 2 } }, pass: { se: 3 }, names: ["Alva", "Pappa"], duel: { mode: "varldsdelar", lv: [0, 4] } } });
+  await page.goto(GAME);
+  await expect(page.locator('.mode[data-mode="flaggor"] .tag')).toHaveText("🧭 Svår");
+  await expect(page.locator(".record")).toContainText("Stämplar i passet: 1");
+  await openMode(page, touch, "flaggor");
+  await startLevel(page, touch, 0);
+  await answerRight(page, touch);
+  const s = await saved(page);
+  expect(s.prog.flaggor.u).toBe(2);
+  expect(s.names).toBeUndefined();
+  expect(s.duel).toBeUndefined();
+});
 
 test("about: rules and the sources and licences of flags and data", async ({ page, touch }) => {
   await page.goto(GAME);
