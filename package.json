@@ -1,7 +1,7 @@
 {
   "name": "stalman-games",
   "private": true,
-  "description": "Game hub test tooling (the site itself has no build step or dependencies)",
+  "description": "Stalman games test tooling (the site itself has no build step or dependencies)",
   "scripts": {
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node tests/goopipes.test.js && node tests/gangertabell.test.js && node tests/detektiven.test.js && node tests/jordenrunt.test.js && node tests/integrity.test.js",

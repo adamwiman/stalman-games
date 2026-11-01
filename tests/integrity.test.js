@@ -19,7 +19,7 @@ const exists = (rel) => fs.existsSync(path.join(ROOT, rel));
 const GAMES = loadGames();
 const { ASSETS, CACHE_VERSION } = loadServiceWorkerConfig();
 
-check("CACHE_VERSION looks like game-hub-vN", /^game-hub-v\d+$/.test(CACHE_VERSION), CACHE_VERSION);
+check("CACHE_VERSION looks like stalman-games-vN", /^stalman-games-v\d+$/.test(CACHE_VERSION), CACHE_VERSION);
 check("GAMES is a non-empty array", Array.isArray(GAMES) && GAMES.length > 0);
 
 // ---- every precached asset exists on disk ----
@@ -28,6 +28,25 @@ for (const a of ASSETS) {
   check(`sw.js asset exists: ${a}`, exists(a));
 }
 check("ASSETS has no duplicates", new Set(ASSETS).size === ASSETS.length);
+
+// ---- the app is called Stalman games, and every icon it names is a precached PNG of that size ----
+const manifest = JSON.parse(read("manifest.webmanifest"));
+const hub = read("index.html");
+check("manifest name is Stalman games", manifest.name === "Stalman games" && manifest.short_name === "Stalman games");
+check("hub title is Stalman games", hub.includes("<title>Stalman games</title>"));
+check("home-screen title is Stalman games", hub.includes('<meta name="apple-mobile-web-app-title" content="Stalman games">'));
+const pngSize = (rel) => { const b = fs.readFileSync(path.join(ROOT, rel)); return b.readUInt32BE(16) + "x" + b.readUInt32BE(20); };
+const icons = manifest.icons.map((i) => [i.src, i.sizes])
+  .concat([...hub.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map((m) => {
+    const href = /href="([^"]+)"/.exec(m[0])[1], sizes = /sizes="([^"]+)"/.exec(m[0]);
+    return [href, sizes ? sizes[1] : "180x180"];
+  }));
+for (const [src, sizes] of icons) {
+  check(`icon exists: ${src}`, exists(src));
+  check(`icon is precached: ${src}`, ASSETS.includes("./" + src));
+  if (exists(src)) check(`icon ${src} is ${sizes}`, pngSize(src) === sizes, pngSize(src));
+}
+check("manifest has a maskable icon", manifest.icons.some((i) => i.purpose === "maskable"));
 
 // ---- every file in games/ is registered ----
 const gameFiles = fs.readdirSync(path.join(ROOT, "games")).filter((f) => f.endsWith(".html"));

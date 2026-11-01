@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!--
   Numlingarnas resa — logik- och mattegåtor (spel-id: numlings)
-  Del av spelhubben. Helt fristående: inga nätverksresurser.
+  Del av Stalman games. Helt fristående: inga nätverksresurser.
   localStorage: state.numlings (sparade framsteg), score.numlings (numlingar som bor i Numeria)
 -->
 <style>
@@ -1930,7 +1930,7 @@ function showSettings(){
     ${ALL.map(k=>`<div class="lvlrow"><span class="nm">${ICONS[k]}${META[k].name}</span>${[1,2,3,4].map(l=>`<button class="lvbtn ${S.levels[k]===l?'on':''}" data-act="lv" data-k="${k}" data-v="${l}" aria-pressed="${S.levels[k]===l}" aria-label="${META[k].name} nivå ${l}">${'★'.repeat(l)}</button>`).join('')}</div>`).join('')}
     <div class="row" style="margin-top:10px"><span class="hint">Sätt alla till:</span>${[1,2,3,4].map(l=>`<button class="lvbtn" data-act="all" data-v="${l}" aria-label="Alla banor nivå ${l}">${'★'.repeat(l)}</button>`).join('')}</div></div>
     <div><h3>För vuxna</h3><p class="hint">Vad varje bana tränar:</p><ul class="skills">${ALL.map(k=>`<li><b>${META[k].name}:</b> ${META[k].skill}</li>`).join('')}</ul>
-    <p class="hint" style="margin-top:8px">Framstegen sparas på den här enheten. Troféen på spelhubbens kort visar hur många numlingar som bor i Numeria. Varje resa går genom 6 av de 10 banorna, och banor som spelats minst väljs först. Hjärtan begränsar gissande: när de tar slut går de numlingar som väntar tillbaka till lägret och följer med på nästa resa, så ingen försvinner för alltid.</p></div>
+    <p class="hint" style="margin-top:8px">Framstegen sparas på den här enheten. Troféen på spelets kort i Stalman games visar hur många numlingar som bor i Numeria. Varje resa går genom 6 av de 10 banorna, och banor som spelats minst väljs först. Hjärtan begränsar gissande: när de tar slut går de numlingar som väntar tillbaka till lägret och följer med på nästa resa, så ingen försvinner för alltid.</p></div>
     <div class="row"><button class="btn sm" data-act="reset">Radera alla framsteg</button></div>
   </main>`,{
     back:showTitle,

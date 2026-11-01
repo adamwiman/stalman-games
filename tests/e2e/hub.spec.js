@@ -15,6 +15,29 @@ test("shows one card per game in config.js, linking to the right file", async ({
   await expectNoHorizontalOverflow(page, "hub");
 });
 
+test("the hub is called Stalman games and uses the Stalman games icon", async ({ page, request }) => {
+  await page.goto("index.html");
+  await expect(page).toHaveTitle("Stalman games");
+  await expect(page.locator("h1")).toHaveText("Stalman games.");
+  await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute("content", "Stalman games");
+  const manifest = await (await request.get("manifest.webmanifest")).json();
+  expect(manifest.name).toBe("Stalman games");
+  expect(manifest.short_name).toBe("Stalman games");
+  // every icon the hub and the manifest point to is served, as a PNG of the stated size
+  const icons = await page.locator('link[rel="apple-touch-icon"], link[rel="icon"]').evaluateAll((ls) => ls.map((l) => l.getAttribute("href")));
+  for (const src of icons.concat(manifest.icons.map((i) => i.src))) {
+    const res = await request.get(src);
+    expect(res.ok(), src).toBe(true);
+    expect(res.headers()["content-type"], src).toBe("image/png");
+  }
+  const size = await page.evaluate(() => new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => ok(img.naturalWidth + "x" + img.naturalHeight);
+    img.src = "icons/apple-touch-icon.png";
+  }));
+  expect(size).toBe("180x180");
+});
+
 test("each card opens its game and the back link returns to the hub", async ({ page, touch }) => {
   await page.goto("index.html");
   for (const g of GAMES) {

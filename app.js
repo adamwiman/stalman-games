@@ -1,5 +1,5 @@
 /* ============================================================
-   Game Hub — hub logic
+   Stalman games — hub logic
    localStorage keys:
      hub.pin      — hashed parent PIN
      hub.limits   — {gameId: minutesPerDay}

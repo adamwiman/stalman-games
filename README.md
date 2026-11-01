@@ -1,8 +1,8 @@
 # stalman-games
 
-An ad-free, offline-capable game collection for kids' iPads. One web app,
-installed via "Add to Home Screen", with on-device high scores and
-PIN-protected daily time limits per game.
+**Stalman games** is an ad-free, offline-capable game collection for kids'
+iPads. One web app, installed via "Add to Home Screen", with on-device high
+scores and PIN-protected daily time limits per game.
 
 - **Play:** <https://adamwiman.github.io/stalman-games/>
 - **Repository:** <https://github.com/adamwiman/stalman-games>
@@ -37,7 +37,7 @@ project subpaths (and a fork works the same way at
 1. Open <https://adamwiman.github.io/stalman-games/> in **Safari** (must be
    Safari for home-screen install).
 2. Tap the share button → **Add to Home Screen**.
-3. Open it once from the home screen icon **while online** — this installs
+3. Open it once from the **Stalman games** icon **while online** — this installs
    the offline cache. After that it works with no internet.
 
 Each installed copy has its own storage: scores, PIN, and time limits are
@@ -60,14 +60,15 @@ Three steps:
    template below) and save it as `games/<id>.html`.
 2. Add an entry to `GAMES` in **config.js**.
 3. Add `"./games/<id>.html"` to `ASSETS` in **sw.js** and bump
-   `CACHE_VERSION` (e.g. `game-hub-v5` → `game-hub-v6`; the cache name
-   keeps the `game-hub-` prefix). Commit and push.
+   `CACHE_VERSION` (e.g. `stalman-games-v10` → `stalman-games-v11`; the
+   cache name keeps the `stalman-games-` prefix). Commit and push.
 
 Devices pick up new files the next time the app is opened with internet.
 
 ### Prompt template for generating a game
 
-> Create a single self-contained HTML file game for my kids' game hub.
+> Create a single self-contained HTML file game for my kids' game
+> collection, Stalman games.
 > Hard requirements:
 > - All CSS and JS inline in the one file; no external network resources
 >   (no CDNs, no web fonts) — it must work fully offline.
@@ -112,7 +113,9 @@ games/jordenrunt.html    Jorden runt — geography games in Swedish, flags and c
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
-icons/                app icons
+icons/                app icons: icon-192/512 and apple-touch-icon (home
+                      screen), icon-maskable-512 (Android, artwork inside
+                      the safe zone) and favicon-32 (browser tab)
 ```
 
 ## Tests

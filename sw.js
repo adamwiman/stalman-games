@@ -3,7 +3,7 @@
    IMPORTANT: whenever you change any file (or add a game),
    bump CACHE_VERSION so devices pick up the new files.
    ============================================================ */
-const CACHE_VERSION = "game-hub-v9";
+const CACHE_VERSION = "stalman-games-v10";
 
 const ASSETS = [
   "./",
@@ -16,6 +16,8 @@ const ASSETS = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
+  "./icons/icon-maskable-512.png",
+  "./icons/favicon-32.png",
   // ---- games (add every new game file here) ----
   "./games/2048.html",
   "./games/goopipes.html",
