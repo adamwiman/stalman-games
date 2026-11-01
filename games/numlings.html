@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Numlingarnas resa</title>
+<title data-en="The Numlings' Journey">Numlingarnas resa</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
 <!--
   Numlingarnas resa — logik- och mattegåtor (spel-id: numlings)
   Del av Stalman games. Helt fristående: inga nätverksresurser.
@@ -367,12 +368,16 @@ button.slot{cursor:pointer;border-style:solid;border-color:rgba(23,51,91,.25);ba
 </style>
 </head>
 <body>
-<nav class="hubnav"><a class="back" href="../index.html">← Spel</a></nav>
+<nav class="hubnav"><a class="back" href="../index.html" data-en="← Games">← Spel</a></nav>
 <div class="bg" aria-hidden="true"><svg viewBox="0 0 1200 200" preserveAspectRatio="none"><path d="M0 120 C150 60 300 70 420 110 S700 160 860 100 1100 60 1200 90 V200 H0Z" fill="#8fcf9c"/><path d="M0 160 C200 110 380 120 560 150 S900 180 1040 140 1160 130 1200 140 V200 H0Z" fill="#6fb985"/></svg></div>
 <div id="app"></div>
-<noscript>Det här spelet behöver JavaScript.</noscript>
+<noscript>Det här spelet behöver JavaScript. / This game needs JavaScript.</noscript>
 <script>
 'use strict';
+// Språket kommer från hubben: svenska (standard) eller engelska.
+const LANG=I18N.lang;
+const tr=(sv,en)=>LANG==='en'?en:sv;
+I18N.apply();
 /* =========================================================
    Numlingarnas resa — logik- och mattegåtor
    ========================================================= */
@@ -392,9 +397,9 @@ const TRI=new Set([1,3,6,10,15,21,28,36,45,55]);
 const PRIMES=[2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97];
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const pl=(n,one,many)=>`${n} ${n===1?one:many}`;
-const LEVEL_NAMES=['','Uppvärmning','Klurig','Listig','Geni'];
+const LEVEL_NAMES=tr(['','Uppvärmning','Klurig','Listig','Geni'],['','Warm-up','Tricky','Clever','Genius']);
 const starStr=l=>'★'.repeat(l)+'☆'.repeat(4-l);
-const stars=l=>`<span class="stars" role="img" aria-label="nivå ${l} av 4">${starStr(l)}</span>`;
+const stars=l=>`<span class="stars" role="img" aria-label="${tr('nivå','level')} ${l} ${tr('av','of')} 4">${starStr(l)}</span>`;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- sparat läge ----------
@@ -439,10 +444,12 @@ const SFX={
 
 // ---------- numlingar ----------
 const SHAPES=['circle','triangle','square','hexagon'];
-const SHAPE_SV={circle:'cirkel',triangle:'triangel',square:'kvadrat',hexagon:'sexhörning'};
+const SHAPE_SV=tr({circle:'cirkel',triangle:'triangel',square:'kvadrat',hexagon:'sexhörning'},{circle:'circle',triangle:'triangle',square:'square',hexagon:'hexagon'});
 const CORNERS={circle:0,triangle:3,square:4,hexagon:6};
 const COLORS={red:{f:'#ff6b6b',d:'#c94545'},blue:{f:'#3d8be0',d:'#24609f'},yellow:{f:'#ffc63f',d:'#c08f14'},purple:{f:'#9a6ad6',d:'#6a439f'}};
-const COLOR_SV={red:'röd',blue:'blå',yellow:'gul',purple:'lila'};
+const COLOR_SV=tr({red:'röd',blue:'blå',yellow:'gul',purple:'lila'},{red:'red',blue:'blue',yellow:'yellow',purple:'purple'});
+const EYES=n=>pl(n,tr('öga','eye'),tr('ögon','eyes'));
+const NUMLINGS=n=>pl(n,'numling',tr('numlingar','numlings'));
 const COLOR_NAMES=Object.keys(COLORS);
 // by/br = magens plats och storlek, fs = textstorlek för [ensiffrigt, tvåsiffrigt] tal
 const LAY={
@@ -462,7 +469,7 @@ function creatureSVG(c){
   const svg=`<svg viewBox="-3 -3 106 112" aria-hidden="true" focusable="false"><g fill="${col.d}" stroke="#17335b" stroke-width="2.5"><ellipse cx="33" cy="99" rx="11" ry="6"/><ellipse cx="67" cy="99" rx="11" ry="6"/></g><g fill="${col.f}" stroke="#17335b" stroke-width="3.5" stroke-linejoin="round">${L.body}</g><g fill="#fff" opacity=".35">${L.hl}</g>${eyes}<circle cx="50" cy="${L.by}" r="${L.br}" fill="#fffdf6" stroke="#17335b" stroke-width="2.5"/><text x="50" y="${L.by}" dy=".35em" text-anchor="middle" font-size="${fs}" font-weight="900" letter-spacing="-.5" fill="#17335b">${c.n}</text></svg>`;
   SVGCACHE.set(key,svg);return svg;
 }
-const describe=c=>`${COLOR_SV[c.color]} ${SHAPE_SV[c.shape]}, ${pl(c.eyes,'öga','ögon')}, talet ${c.n}`;
+const describe=c=>`${COLOR_SV[c.color]} ${SHAPE_SV[c.shape]}, ${EYES(c.eyes)}, ${tr('talet','number')} ${c.n}`;
 function crHTML(c,o={}){
   const cls=['cr'];
   if(o.dr)cls.push('dr');if(o.sm)cls.push('sm');if(o.xs)cls.push('xs');if(o.sel)cls.push('selected');if(o.cls)cls.push(o.cls);
@@ -496,7 +503,7 @@ const ICONS={
 const HEART=full=>`<svg viewBox="0 0 26 24" class="heart${full?'':' empty'}" aria-hidden="true"><path d="M13 22C6 16 2 12.5 2 8a5.5 5.5 0 0 1 11-2.5A5.5 5.5 0 0 1 24 8c0 4.5-4 8-11 14z"/></svg>`;
 
 // ---------- banorna ----------
-const META={
+const META=tr({
   gates:{name:'Viskportarna',blurb:'Två portar, en hemlig regel. Vem får gå var?',skill:'Hitta en dold regel utifrån exempel: jämnt och udda, större än, delbarhet, primtal, kvadrattal och OCH/ELLER-logik.'},
   balloon:{name:'Ballongfärden',blurb:'Ballongen lyfter bara vid exakt rätt vikt.',skill:'Addera flera tal till en exakt summa, och på högre nivåer räkna ut ett uttryck först (multiplikation, kvadrater, parenteser).'},
   stones:{name:'Mönsterbäcken',blurb:'Hitta de saknade talen på stegstenarna.',skill:'Talföljder: lika stora steg, dubblering, kvadrattal, triangeltal, kubtal, Fibonacci-liknande mönster och primtal.'},
@@ -507,38 +514,64 @@ const META={
   garden:{name:'Trädgårdslandet',blurb:'Plantera numlingarna så att raderna och kolumnerna får rätt summa.',skill:'Planera med flera summor samtidigt (rader, kolumner och diagonal), som en enkel magisk kvadrat.'},
   share:{name:'Bärbusken',blurb:'Dela bären lika. Hur många blir över?',skill:'Division: dela lika, med och utan rest, och baklänges (multiplikation plus rest).'},
   path:{name:'Bergsstigen',blurb:'Välj en sten på varje rad och nå toppen med exakt rätt tal.',skill:'Planera flera räknesteg i rad (+, −, ·, /) för att nå ett mål.'}
-};
+},{
+  gates:{name:'The Whispering Gates',blurb:'Two gates, one secret rule. Who may go where?',skill:'Find a hidden rule from examples: even and odd, greater than, divisibility, primes, square numbers and AND/OR logic.'},
+  balloon:{name:'The Balloon Ride',blurb:'The balloon only lifts at exactly the right weight.',skill:'Add several numbers to an exact sum, and at higher levels work out an expression first (multiplication, squares, brackets).'},
+  stones:{name:'Pattern Creek',blurb:'Find the missing numbers on the stepping stones.',skill:'Number sequences: equal steps, doubling, square numbers, triangular numbers, cube numbers, Fibonacci-like patterns and primes.'},
+  venn:{name:'Lily Pond',blurb:'Put every numling in the right circles.',skill:'Sort in Venn diagrams and work out two or three secret rules at once.'},
+  raft:{name:'The Friendship Raft',blurb:'All neighbours on the raft must follow the rule.',skill:'Plan an order that follows a rule: shared features, odd and even, common factors, divisibility and prime sums.'},
+  lock:{name:'The Owl\'s Door',blurb:'Crack the secret code with the owl\'s clues.',skill:'Logical deduction from clues, the same idea as the game Mastermind.'},
+  machine:{name:'The Number Machine',blurb:'What does the machine do to the numbers? Work out what comes out.',skill:'Function machine: find the rule (like + 5, · 2 or · 2 + 1) from examples and use it.'},
+  garden:{name:'The Garden Patch',blurb:'Plant the numlings so the rows and columns get the right sum.',skill:'Plan with several sums at once (rows, columns and a diagonal), like a simple magic square.'},
+  share:{name:'The Berry Bush',blurb:'Share the berries equally. How many are left over?',skill:'Division: share equally, with and without a remainder, and backwards (multiplication plus remainder).'},
+  path:{name:'The Mountain Path',blurb:'Pick a stone on every row and reach the top with exactly the right number.',skill:'Plan several calculation steps in a row (+, −, ·, /) to reach a goal.'}
+});
 
 // ---------- regler för portarna och dammen ----------
 function atom(key,text,short,test,lvl,fam){return{key,text,short,test,lvl,fam};}
 const ATOMS=(()=>{
   const R=[];
-  R.push(atom('even','talet är jämnt','jämnt tal',c=>c.n%2===0,1,'parity'));
-  R.push(atom('odd','talet är udda','udda tal',c=>c.n%2===1,1,'parity'));
-  [10,12,15,20].forEach(k=>R.push(atom('gt'+k,`talet är större än ${k}`,`större än ${k}`,c=>c.n>k,1,'size')));
-  [8,10,13].forEach(k=>R.push(atom('lt'+k,`talet är mindre än ${k}`,`mindre än ${k}`,c=>c.n<k,1,'size')));
-  COLOR_NAMES.forEach(col=>R.push(atom('c-'+col,`färgen är ${COLOR_SV[col]}`,COLOR_SV[col],c=>c.color===col,1,'color')));
-  SHAPES.forEach(sh=>R.push(atom('s-'+sh,`formen är en ${SHAPE_SV[sh]}`,SHAPE_SV[sh],c=>c.shape===sh,1,'shape')));
-  [1,2,3].forEach(e=>R.push(atom('e'+e,`har ${pl(e,'öga','ögon')}`,pl(e,'öga','ögon'),c=>c.eyes===e,1,'eyes')));
-  [3,4,5].forEach(m=>R.push(atom('m'+m,`talet är delbart med ${m}`,`delbart med ${m}`,c=>c.n%m===0,2,'mult')));
-  R.push(atom('btw','talet är från 10 till 20','från 10 till 20',c=>c.n>=10&&c.n<=20,2,'size'));
-  R.push(atom('has1','talet innehåller siffran 1','innehåller siffran 1',c=>String(c.n).includes('1'),2,'digit'));
-  R.push(atom('corners','formen har hörn','har hörn',c=>c.shape!=='circle',2,'shape'));
-  R.push(atom('e2p','har minst 2 ögon','minst 2 ögon',c=>c.eyes>1,2,'eyes'));
-  R.push(atom('m6','talet är delbart med 6','delbart med 6',c=>c.n%6===0,3,'mult'));
-  R.push(atom('prime','talet är ett primtal','primtal',c=>isPrime(c.n),3,'prime'));
-  R.push(atom('square','talet är ett kvadrattal','kvadrattal',c=>isSquare(c.n),3,'square'));
-  R.push(atom('f24','talet går jämnt upp i 24','går jämnt upp i 24',c=>24%c.n===0,3,'factor'));
-  R.push(atom('f30','talet går jämnt upp i 30','går jämnt upp i 30',c=>30%c.n===0,3,'factor'));
-  R.push(atom('cgte','har fler hörn än ögon','fler hörn än ögon',c=>CORNERS[c.shape]>c.eyes,3,'cross'));
-  R.push(atom('dsEven','talets siffersumma är jämn','jämn siffersumma',c=>digitSum(c.n)%2===0,4,'digit'));
-  R.push(atom('tri','talet är ett triangeltal','triangeltal',c=>TRI.has(c.n),4,'tri'));
-  R.push(atom('multEyes','talet är delbart med antalet ögon','delbart med antalet ögon',c=>c.n%c.eyes===0,4,'cross'));
-  R.push(atom('multCorners','talet är delbart med antalet hörn','delbart med antalet hörn',c=>CORNERS[c.shape]>0&&c.n%CORNERS[c.shape]===0,4,'cross'));
-  R.push(atom('sumEyes','talet + antalet ögon blir jämnt','tal + ögon blir jämnt',c=>(c.n+c.eyes)%2===0,4,'cross'));
+  R.push(atom('even',tr('talet är jämnt','the number is even'),tr('jämnt tal','even number'),c=>c.n%2===0,1,'parity'));
+  R.push(atom('odd',tr('talet är udda','the number is odd'),tr('udda tal','odd number'),c=>c.n%2===1,1,'parity'));
+  [10,12,15,20].forEach(k=>R.push(atom('gt'+k,tr(`talet är större än ${k}`,`the number is greater than ${k}`),tr(`större än ${k}`,`greater than ${k}`),c=>c.n>k,1,'size')));
+  [8,10,13].forEach(k=>R.push(atom('lt'+k,tr(`talet är mindre än ${k}`,`the number is less than ${k}`),tr(`mindre än ${k}`,`less than ${k}`),c=>c.n<k,1,'size')));
+  COLOR_NAMES.forEach(col=>R.push(atom('c-'+col,tr(`färgen är ${COLOR_SV[col]}`,`the colour is ${COLOR_SV[col]}`),COLOR_SV[col],c=>c.color===col,1,'color')));
+  SHAPES.forEach(sh=>R.push(atom('s-'+sh,tr(`formen är en ${SHAPE_SV[sh]}`,`the shape is a ${SHAPE_SV[sh]}`),SHAPE_SV[sh],c=>c.shape===sh,1,'shape')));
+  [1,2,3].forEach(e=>R.push(atom('e'+e,tr('har ','has ')+EYES(e),EYES(e),c=>c.eyes===e,1,'eyes')));
+  [3,4,5].forEach(m=>R.push(atom('m'+m,tr(`talet är delbart med ${m}`,`the number is divisible by ${m}`),tr(`delbart med ${m}`,`divisible by ${m}`),c=>c.n%m===0,2,'mult')));
+  R.push(atom('btw',tr('talet är från 10 till 20','the number is from 10 to 20'),tr('från 10 till 20','from 10 to 20'),c=>c.n>=10&&c.n<=20,2,'size'));
+  R.push(atom('has1',tr('talet innehåller siffran 1','the number contains the digit 1'),tr('innehåller siffran 1','contains the digit 1'),c=>String(c.n).includes('1'),2,'digit'));
+  R.push(atom('corners',tr('formen har hörn','the shape has corners'),tr('har hörn','has corners'),c=>c.shape!=='circle',2,'shape'));
+  R.push(atom('e2p',tr('har minst 2 ögon','has at least 2 eyes'),tr('minst 2 ögon','at least 2 eyes'),c=>c.eyes>1,2,'eyes'));
+  R.push(atom('m6',tr('talet är delbart med 6','the number is divisible by 6'),tr('delbart med 6','divisible by 6'),c=>c.n%6===0,3,'mult'));
+  R.push(atom('prime',tr('talet är ett primtal','the number is a prime'),tr('primtal','prime number'),c=>isPrime(c.n),3,'prime'));
+  R.push(atom('square',tr('talet är ett kvadrattal','the number is a square number'),tr('kvadrattal','square number'),c=>isSquare(c.n),3,'square'));
+  R.push(atom('f24',tr('talet går jämnt upp i 24','the number goes evenly into 24'),tr('går jämnt upp i 24','goes evenly into 24'),c=>24%c.n===0,3,'factor'));
+  R.push(atom('f30',tr('talet går jämnt upp i 30','the number goes evenly into 30'),tr('går jämnt upp i 30','goes evenly into 30'),c=>30%c.n===0,3,'factor'));
+  R.push(atom('cgte',tr('har fler hörn än ögon','has more corners than eyes'),tr('fler hörn än ögon','more corners than eyes'),c=>CORNERS[c.shape]>c.eyes,3,'cross'));
+  R.push(atom('dsEven',tr('talets siffersumma är jämn','the number\'s digit sum is even'),tr('jämn siffersumma','even digit sum'),c=>digitSum(c.n)%2===0,4,'digit'));
+  R.push(atom('tri',tr('talet är ett triangeltal','the number is a triangular number'),tr('triangeltal','triangular number'),c=>TRI.has(c.n),4,'tri'));
+  R.push(atom('multEyes',tr('talet är delbart med antalet ögon','the number is divisible by its number of eyes'),tr('delbart med antalet ögon','divisible by the number of eyes'),c=>c.n%c.eyes===0,4,'cross'));
+  R.push(atom('multCorners',tr('talet är delbart med antalet hörn','the number is divisible by its number of corners'),tr('delbart med antalet hörn','divisible by the number of corners'),c=>CORNERS[c.shape]>0&&c.n%CORNERS[c.shape]===0,4,'cross'));
+  R.push(atom('sumEyes',tr('talet + antalet ögon blir jämnt','the number + the number of eyes is even'),tr('tal + ögon blir jämnt','number + eyes is even'),c=>(c.n+c.eyes)%2===0,4,'cross'));
   return R;
 })();
-const TIPS={
+const TIPS=LANG==='en'?{
+  prime:'A prime has exactly two divisors: 1 and itself. 2, 3, 5, 7, 11, 13, 17, 19, 23, 29. (1 is not a prime!)',
+  square:'A square number is a number times itself: 1, 4, 9, 16, 25. That many dots can be laid out in a perfect square.',
+  tri:'Triangular numbers are dots stacked in a triangle: 1, 3, 6, 10, 15, 21, 28. Each row has one more dot.',
+  f24:'The numbers that go evenly into 24 are 1, 2, 3, 4, 6, 8, 12 and 24.',
+  f30:'The numbers that go evenly into 30 are 1, 2, 3, 5, 6, 10, 15 and 30.',
+  m3:'Numbers divisible by 3 are in the 3 times table: 3, 6, 9, 12, 15, 18 …',
+  m4:'Numbers divisible by 4 are in the 4 times table: 4, 8, 12, 16, 20 …',
+  m5:'Numbers divisible by 5 always end in 0 or 5.',
+  m6:'Numbers divisible by 6: 6, 12, 18, 24, 30. They are even AND divisible by 3!',
+  dsEven:'The digit sum of 27 is 2 + 7 = 9.',
+  multCorners:'Circles have no corners, triangles have 3, squares 4 and hexagons 6.',
+  cgte:'Circles have no corners, triangles have 3, squares 4 and hexagons 6.',
+  multEyes:'All numbers are divisible by 1, so numlings with one eye always fit!',
+  sumEyes:'Odd + odd = even, even + even = even, but odd + even = odd.'
+}:{
   prime:'Ett primtal har exakt två delare: 1 och sig självt. 2, 3, 5, 7, 11, 13, 17, 19, 23, 29. (1 är inte ett primtal!)',
   square:'Kvadrattal är ett tal gånger sig självt: 1, 4, 9, 16, 25. Så många prickar går att lägga i en perfekt kvadrat.',
   tri:'Triangeltal är prickar staplade i en triangel: 1, 3, 6, 10, 15, 21, 28. Varje rad har en prick mer.',
@@ -559,9 +592,9 @@ function makeCompound(L){
   const a=pick(simple);let b=pick(simple),guard=0;
   while(b.fam===a.fam&&guard++<60)b=pick(simple);
   const op=pick(L>=4?['and','or','but']:['and','or']);
-  if(op==='and')return{key:'cmp',text:`${a.text} OCH ${b.text}`,test:c=>a.test(c)&&b.test(c),lvl:3,fam:'cmp',parts:[a,b]};
-  if(op==='or')return{key:'cmp',text:`${a.text} ELLER ${b.text}`,test:c=>a.test(c)||b.test(c),lvl:3,fam:'cmp',parts:[a,b]};
-  return{key:'cmp',text:`${a.text}, men INTE om ${b.text}`,test:c=>a.test(c)&&!b.test(c),lvl:4,fam:'cmp',parts:[a,b]};
+  if(op==='and')return{key:'cmp',text:`${a.text} ${tr('OCH','AND')} ${b.text}`,test:c=>a.test(c)&&b.test(c),lvl:3,fam:'cmp',parts:[a,b]};
+  if(op==='or')return{key:'cmp',text:`${a.text} ${tr('ELLER','OR')} ${b.text}`,test:c=>a.test(c)||b.test(c),lvl:3,fam:'cmp',parts:[a,b]};
+  return{key:'cmp',text:`${a.text}${tr(', men INTE om ',', but NOT if ')}${b.text}`,test:c=>a.test(c)&&!b.test(c),lvl:4,fam:'cmp',parts:[a,b]};
 }
 // Nivå 3 och 4 blandar in fler regler från lägre nivåer, så stegringen blir mjukare.
 function rulePool(L){
@@ -616,15 +649,15 @@ function pickVennRules(L,troupe){
 // ---------- regler för flotten ----------
 const shared=(a,b)=>(a.shape===b.shape)+(a.color===b.color)+(a.eyes===b.eyes);
 const PAIR_RULES=[
-  {key:'share',lvl:1,text:'Grannar måste ha minst en sak gemensamt: samma form, samma färg eller samma antal ögon.',test:(a,b)=>shared(a,b)>=1},
-  {key:'close',lvl:1,text:'Grannarnas tal får skilja högst 5. (12 och 9 skiljer 3.)',test:(a,b)=>Math.abs(a.n-b.n)<=5},
-  {key:'oddEven',lvl:2,text:'Bredvid varandra måste det ena talet vara udda och det andra jämnt.',test:(a,b)=>(a.n+b.n)%2===1},
-  {key:'one',lvl:2,text:'Grannar måste ha exakt EN sak gemensamt av form, färg och ögon. Inte noll, inte två!',test:(a,b)=>shared(a,b)===1},
-  {key:'gcd',lvl:3,text:'Grannarnas tal måste båda vara delbara med samma tal (större än 1). (6 och 9 går bra: båda är delbara med 3.)',test:(a,b)=>gcd(a.n,b.n)>1},
-  {key:'shareClose',lvl:3,text:'Grannar måste ha minst en sak gemensamt (form, färg eller ögon) OCH deras tal får skilja högst 8.',test:(a,b)=>shared(a,b)>=1&&Math.abs(a.n-b.n)<=8},
-  {key:'divides',lvl:4,text:'Det ena talet måste gå jämnt upp i det andra. (4 och 12 går bra, för 12 / 4 = 3.)',test:(a,b)=>a.n%b.n===0||b.n%a.n===0},
-  {key:'sumPrime',lvl:4,text:'Grannarnas tal måste tillsammans bli ett primtal. (4 + 7 = 11, som är ett primtal.)',test:(a,b)=>isPrime(a.n+b.n)},
-  {key:'two',lvl:4,text:'Grannar måste ha exakt TVÅ saker gemensamt av form, färg och ögon.',test:(a,b)=>shared(a,b)===2}
+  {key:'share',lvl:1,text:tr('Grannar måste ha minst en sak gemensamt: samma form, samma färg eller samma antal ögon.','Neighbours must have at least one thing in common: the same shape, the same colour or the same number of eyes.'),test:(a,b)=>shared(a,b)>=1},
+  {key:'close',lvl:1,text:tr('Grannarnas tal får skilja högst 5. (12 och 9 skiljer 3.)','The neighbours\' numbers may differ by at most 5. (12 and 9 differ by 3.)'),test:(a,b)=>Math.abs(a.n-b.n)<=5},
+  {key:'oddEven',lvl:2,text:tr('Bredvid varandra måste det ena talet vara udda och det andra jämnt.','Side by side, one number must be odd and the other even.'),test:(a,b)=>(a.n+b.n)%2===1},
+  {key:'one',lvl:2,text:tr('Grannar måste ha exakt EN sak gemensamt av form, färg och ögon. Inte noll, inte två!','Neighbours must have exactly ONE thing in common out of shape, colour and eyes. Not zero, not two!'),test:(a,b)=>shared(a,b)===1},
+  {key:'gcd',lvl:3,text:tr('Grannarnas tal måste båda vara delbara med samma tal (större än 1). (6 och 9 går bra: båda är delbara med 3.)','The neighbours\' numbers must both be divisible by the same number (greater than 1). (6 and 9 are fine: both are divisible by 3.)'),test:(a,b)=>gcd(a.n,b.n)>1},
+  {key:'shareClose',lvl:3,text:tr('Grannar måste ha minst en sak gemensamt (form, färg eller ögon) OCH deras tal får skilja högst 8.','Neighbours must have at least one thing in common (shape, colour or eyes) AND their numbers may differ by at most 8.'),test:(a,b)=>shared(a,b)>=1&&Math.abs(a.n-b.n)<=8},
+  {key:'divides',lvl:4,text:tr('Det ena talet måste gå jämnt upp i det andra. (4 och 12 går bra, för 12 / 4 = 3.)','One number must go evenly into the other. (4 and 12 are fine, because 12 / 4 = 3.)'),test:(a,b)=>a.n%b.n===0||b.n%a.n===0},
+  {key:'sumPrime',lvl:4,text:tr('Grannarnas tal måste tillsammans bli ett primtal. (4 + 7 = 11, som är ett primtal.)','The neighbours\' numbers must add up to a prime. (4 + 7 = 11, which is a prime.)'),test:(a,b)=>isPrime(a.n+b.n)},
+  {key:'two',lvl:4,text:tr('Grannar måste ha exakt TVÅ saker gemensamt av form, färg och ögon.','Neighbours must have exactly TWO things in common out of shape, colour and eyes.'),test:(a,b)=>shared(a,b)===2}
 ];
 function findChain(list,k,test,ring){
   const n=list.length;if(k>n||k<1)return null;if(k===1)return[list[0]];
@@ -651,8 +684,8 @@ function exprFor(v,L){
     const b2=Math.ceil(v/a),c2=a*b2-v;
     if(b2>=2&&b2<=10&&c2>0)into.push(`${a} · ${b2} − ${c2}`);
   }
-  if(v%2===0&&v>=8)easy.push(`dubbla ${v/2}`);
-  if(v<=50)easy.push(`hälften av ${v*2}`);
+  if(v%2===0&&v>=8)easy.push(tr(`dubbla ${v/2}`,`double ${v/2}`));
+  if(v<=50)easy.push(tr(`hälften av ${v*2}`,`half of ${v*2}`));
   if(L>=4){
     for(let s=2;s<=9;s++){const d=v-s*s;if(d>0&&d<=10)hard.push(`${s}² + ${d}`);else if(d<0&&-d<=10)hard.push(`${s}² − ${-d}`);else if(d===0)hard.push(`${s}²`);}
     for(let c=2;c<=5;c++)if(v%c===0&&v/c>=3){const q=v/c,a=rnd(1,q-1);hard.push(`(${a} + ${q-a}) · ${c}`);}
@@ -666,7 +699,7 @@ function exprFor(v,L){
 }
 
 // ---------- talföljder ----------
-const SEQ={
+const SEQ_SV={
   add:n=>{const d=rnd(2,9),a=rnd(0,20);return{s:A(n,i=>a+i*d),why:`Lägg till ${d} varje gång.`};},
   sub:n=>{const d=rnd(2,9),a=d*(n-1)+rnd(0,15);return{s:A(n,i=>a-i*d),why:`Ta bort ${d} varje gång.`};},
   addBig:n=>{const d=rnd(11,25),a=rnd(5,60);return{s:A(n,i=>a+i*d),why:`Lägg till ${d} varje gång.`};},
@@ -685,6 +718,26 @@ const SEQ={
   jd:n=>{let x=rnd(1,10);return{s:A(n,i=>{if(i)x+=2**(i-1);return x;}),why:'Hoppet dubblas varje gång: +1, +2, +4, +8 …'};},
   fibBig:n=>{const a=rnd(3,9),b=rnd(a+1,14);const s=[a,b];while(s.length<n)s.push(s[s.length-1]+s[s.length-2]);return{s,why:'Lägg ihop de två talen före för att få nästa.'};}
 };
+const SEQ_EN={
+  add:n=>{const d=rnd(2,9),a=rnd(0,20);return{s:A(n,i=>a+i*d),why:`Add ${d} each time.`};},
+  sub:n=>{const d=rnd(2,9),a=d*(n-1)+rnd(0,15);return{s:A(n,i=>a-i*d),why:`Take away ${d} each time.`};},
+  addBig:n=>{const d=rnd(11,25),a=rnd(5,60);return{s:A(n,i=>a+i*d),why:`Add ${d} each time.`};},
+  dbl:n=>{const a=rnd(1,5);return{s:A(n,i=>a*2**i),why:'Double each time (· 2).'};},
+  sq:n=>{const s=rnd(1,4);return{s:A(n,i=>(s+i)**2),why:'Square numbers: a number times itself (3 · 3 = 9, 4 · 4 = 16 …).'};},
+  alt:n=>{const p=rnd(4,9),q=rnd(1,p-2),a=rnd(5,20);let x=a;return{s:A(n,i=>{if(i)x+=i%2?p:-q;return x;}),why:`Add ${p}, then take away ${q}, again and again.`,minBlank:4};},
+  grow:n=>{const d=rnd(1,3),a=rnd(1,10);let x=a;return{s:A(n,i=>{if(i)x+=d+i-1;return x;}),why:`The jump gets 1 bigger each time: +${d}, +${d+1}, +${d+2} …`};},
+  fib:n=>{const a=rnd(1,4),b=rnd(a,7);const s=[a,b];while(s.length<n)s.push(s[s.length-1]+s[s.length-2]);return{s,why:'Add the two numbers before to get the next.'};},
+  tri:n=>{const k=rnd(1,3);return{s:A(n,i=>(k+i)*(k+i+1)/2),why:'Triangular numbers: each jump is 1 bigger than the last.'};},
+  primes:n=>{const k=rnd(0,4);return{s:PRIMES.slice(k,k+n),why:'Primes: they can only be divided evenly by 1 and themselves.'};},
+  two:n=>{const a=rnd(1,10),b=rnd(25,40),d1=rnd(2,5),d2=rnd(1,4);return{s:A(n,i=>i%2===0?a+(i/2)*d1:b-((i-1)/2)*d2),why:`Two patterns take turns: one grows by ${d1}, the other shrinks by ${d2}.`,minBlank:4};},
+  tpl:n=>{const a=rnd(1,2);return{s:A(Math.min(n,6),i=>a*3**i),why:'Times 3 each time.'};},
+  cube:n=>{const s=rnd(1,2);return{s:A(Math.min(n,6),i=>(s+i)**3),why:'Cube numbers: 2 · 2 · 2 = 8, 3 · 3 · 3 = 27 …'};},
+  sqp:n=>{const s=rnd(1,3),c=pick([1,2,-1]);return{s:A(n,i=>(s+i)**2+c),why:`Square numbers ${c>0?'plus':'minus'} ${Math.abs(c)}.`};},
+  dbl1:n=>{let x=rnd(1,3);const s=[x];while(s.length<n){x=2*x+1;s.push(x);}return{s,why:'Double and add 1.'};},
+  jd:n=>{let x=rnd(1,10);return{s:A(n,i=>{if(i)x+=2**(i-1);return x;}),why:'The jump doubles each time: +1, +2, +4, +8 …'};},
+  fibBig:n=>{const a=rnd(3,9),b=rnd(a+1,14);const s=[a,b];while(s.length<n)s.push(s[s.length-1]+s[s.length-2]);return{s,why:'Add the two numbers before to get the next.'};}
+};
+const SEQ=LANG==='en'?SEQ_EN:SEQ_SV;
 const SEQLV={1:['add','add','sub'],2:['addBig','dbl','sq','alt','sub'],3:['grow','fib','tri','primes','tpl'],4:['cube','sqp','dbl1','jd','fibBig','two']};
 function makeSeq(L){
   const len=L>=3?7:6;
@@ -697,7 +750,7 @@ function makeSeq(L){
 
 // ---------- regler för talmaskinen ----------
 function machinePool(L,mn,mx){
-  const P=[],R=(txt,f,expl)=>P.push({txt,f,expl});
+  const P=[],R=(txt,f,expl)=>P.push({txt:LANG==='en'?txt.replace(/talet/g,'number'):txt,f,expl:LANG==='en'?machineExplainEn(expl):expl});
   if(L===1){
     for(let k=2;k<=10;k++)R(`talet + ${k}`,n=>n+k,`Maskinen lägger till ${k}.`);
     for(let k=2;k<=Math.min(9,mn-1);k++)R(`talet − ${k}`,n=>n-k,`Maskinen tar bort ${k}.`);
@@ -724,6 +777,26 @@ function machinePool(L,mn,mx){
     if(mx<=12)R('talet · talet',n=>n*n,'Talet gånger sig självt (kvadrattal).');
   }
   return P;
+}
+// Maskinens förklaringar på engelska, översatta mönster för mönster.
+function machineExplainEn(s){
+  const T=[
+    [/^Maskinen lägger till (\d+)\.$/,'The machine adds $1.'],
+    [/^Maskinen tar bort (\d+)\.$/,'The machine takes away $1.'],
+    [/^Maskinen dubblar talet\.$/,'The machine doubles the number.'],
+    [/^Maskinen tar talet gånger (\d+)\.$/,'The machine multiplies the number by $1.'],
+    [/^Gånger 10: talet får en nolla på slutet\.$/,'Times 10: the number gets a zero on the end.'],
+    [/^Maskinen dubblar talet och lägger till (\d+)\.$/,'The machine doubles the number and adds $1.'],
+    [/^Maskinen dubblar talet och tar bort (\d+)\.$/,'The machine doubles the number and takes away $1.'],
+    [/^Gånger 4: dubbla två gånger\.$/,'Times 4: double twice.'],
+    [/^Maskinen tar talet gånger 3 och lägger till (\d+)\.$/,'The machine multiplies the number by 3 and adds $1.'],
+    [/^Maskinen tar talet gånger 3 och tar bort (\d+)\.$/,'The machine multiplies the number by 3 and takes away $1.'],
+    [/^Maskinen lägger först till (\d+) och dubblar sedan\.$/,'The machine first adds $1 and then doubles.'],
+    [/^Gånger 10, och sedan plus (\d+)\.$/,'Times 10, and then plus $1.'],
+    [/^Talet gånger sig självt \(kvadrattal\)\.$/,'The number times itself (a square number).']
+  ];
+  for(const [re,en] of T)if(re.test(s))return s.replace(re,en);
+  return s;
 }
 function machineRule(L,nums){
   const mn=Math.min(...nums),mx=Math.max(...nums);
@@ -887,7 +960,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // ---------- gemensamt för alla banor ----------
-const PRAISE=['Ja!','Snyggt!','Bra tänkt!','Helt rätt!','Toppen!','Du klarade det!','Superbra!'];
+const PRAISE=tr(['Ja!','Snyggt!','Bra tänkt!','Helt rätt!','Toppen!','Du klarade det!','Superbra!'],['Yes!','Nice!','Good thinking!','Spot on!','Great!','You did it!','Super!']);
 function baseStation(key,troupe,L){
   const st={key,L,waiting:troupe.slice(),across:[],back:[],sel:null,say:'',mood:'',fx:{},done:false,hearts:5,max:5,startN:troupe.length,acts:{}};
   st.setHearts=n=>{st.hearts=st.max=n;};
@@ -898,37 +971,39 @@ function baseStation(key,troupe,L){
   st.onTap=id=>{
     if(st.done)return;
     st.sel=st.sel===id?null:id;SFX.pop();
-    if(st.sel!=null){st.say=st.tapSay||'Tryck nu där den ska vara.';st.mood='';}
+    if(st.sel!=null){st.say=st.tapSay||tr('Tryck nu där den ska vara.','Now tap where it should go.');st.mood='';}
     st.render();
   };
   st.onDrop=()=>{};
   st.strike=msg=>{
     st.hearts=Math.max(0,st.hearts-1);SFX.bad();st.say=msg;st.mood='bad';
-    if(st.hearts<=0){st.say=msg+' Det var sista hjärtat.';st.done=true;setTimeout(()=>finishStation(st),1300);}
+    if(st.hearts<=0){st.say=msg+tr(' Det var sista hjärtat.',' That was the last heart.');st.done=true;setTimeout(()=>finishStation(st),1300);}
   };
   st.win=()=>{st.done=true;setTimeout(()=>finishStation(st),900);};
   return st;
 }
 function shell(st){
   const m=META[st.key];
-  const hearts=st.heartsHTML?st.heartsHTML():`<div class="hearts" role="img" aria-label="${st.hearts} av ${st.max} hjärtan kvar">${A(st.max,i=>HEART(i<st.hearts)).join('')}</div>`;
+  const hearts=st.heartsHTML?st.heartsHTML():`<div class="hearts" role="img" aria-label="${tr(`${st.hearts} av ${st.max} hjärtan kvar`,`${st.hearts} of ${st.max} hearts left`)}">${A(st.max,i=>HEART(i<st.hearts)).join('')}</div>`;
   return `<div class="station st-${st.key}">
   <header class="top">
-    <button class="iconbtn" data-act="leave" aria-label="Tillbaka till kartan" title="Karta">${ICONS.map}</button>
+    <button class="iconbtn" data-act="leave" aria-label="${tr('Tillbaka till kartan','Back to the map')}" title="${tr('Karta','Map')}">${ICONS.map}</button>
     <div class="ttl">${ICONS[st.key]}<h2>${m.name}</h2>${stars(st.L)}</div>
     <div class="spacer"></div>${hearts}
-    <button class="iconbtn" data-act="help" aria-label="Så spelar du" title="Så spelar du">?</button>
-    <button class="iconbtn" data-act="sound" aria-label="Ljud ${S.sound?'på':'av'}" title="Ljud">${S.sound?ICONS.soundOn:ICONS.soundOff}</button>
+    <button class="iconbtn" data-act="help" aria-label="${tr('Så spelar du','How to play')}" title="${tr('Så spelar du','How to play')}">?</button>
+    <button class="iconbtn" data-act="sound" aria-label="${tr('Ljud','Sound')} ${S.sound?tr('på','on'):tr('av','off')}" title="${tr('Ljud','Sound')}">${S.sound?ICONS.soundOn:ICONS.soundOff}</button>
   </header>
   <div class="say panel ${st.mood}" role="status" aria-live="polite">${crHTML(GUIDE)}<span>${st.say}</span></div>
   ${st.html()}
   </div>`;
 }
 function confirmLeave(){
-  modal(`<h3>Tillbaka till kartan?</h3><p>Banan börjar om från början när du kommer tillbaka. Dina numlingar stannar hos dig.</p><div class="row"><button class="btn go" data-m="close">Fortsätt spela</button><button class="btn" data-m="map">Tillbaka till kartan</button></div>`,{map:showMap});
+  modal(tr(`<h3>Tillbaka till kartan?</h3><p>Banan börjar om från början när du kommer tillbaka. Dina numlingar stannar hos dig.</p><div class="row"><button class="btn go" data-m="close">Fortsätt spela</button><button class="btn" data-m="map">Tillbaka till kartan</button></div>`,
+    `<h3>Back to the map?</h3><p>The stop starts over from the beginning when you come back. Your numlings stay with you.</p><div class="row"><button class="btn go" data-m="close">Keep playing</button><button class="btn" data-m="map">Back to the map</button></div>`),{map:showMap});
 }
 function helpText(st){
   const L=st.L;
+  if(LANG==='en')return helpTextEn(st);
   switch(st.key){
     case 'gates':return `<p>Två portar, en hemlig regel. Vissa numlingar får bara gå genom <b>Solporten</b>. Alla andra måste gå genom <b>Månporten</b>.</p><p>Skicka numlingar en i taget: dra en till en port, eller tryck på den och sedan på en port. Titta på vem som går vart och leta efter regeln.</p><p>Tror du att du vet regeln? Tryck på <b>Jag vet regeln!</b> så går alla som är kvar över på en gång.</p><p>Fel port kostar ett hjärta.</p>`;
     case 'balloon':return `<p>Ballongen lyfter bara när korgen väger <b>exakt</b> lika mycket som talet på skylten. Varje numling väger lika mycket som talet på magen.</p><p>Tryck på numlingar för att sätta dem i korgen (tryck igen för att ta ut dem), och tryck sedan på <b>Lyft!</b></p>${L>=3?'<p>Skylten visar en uträkning. Räkna ut den först! Den säger också hur många passagerare som ska med.</p>':''}${st.showSum?'':'<p>På den här nivån visas ingen summa. Räkna i huvudet!</p>'}<p>Fel vikt kostar ett hjärta.</p>`;
@@ -943,7 +1018,23 @@ function helpText(st){
   }
   return '';
 }
-function showHelp(st){modal(`<h3>Så spelar du: ${META[st.key].name}</h3>${helpText(st)}<button class="btn go" data-m="close">Okej!</button>`);}
+function helpTextEn(st){
+  const L=st.L;
+  switch(st.key){
+    case 'gates':return `<p>Two gates, one secret rule. Some numlings may only go through <b>the Sun Gate</b>. Everyone else must go through <b>the Moon Gate</b>.</p><p>Send numlings one at a time: drag one to a gate, or tap it and then a gate. Watch who goes where and look for the rule.</p><p>Think you know the rule? Tap <b>I know the rule!</b> and everyone left goes across at once.</p><p>The wrong gate costs a heart.</p>`;
+    case 'balloon':return `<p>The balloon only lifts when the basket weighs <b>exactly</b> as much as the number on the sign. Each numling weighs as much as the number on its tummy.</p><p>Tap numlings to put them in the basket (tap again to take them out), then tap <b>Lift!</b></p>${L>=3?'<p>The sign shows a calculation. Work it out first! It also says how many passengers must come along.</p>':''}${st.showSum?'':'<p>On this level no sum is shown. Count in your head!</p>'}<p>The wrong weight costs a heart.</p>`;
+    case 'stones':return `<p>The numbers on the stepping stones follow a pattern. Work out ${st.blanks&&st.blanks.length>1?'the missing numbers':'the missing number'}, type with the number keys (or the keyboard) and tap <b>✓</b>.</p><p>Stuck? <b>Show the jumps</b> shows how much the numbers change.</p><p>Every finished path carries some numlings across. A wrong number costs a heart.</p>`;
+    case 'venn':{const nv=st.visible.filter(Boolean).length;return `<p>Each circle in the pond has a rule. ${nv===st.k?'The rules are written above the pond.':nv?'One rule is written above the pond. The others are <b>secret</b>: work them out!':'The rules are <b>secret</b>: work them out!'}</p><p>Put every numling inside each circle whose rule it fits, and outside the others. Where the circles overlap, both rules apply. Numlings that fit no rule go in the water outside all the circles.</p><p>Drag a numling to its place, or tap it and then the pond. The wrong place costs a heart.</p>`;}
+    case 'raft':return `<p>Fill <b>every seat</b> on the raft. Every pair of numlings sitting next to each other must follow the rule on the sign.</p>${st.isRing?'<p>This raft is round, so the first and last seats are neighbours too!</p>':''}<p>Drag numlings to the seats, or tap one and then a seat. Tap <b>Sail!</b> when you are done. A raft that breaks the rule costs a heart.</p>`;
+    case 'lock':return `<p>The Owl's Door has a secret code with <b>${st.slots} digits</b>, each from 1 to ${st.D}.${st.rep?' A digit can appear more than once.':' No digit is used twice.'}</p><p>Make a guess, and the owl gives you clues:</p>${lockLegend(st)}<p>You have ${st.free} free guesses. After that the owl gets sleepy, and every wrong guess sends a numling back to camp.</p>`;
+    case 'machine':return `<p>The Number Machine always does the same thing to the number that goes in. The first numlings show how it works.</p><p>Look at the table, work out what comes out for the next numling and type the answer. Tap <b>✓</b>.</p><p>Have you worked out the rule? Tap <b>I know the rule!</b> and everyone left goes through. A wrong answer costs a heart.</p>`;
+    case 'garden':return `<p>Put numlings in the squares of the patch. The number on every numling counts, and the numbers on the stones count too.</p><p>Every row and column${st.spec&&st.spec.diag?', and the diagonal,':''} must get exactly the sum written at the edge. The small numbers show the sum right now.</p><p>Tip: all the row sums together equal all the numbers in the patch together.</p><p>Tap <b>Plant!</b> when you are done. A wrong sum costs a heart.</p>`;
+    case 'share':return `<p>The berries in the bush must be shared <b>equally</b> between the numlings. How many does each one get${L>=2?', and how many are left over':''}?</p>${L>=4?'<p>Sometimes it is the other way round: you know what each one got and must work out how many berries there were.</p>':''}<p>Tap a box, type the answer and tap <b>✓</b>. A wrong answer costs a heart.</p>`;
+    case 'path':return `<p>Start with the number at the bottom. Pick one stone on every row, from the bottom up. Every stone changes the number.</p><p>Reach the top with <b>exactly</b> the number on the flag. Then tap <b>Climb!</b></p><p>A wrong number at the top costs a heart.</p>`;
+  }
+  return '';
+}
+function showHelp(st){modal(`<h3>${tr('Så spelar du','How to play')}: ${META[st.key].name}</h3>${helpText(st)}<button class="btn go" data-m="close">${tr('Okej!','OK!')}</button>`);}
 
 function finishStation(st,extra=''){
   if(!S.journey)return;
@@ -955,19 +1046,19 @@ function finishStation(st,extra=''){
   S.played[st.key]=(S.played[st.key]||0)+1;
   const sug=S.levels[st.key];
   let lvl='';
-  if(perfect&&st.L>=sug&&sug<4){S.levels[st.key]=sug+1;lvl=`<p class="lvup">Ny nivå! ${META[st.key].name} föreslås nu på ${stars(S.levels[st.key])}</p>`;}
-  else if(perfect&&st.L<sug)lvl=`<p class="lvup">Perfekt! Prova gärna ${stars(sug)} nästa gång.</p>`;
-  else if(perfect)lvl=`<p class="lvup">Perfekt på högsta nivån!</p>`;
+  if(perfect&&st.L>=sug&&sug<4){S.levels[st.key]=sug+1;lvl=`<p class="lvup">${tr(`Ny nivå! ${META[st.key].name} föreslås nu på`,`New level! ${META[st.key].name} is now suggested at`)} ${stars(S.levels[st.key])}</p>`;}
+  else if(perfect&&st.L<sug)lvl=`<p class="lvup">${tr('Perfekt! Prova gärna','Perfect! Why not try')} ${stars(sug)} ${tr('nästa gång.','next time.')}</p>`;
+  else if(perfect)lvl=`<p class="lvup">${tr('Perfekt på högsta nivån!','Perfect on the highest level!')}</p>`;
   save();
   const made=st.across.length,back=st.back.length;
-  const title=perfect?pick(['Lysande!','Fantastiskt!','Supertänkt!','Otroligt!']):made?'Några kom igenom!':'Åh nej!';
+  const title=perfect?pick(tr(['Lysande!','Fantastiskt!','Supertänkt!','Otroligt!'],['Brilliant!','Fantastic!','Super thinking!','Incredible!'])):made?tr('Några kom igenom!','Some made it through!'):tr('Åh nej!','Oh no!');
   const reveal=st.reveal?st.reveal():'';
   if(perfect){SFX.win();confetti();}else SFX.sad();
   const end=j.station>=j.route.length;
   modal(`<h2>${title}</h2>${made?`<div class="crowd">${st.across.map(c=>crHTML(c)).join('')}</div>`:''}
-    <p><b>${made} av ${st.startN}</b> numlingar klarade ${META[st.key].name}.${back?` ${pl(back,'numling','numlingar')} gick tillbaka till lägret. De följer med på nästa resa.`:''}</p>
+    <p>${tr(`<b>${made} av ${st.startN}</b> numlingar klarade ${META[st.key].name}.`,`<b>${made} of ${st.startN}</b> numlings made it through ${META[st.key].name}.`)}${back?tr(` ${NUMLINGS(back)} gick tillbaka till lägret. De följer med på nästa resa.`,` ${NUMLINGS(back)} went back to camp. They will come along on the next journey.`):''}</p>
     ${reveal?`<div class="reveal">${reveal}</div>`:''}${extra}${lvl}
-    <button class="btn go big" data-m="next">${j.troupe.length===0?'Tillbaka till lägret':end?'Vidare till Numeria!':'Fortsätt'}</button>`,
+    <button class="btn go big" data-m="next">${j.troupe.length===0?tr('Tillbaka till lägret','Back to camp'):end?tr('Vidare till Numeria!','On to Numeria!'):tr('Fortsätt','Continue')}</button>`,
     {next:()=>{if(j.troupe.length===0){S.journey=null;save();showAllBack();}else if(end)showArrival();else showMap();}});
 }
 
@@ -985,32 +1076,32 @@ function makeGates(troupe,L){
   const st=baseStation('gates',troupe,L);
   st.all=troupe.slice();st.rule=pickSplitRule(L,troupe);st.sun=[];st.moon=[];
   st.setHearts(L>=4?7:L===3?6:5);
-  const GN={sun:'Solporten',moon:'Månporten'};
-  st.say='Portarna har en hemlig regel. Dra en numling till en port, eller tryck på den och sedan på en port.';
-  st.tapSay='Tryck nu på en port.';
+  const GN=tr({sun:'Solporten',moon:'Månporten'},{sun:'the Sun Gate',moon:'the Moon Gate'});
+  st.say=tr('Portarna har en hemlig regel. Dra en numling till en port, eller tryck på den och sedan på en port.','The gates have a secret rule. Drag a numling to a gate, or tap it and then a gate.');
+  st.tapSay=tr('Tryck nu på en port.','Now tap a gate.');
   st.html=()=>`
     <div class="gates">${['sun','moon'].map(g=>`
-      <div class="gatecol ${st.fx.gate===g?'rumble':''}" data-drop="${g}" tabindex="0" role="button" aria-label="${GN[g]}">
+      <div class="gatecol ${st.fx.gate===g?'rumble':''}" data-drop="${g}" tabindex="0" role="button" aria-label="${cap(GN[g])}">
         <div class="gate">${gateSVG(g)}</div>
-        <div class="gname">${GN[g]}</div>
+        <div class="gname">${cap(GN[g])}</div>
         <div class="passed">${st[g].map(c=>crHTML(c,{sm:1,cls:st.fx.pop===c.id?'pop':''})).join('')}</div>
       </div>`).join('')}
     </div>
-    <div><div class="tray-label">Väntar vid portarna</div>
-    <div class="tray" data-drop="tray">${st.waiting.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id,cls:st.fx.shake===c.id?'shake':''})).join('')||'<span class="hint">Alla har gått igenom!</span>'}</div></div>
-    <div class="actions"><button class="btn go" data-act="guess" ${st.sun.length+st.moon.length<3||st.done?'disabled':''}>Jag vet regeln!</button></div>
-    ${st.sun.length+st.moon.length<3?'<p class="hint" style="text-align:center">Skicka minst 3 numlingar först, sedan kan du gissa regeln.</p>':''}`;
+    <div><div class="tray-label">${tr('Väntar vid portarna','Waiting at the gates')}</div>
+    <div class="tray" data-drop="tray">${st.waiting.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id,cls:st.fx.shake===c.id?'shake':''})).join('')||`<span class="hint">${tr('Alla har gått igenom!','Everyone is through!')}</span>`}</div></div>
+    <div class="actions"><button class="btn go" data-act="guess" ${st.sun.length+st.moon.length<3||st.done?'disabled':''}>${tr('Jag vet regeln!','I know the rule!')}</button></div>
+    ${st.sun.length+st.moon.length<3?`<p class="hint" style="text-align:center">${tr('Skicka minst 3 numlingar först, sedan kan du gissa regeln.','Send at least 3 numlings first, then you can guess the rule.')}</p>`:''}`;
   st.onDrop=(id,zone)=>{
     if(st.done)return;
     const c=st.waiting.find(x=>x.id===id);st.sel=null;
     if(!c||(zone!=='sun'&&zone!=='moon')){st.render();return;}
     if(st.rule.test(c)===(zone==='sun')){
       st.waiting=st.waiting.filter(x=>x!==c);st[zone].push(c);st.across.push(c);
-      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} Nummer ${c.n} går genom ${GN[zone]}.`;st.mood='good';
-      if(!st.waiting.length){st.say='Alla har gått igenom! Såg du regeln?';st.win();}
+      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} ${tr(`Nummer ${c.n} går genom ${GN[zone]}.`,`Number ${c.n} goes through ${GN[zone]}.`)}`;st.mood='good';
+      if(!st.waiting.length){st.say=tr('Alla har gått igenom! Såg du regeln?','Everyone is through! Did you spot the rule?');st.win();}
     }else{
       st.fx={shake:c.id,gate:zone};
-      st.strike(`${GN[zone]} mullrar. Nummer ${c.n} får inte gå där.`);
+      st.strike(tr(`${GN[zone]} mullrar. Nummer ${c.n} får inte gå där.`,`${cap(GN[zone])} rumbles. Number ${c.n} may not go there.`));
     }
     st.render();
   };
@@ -1021,12 +1112,12 @@ function makeGates(troupe,L){
       if(st.done)return;
       if(r===st.rule){
         st.waiting.forEach(c=>{(st.rule.test(c)?st.sun:st.moon).push(c);st.across.push(c);});
-        st.waiting=[];SFX.ok();st.say='Du knäckte den! Alla hoppar genom rätt port.';st.mood='good';st.cracked=true;st.render();st.win();
-      }else{st.strike('Inte den regeln. Titta på numlingarna vid varje port igen.');st.render();}
+        st.waiting=[];SFX.ok();st.say=tr('Du knäckte den! Alla hoppar genom rätt port.','You cracked it! Everyone jumps through the right gate.');st.mood='good';st.cracked=true;st.render();st.win();
+      }else{st.strike(tr('Inte den regeln. Titta på numlingarna vid varje port igen.','Not that rule. Look at the numlings at each gate again.'));st.render();}
     });
-    modal(`<h3>Vilken regel har Solporten?</h3><p>Kolla alla numlingar som gick genom varje port. Bara en regel passar alla.</p><div class="opts">${opts.map((r,i)=>`<button class="btn" data-m="o${i}">${cap(r.text)}</button>`).join('')}</div><button class="btn sm" data-m="close">Inte än</button>`,h);
+    modal(`<h3>${tr('Vilken regel har Solporten?','What is the Sun Gate\'s rule?')}</h3><p>${tr('Kolla alla numlingar som gick genom varje port. Bara en regel passar alla.','Check every numling that went through each gate. Only one rule fits them all.')}</p><div class="opts">${opts.map((r,i)=>`<button class="btn" data-m="o${i}">${cap(r.text)}</button>`).join('')}</div><button class="btn sm" data-m="close">${tr('Inte än','Not yet')}</button>`,h);
   };
-  st.reveal=()=>`<p><b>Solportens regel:</b> ${cap(st.rule.text)}.</p><p><b>Månporten:</b> alla andra.</p>${tipFor(st.rule)?`<p>${tipFor(st.rule)}</p>`:''}${st.cracked?'<p><b>Du gissade regeln. Snyggt detektivarbete!</b></p>':''}`;
+  st.reveal=()=>`<p><b>${tr('Solportens regel:','The Sun Gate\'s rule:')}</b> ${cap(st.rule.text)}.</p><p><b>${tr('Månporten:','The Moon Gate:')}</b> ${tr('alla andra.','everyone else.')}</p>${tipFor(st.rule)?`<p>${tipFor(st.rule)}</p>`:''}${st.cracked?`<p><b>${tr('Du gissade regeln. Snyggt detektivarbete!','You guessed the rule. Nice detective work!')}</b></p>`:''}`;
   return st;
 }
 
@@ -1047,28 +1138,29 @@ function makeBalloon(troupe,L){
     st.basket=[];
   };
   st.newTrip();
-  st.say=L>=3?'Räkna ut talet på skylten. Lasta sedan exakt så mycket vikt, med rätt antal passagerare.':'Varje numling väger lika mycket som talet på magen. Tryck på numlingar för att lasta korgen med exakt rätt vikt.';
+  st.say=L>=3?tr('Räkna ut talet på skylten. Lasta sedan exakt så mycket vikt, med rätt antal passagerare.','Work out the number on the sign. Then load exactly that much weight, with the right number of passengers.'):tr('Varje numling väger lika mycket som talet på magen. Tryck på numlingar för att lasta korgen med exakt rätt vikt.','Each numling weighs as much as the number on its tummy. Tap numlings to load the basket with exactly the right weight.');
+  const PASS=n=>pl(n,tr('passagerare','passenger'),tr('passagerare','passengers'));
   const inBasket=c=>st.basket.includes(c);
   st.html=()=>{
     const tot=sum(st.basket.map(c=>c.n));
-    const sign=st.expr?`<small>Behöver exakt</small><b class="expr">${st.expr}</b><small>med ${pl(st.count,'passagerare','passagerare')}</small>`:`<small>Behöver exakt</small><b>${st.target}</b>`;
+    const sign=st.expr?`<small>${tr('Behöver exakt','Needs exactly')}</small><b class="expr">${st.expr}</b><small>${tr('med','with')} ${PASS(st.count)}</small>`:`<small>${tr('Behöver exakt','Needs exactly')}</small><b>${st.target}</b>`;
     return `<div class="canyon">
-      <div class="cliff"><div class="tray-label">Väntar</div><div class="tray" data-drop="tray">${st.waiting.filter(c=>!inBasket(c)).map(c=>crHTML(c,{dr:1,cls:st.fx.shake===c.id?'shake':''})).join('')||'<span class="hint">Alla sitter i korgen.</span>'}</div></div>
+      <div class="cliff"><div class="tray-label">${tr('Väntar','Waiting')}</div><div class="tray" data-drop="tray">${st.waiting.filter(c=>!inBasket(c)).map(c=>crHTML(c,{dr:1,cls:st.fx.shake===c.id?'shake':''})).join('')||`<span class="hint">${tr('Alla sitter i korgen.','Everyone is in the basket.')}</span>`}</div></div>
       <div class="balloon ${st.flying?'flying':''}">
         <div class="envelope">${BALLOON_SVG}<div class="sign">${sign}</div></div>
-        <div class="basket" data-drop="basket" tabindex="0" aria-label="Korgen">${st.basket.map(c=>crHTML(c,{dr:1})).join('')}</div>
-        ${st.showSum?`<div class="sum" aria-live="polite">${st.basket.length?`${st.basket.map(c=>c.n).join(' + ')} = ${tot}`:'Korgen är tom'}</div>`:''}
+        <div class="basket" data-drop="basket" tabindex="0" aria-label="${tr('Korgen','The basket')}">${st.basket.map(c=>crHTML(c,{dr:1})).join('')}</div>
+        ${st.showSum?`<div class="sum" aria-live="polite">${st.basket.length?`${st.basket.map(c=>c.n).join(' + ')} = ${tot}`:tr('Korgen är tom','The basket is empty')}</div>`:''}
       </div>
-      <div class="cliff"><div class="tray-label">Över ravinen</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+      <div class="cliff"><div class="tray-label">${tr('Över ravinen','Across the canyon')}</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
     </div>
-    <div class="actions"><button class="btn go big" data-act="lift" ${!st.basket.length||st.flying||st.done?'disabled':''}>Lyft!</button>${st.basket.length?'<button class="btn" data-act="empty">Töm korgen</button>':''}</div>`;
+    <div class="actions"><button class="btn go big" data-act="lift" ${!st.basket.length||st.flying||st.done?'disabled':''}>${tr('Lyft!','Lift!')}</button>${st.basket.length?`<button class="btn" data-act="empty">${tr('Töm korgen','Empty the basket')}</button>`:''}</div>`;
   };
   st.onTap=id=>{
     if(st.done||st.flying)return;
     const c=st.waiting.find(x=>x.id===id);if(!c)return;
     if(inBasket(c))st.basket=st.basket.filter(x=>x!==c);
     else if(st.basket.length<6)st.basket.push(c);
-    else{st.say='Korgen är full. Högst sex passagerare!';st.mood='bad';}
+    else{st.say=tr('Korgen är full. Högst sex passagerare!','The basket is full. Six passengers at most!');st.mood='bad';}
     SFX.pop();st.render();
   };
   st.onDrop=(id,zone)=>{
@@ -1082,17 +1174,17 @@ function makeBalloon(troupe,L){
   st.acts.lift=()=>{
     if(!st.basket.length||st.flying||st.done)return;
     const tot=sum(st.basket.map(c=>c.n));
-    if(st.count&&st.basket.length!==st.count){st.strike(`Skylten säger exakt ${pl(st.count,'passagerare','passagerare')}, men korgen har ${st.basket.length}.`);st.render();return;}
+    if(st.count&&st.basket.length!==st.count){st.strike(tr(`Skylten säger exakt ${pl(st.count,'passagerare','passagerare')}, men korgen har ${st.basket.length}.`,`The sign says exactly ${pl(st.count,'passenger','passengers')}, but the basket has ${st.basket.length}.`));st.render();return;}
     if(tot!==st.target){
-      st.strike(tot>st.target?'För tungt! Ballongen lyfter inte från marken.':'För lätt! Ballongen vinglar och sjunker ner igen.');
+      st.strike(tot>st.target?tr('För tungt! Ballongen lyfter inte från marken.','Too heavy! The balloon does not leave the ground.'):tr('För lätt! Ballongen vinglar och sjunker ner igen.','Too light! The balloon wobbles and sinks back down.'));
       st.render();return;
     }
     const riders=st.basket.slice();
-    st.flying=true;SFX.ok();st.say=`${pick(PRAISE)} ${riders.map(c=>c.n).join(' + ')} = ${st.target}. Upp, upp och iväg!`;st.mood='good';st.render();
+    st.flying=true;SFX.ok();st.say=`${pick(PRAISE)} ${riders.map(c=>c.n).join(' + ')} = ${st.target}. ${tr('Upp, upp och iväg!','Up, up and away!')}`;st.mood='good';st.render();
     setTimeout(()=>{
       st.flying=false;
       st.waiting=st.waiting.filter(c=>!riders.includes(c));st.across.push(...riders);st.fx={pop:riders.map(c=>c.id)};
-      if(!st.waiting.length){st.say='Alla flög över ravinen!';st.win();}
+      if(!st.waiting.length){st.say=tr('Alla flög över ravinen!','Everyone flew across the canyon!');st.win();}
       else st.newTrip();
       st.render();
     },reduceMotion()?200:1200);
@@ -1109,7 +1201,7 @@ function makeStones(troupe,L){
   st.per=Math.max(2,Math.ceil(troupe.length/4));
   st.next=()=>{const s=makeSeq(st.L);st.seq=s.seq;st.why=s.why;st.blanks=s.blanks;st.bi=0;st.input='';st.hint=false;st.solved=false;};
   st.next();
-  st.say=`Hitta ${st.blanks.length>1?'de saknade talen':'det saknade talet'} på stegstenarna. Skriv svaret och tryck på ✓.`;
+  st.say=tr(`Hitta ${st.blanks.length>1?'de saknade talen':'det saknade talet'} på stegstenarna. Skriv svaret och tryck på ✓.`,`Find ${st.blanks.length>1?'the missing numbers':'the missing number'} on the stepping stones. Type the answer and tap ✓.`);
   st.html=()=>{
     const n=st.seq.length;
     const known=i=>!st.blanks.includes(i)||st.blanks.indexOf(i)<st.bi||st.solved;
@@ -1119,7 +1211,7 @@ function makeStones(troupe,L){
       const filledBlank=st.blanks.includes(i)&&known(i);
       const txt=blank?(active?(st.input||'?'):'?'):v;
       const d=String(txt).length>=4?'d4':String(txt).length===3?'d3':'';
-      cells+=`<div class="stone ${blank?'blank':''} ${active?'active':''} ${filledBlank?'done':''} ${active&&st.fx.wob?'wobble':''} ${d}" style="grid-column:${i*2+1};grid-row:1" ${active?'aria-live="polite"':''} aria-label="${blank?'saknat tal':v}">${txt}</div>`;
+      cells+=`<div class="stone ${blank?'blank':''} ${active?'active':''} ${filledBlank?'done':''} ${active&&st.fx.wob?'wobble':''} ${d}" style="grid-column:${i*2+1};grid-row:1" ${active?'aria-live="polite"':''} aria-label="${blank?tr('saknat tal','missing number'):v}">${txt}</div>`;
       if(i<n-1&&st.hint){
         const ok=known(i)&&known(i+1);const df=st.seq[i+1]-v;
         cells+=`<div class="diff" style="grid-column:${i*2+2};grid-row:1">${ok?(df>=0?'+'+df:'−'+(-df)):'?'}</div>`;
@@ -1127,13 +1219,13 @@ function makeStones(troupe,L){
     });
     const keys=[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'];
     return `<div class="creek">
-      <div class="bank"><div class="tray-label">Väntar</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')}</div></div>
+      <div class="bank"><div class="tray-label">${tr('Väntar','Waiting')}</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')}</div></div>
       <div class="water"><div class="stones" style="--k:${n-1}">${cells}</div></div>
-      <div class="bank"><div class="tray-label">Över bäcken</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+      <div class="bank"><div class="tray-label">${tr('Över bäcken','Across the creek')}</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
     </div>
     <div class="padrow">
-      ${st.solved?'':`<div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?'Radera':k==='✓'?'Kontrollera svaret':k}" ${st.done?'disabled':''}>${k}</button>`).join('')}</div>`}
-      <div class="side">${st.solved?`<p><b>Mönster:</b> ${st.why}</p>${st.waiting.length?'<button class="btn go big" data-act="next">Nya stenar</button>':''}`:`<button class="btn" data-act="hint" ${st.hint?'disabled':''}>Visa hoppen</button><p class="hint">Varje klar stig bär över ${pl(Math.min(st.per,st.waiting.length),'numling','numlingar')}.</p>`}</div>
+      ${st.solved?'':`<div class="numpad" role="group" aria-label="${tr('Sifferknappar','Number keys')}">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?tr('Radera','Delete'):k==='✓'?tr('Kontrollera svaret','Check the answer'):k}" ${st.done?'disabled':''}>${k}</button>`).join('')}</div>`}
+      <div class="side">${st.solved?`<p><b>${tr('Mönster:','Pattern:')}</b> ${st.why}</p>${st.waiting.length?`<button class="btn go big" data-act="next">${tr('Nya stenar','New stones')}</button>`:''}`:`<button class="btn" data-act="hint" ${st.hint?'disabled':''}>${tr('Visa hoppen','Show the jumps')}</button><p class="hint">${tr('Varje klar stig bär över','Every finished path carries across')} ${NUMLINGS(Math.min(st.per,st.waiting.length))}.</p>`}</div>
     </div>`;
   };
   st.press=k=>{
@@ -1151,19 +1243,19 @@ function makeStones(troupe,L){
         st.solved=true;
         const movers=st.waiting.slice(0,st.per);
         st.waiting=st.waiting.slice(movers.length);st.across.push(...movers);st.fx={pop:movers.map(c=>c.id)};
-        st.say=`${pick(PRAISE)} Stenarna ligger stadigt och ${pl(movers.length,'numling','numlingar')} hoppar över.`;st.mood='good';
-        if(!st.waiting.length){st.say='Alla tog sig över Mönsterbäcken!';st.win();}
-      }else{st.say='Rätt! Nu nästa saknade sten.';st.mood='good';}
+        st.say=`${pick(PRAISE)} ${tr(`Stenarna ligger stadigt och ${NUMLINGS(movers.length)} hoppar över.`,`The stones are steady and ${NUMLINGS(movers.length)} hop across.`)}`;st.mood='good';
+        if(!st.waiting.length){st.say=tr('Alla tog sig över Mönsterbäcken!','Everyone made it across Pattern Creek!');st.win();}
+      }else{st.say=tr('Rätt! Nu nästa saknade sten.','Right! Now the next missing stone.');st.mood='good';}
     }else{
       st.input='';st.fx={wob:1};
-      st.strike(`${v} passar inte. ${st.hint?'Titta på hoppen mellan stenarna.':'Prova ”Visa hoppen” om du vill ha hjälp.'}`);
+      st.strike(tr(`${v} passar inte. ${st.hint?'Titta på hoppen mellan stenarna.':'Prova ”Visa hoppen” om du vill ha hjälp.'}`,`${v} does not fit. ${st.hint?'Look at the jumps between the stones.':'Try “Show the jumps” if you want help.'}`));
     }
     st.render();
   };
   st.onKey=k=>{if(/^[0-9]$/.test(k)){st.press(+k);return true;}if(k==='Backspace'){st.press('⌫');return true;}if(k==='Enter'){st.press('✓');return true;}return false;};
   st.acts.key=b=>{const v=b.dataset.v;st.press(/^[0-9]$/.test(v)?+v:v);};
   st.acts.hint=()=>{st.hint=true;st.render();};
-  st.acts.next=()=>{st.next();st.say='Nya stenar! Vad kommer sedan?';st.mood='';st.render();};
+  st.acts.next=()=>{st.next();st.say=tr('Nya stenar! Vad kommer sedan?','New stones! What comes next?');st.mood='';st.render();};
   return st;
 }
 
@@ -1171,9 +1263,9 @@ function makeStones(troupe,L){
 //  Näckrosdammen — Venndiagram
 // =========================================================
 const VC=[
-  {name:'Grön',def:'den gröna cirkeln',stroke:'#2a8f52',fill:'rgba(70,185,115,.32)'},
-  {name:'Orange',def:'den orange cirkeln',stroke:'#d9721a',fill:'rgba(255,155,55,.32)'},
-  {name:'Rosa',def:'den rosa cirkeln',stroke:'#c93d7c',fill:'rgba(235,100,160,.28)'}
+  {name:tr('Grön','Green'),def:tr('den gröna cirkeln','the green circle'),stroke:'#2a8f52',fill:'rgba(70,185,115,.32)'},
+  {name:tr('Orange','Orange'),def:tr('den orange cirkeln','the orange circle'),stroke:'#d9721a',fill:'rgba(255,155,55,.32)'},
+  {name:tr('Rosa','Pink'),def:tr('den rosa cirkeln','the pink circle'),stroke:'#c93d7c',fill:'rgba(235,100,160,.28)'}
 ];
 function makeVenn(troupe,L){
   const st=baseStation('venn',troupe,L);
@@ -1185,13 +1277,13 @@ function makeVenn(troupe,L){
   st.setHearts(L>=4?7:L===3?6:5);st.placed=[];
   st.circles=st.k===2?[{x:240,y:205,r:135},{x:360,y:205,r:135}]:[{x:245,y:150,r:116},{x:355,y:150,r:116},{x:300,y:250,r:116}];
   const nv=st.visible.filter(Boolean).length;
-  st.say=nv===st.k?'Läs cirklarnas regler och släpp sedan varje numling på rätt plats.':nv?'En regel syns, resten är hemliga. Släpp numlingar i dammen och lista ut var de hör hemma!':'Cirklarna har hemliga regler. Släpp numlingar i dammen och lista ut var de hör hemma!';
-  st.tapSay='Tryck nu på den plats i dammen där den hör hemma.';
+  st.say=nv===st.k?tr('Läs cirklarnas regler och släpp sedan varje numling på rätt plats.','Read the circles\' rules, then drop every numling in the right place.'):nv?tr('En regel syns, resten är hemliga. Släpp numlingar i dammen och lista ut var de hör hemma!','One rule is shown, the rest are secret. Drop numlings in the pond and work out where they belong!'):tr('Cirklarna har hemliga regler. Släpp numlingar i dammen och lista ut var de hör hemma!','The circles have secret rules. Drop numlings in the pond and work out where they belong!');
+  st.tapSay=tr('Tryck nu på den plats i dammen där den hör hemma.','Now tap the place in the pond where it belongs.');
   const pondSVG=()=>`<svg viewBox="0 0 600 400" aria-hidden="true"><defs><linearGradient id="pw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63b9db"/><stop offset="1" stop-color="#3f93bd"/></linearGradient></defs><rect width="600" height="400" fill="url(#pw)"/><g fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="3" stroke-linecap="round"><path d="M30 60q20-8 40 0M520 340q20-8 40 0M40 330q16-6 32 0M530 70q16-6 32 0"/></g><g fill="#5fb36f" stroke="#17335b" stroke-width="2.5"><path d="M38 360a22 16 0 1 0 30 6l-14-6z"/><path d="M560 40a20 14 0 1 0 -26 -8l12 6z"/></g>${st.circles.map((c,i)=>`<circle cx="${c.x}" cy="${c.y}" r="${c.r}" fill="${VC[i].fill}" stroke="${VC[i].stroke}" stroke-width="7"/>`).join('')}</svg>`;
   st.html=()=>`
-    <div class="legend">${st.rules.map((r,i)=>`<div class="lchip" style="--c:${VC[i].stroke}"><i></i><span><b>${VC[i].name} cirkel:</b> ${st.visible[i]||st.done?cap(r.text):'<span class="secret">? ? ?</span>'}</span></div>`).join('')}</div>
-    <div class="pond" data-drop="pond" aria-label="Damm med ${st.k} cirklar">${pondSVG()}${st.placed.map(p=>crHTML(p.c,{style:`left:${(p.x/6).toFixed(2)}%;top:${(p.y/4).toFixed(2)}%`,cls:st.fx.pop===p.c.id?'pop':''})).join('')}</div>
-    <div><div class="tray-label">Väntar på stranden</div><div class="tray" data-drop="tray">${st.waiting.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id,cls:st.fx.shake===c.id?'shake':''})).join('')||'<span class="hint">Alla är i dammen!</span>'}</div></div>`;
+    <div class="legend">${st.rules.map((r,i)=>`<div class="lchip" style="--c:${VC[i].stroke}"><i></i><span><b>${VC[i].name} ${tr('cirkel','circle')}:</b> ${st.visible[i]||st.done?cap(r.text):'<span class="secret">? ? ?</span>'}</span></div>`).join('')}</div>
+    <div class="pond" data-drop="pond" aria-label="${tr(`Damm med ${st.k} cirklar`,`Pond with ${st.k} circles`)}">${pondSVG()}${st.placed.map(p=>crHTML(p.c,{style:`left:${(p.x/6).toFixed(2)}%;top:${(p.y/4).toFixed(2)}%`,cls:st.fx.pop===p.c.id?'pop':''})).join('')}</div>
+    <div><div class="tray-label">${tr('Väntar på stranden','Waiting on the shore')}</div><div class="tray" data-drop="tray">${st.waiting.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id,cls:st.fx.shake===c.id?'shake':''})).join('')||`<span class="hint">${tr('Alla är i dammen!','Everyone is in the pond!')}</span>`}</div></div>`;
   st.onDrop=(id,zone,x,y)=>{
     if(st.done)return;
     const c=st.waiting.find(q=>q.id===id);st.sel=null;
@@ -1213,17 +1305,17 @@ function makeVenn(troupe,L){
         }
       }
       st.waiting=st.waiting.filter(q=>q!==c);st.placed.push({c,x:spot[0],y:spot[1]});st.across.push(c);
-      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} Nummer ${c.n} hittade sitt näckrosblad.`;st.mood='good';
-      if(!st.waiting.length){st.say='Alla är sorterade! Här är de hemliga reglerna.';st.win();}
+      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} ${tr(`Nummer ${c.n} hittade sitt näckrosblad.`,`Number ${c.n} found its lily pad.`)}`;st.mood='good';
+      if(!st.waiting.length){st.say=tr('Alla är sorterade! Här är de hemliga reglerna.','Everyone is sorted! Here are the secret rules.');st.win();}
     }else{
       st.fx={shake:c.id};
       const i=inside.findIndex((v,j)=>v!==truth[j]);
-      if(st.visible[i])st.strike(`Kolla ${VC[i].def}: nummer ${c.n} ${truth[i]?'passar':'passar inte'} ”${st.rules[i].short}”.`);
-      else st.strike('Plask! Det är inte rätt plats. Prova någon annanstans.');
+      if(st.visible[i])st.strike(tr(`Kolla ${VC[i].def}: nummer ${c.n} ${truth[i]?'passar':'passar inte'} ”${st.rules[i].short}”.`,`Check ${VC[i].def}: number ${c.n} ${truth[i]?'fits':'does not fit'} “${st.rules[i].short}”.`));
+      else st.strike(tr('Plask! Det är inte rätt plats. Prova någon annanstans.','Splash! That is not the right place. Try somewhere else.'));
     }
     st.render();
   };
-  st.reveal=()=>st.rules.map((r,i)=>`<p><b>${VC[i].name} cirkel:</b> ${cap(r.text)}.</p>`).join('')+(st.rules.map(tipFor).filter(Boolean).slice(0,1).map(t=>`<p>${t}</p>`).join(''));
+  st.reveal=()=>st.rules.map((r,i)=>`<p><b>${VC[i].name} ${tr('cirkel','circle')}:</b> ${cap(r.text)}.</p>`).join('')+(st.rules.map(tipFor).filter(Boolean).slice(0,1).map(t=>`<p>${t}</p>`).join(''));
   return st;
 }
 
@@ -1242,8 +1334,9 @@ function makeRaft(troupe,L){
     st.k=k;st.isRing=st.ring&&k>=4;st.seats=new Array(k).fill(null);st.res=null;
   };
   st.newTrip();
-  st.say=`Fyll alla ${st.k} platser så att varje grannpar följer regeln. Tryck sedan på Segla!`;
-  st.tapSay='Tryck nu på en plats på flotten.';
+  st.say=tr(`Fyll alla ${st.k} platser så att varje grannpar följer regeln. Tryck sedan på Segla!`,`Fill all ${st.k} seats so that every pair of neighbours follows the rule. Then tap Sail!`);
+  st.tapSay=tr('Tryck nu på en plats på flotten.','Now tap a seat on the raft.');
+  const SEATS=n=>pl(n,tr('plats','seat'),tr('platser','seats'));
   const seatOf=id=>st.seats.indexOf(id);
   const pairs=()=>{const p=A(st.k-1,i=>[i,i+1]);if(st.isRing)p.push([st.k-1,0]);return p;};
   const byId=id=>st.waiting.find(c=>c.id===id)||st.across.find(c=>c.id===id);
@@ -1255,7 +1348,7 @@ function makeRaft(troupe,L){
   st.html=()=>{
     const ps=pairs();
     let raft='';
-    const seatHTML=i=>{const id=st.seats[i];const c=id!=null?byId(id):null;return `<div class="seat" data-drop="seat-${i}" tabindex="0" aria-label="Plats ${i+1}${c?': '+describe(c):', tom'}"${st.isRing?` style="left:${(50+35*Math.cos(-Math.PI/2+2*Math.PI*i/st.k)).toFixed(2)}%;top:${(50+35*Math.sin(-Math.PI/2+2*Math.PI*i/st.k)).toFixed(2)}%"`:''}>${c?crHTML(c,{dr:1,sel:st.sel===c.id}):''}</div>`;};
+    const seatHTML=i=>{const id=st.seats[i];const c=id!=null?byId(id):null;return `<div class="seat" data-drop="seat-${i}" tabindex="0" aria-label="${tr('Plats','Seat')} ${i+1}${c?': '+describe(c):tr(', tom',', empty')}"${st.isRing?` style="left:${(50+35*Math.cos(-Math.PI/2+2*Math.PI*i/st.k)).toFixed(2)}%;top:${(50+35*Math.sin(-Math.PI/2+2*Math.PI*i/st.k)).toFixed(2)}%"`:''}>${c?crHTML(c,{dr:1,sel:st.sel===c.id}):''}</div>`;};
     const linkHTML=(idx,style='')=>{const s=linkState(ps[idx][0],ps[idx][1],idx);return `<span class="link ${s}"${style} aria-hidden="true">${s==='ok'?'✓':s==='bad'?'✗':''}</span>`;};
     if(st.isRing){
       for(let i=0;i<st.k;i++)raft+=seatHTML(i);
@@ -1264,15 +1357,15 @@ function makeRaft(troupe,L){
       for(let i=0;i<st.k;i++){raft+=seatHTML(i);if(i<st.k-1)raft+=linkHTML(i);}
     }
     const shore=st.waiting.filter(c=>seatOf(c.id)<0);
-    return `<div class="rulesign panel"><b>Flottens regel:</b> ${st.rule.text}${st.isRing?' <b>Flotten är rund: första och sista platsen är också grannar.</b>':''}</div>
+    return `<div class="rulesign panel"><b>${tr('Flottens regel:','The raft\'s rule:')}</b> ${st.rule.text}${st.isRing?` <b>${tr('Flotten är rund: första och sista platsen är också grannar.','The raft is round: the first and last seats are neighbours too.')}</b>`:''}</div>
     <div class="sidewrap">
       <div class="sidemain">
         <div class="lake ${st.sailing?'sailing':''}"><div class="raft ${st.isRing?'ring':''}">${raft}</div></div>
-        <div class="actions"><button class="btn go big" data-act="sail" ${st.sailing||st.done?'disabled':''}>Segla!</button>${st.seats.some(x=>x!=null)?'<button class="btn" data-act="clear">Töm flotten</button>':''}</div>
+        <div class="actions"><button class="btn go big" data-act="sail" ${st.sailing||st.done?'disabled':''}>${tr('Segla!','Sail!')}</button>${st.seats.some(x=>x!=null)?`<button class="btn" data-act="clear">${tr('Töm flotten','Clear the raft')}</button>`:''}</div>
       </div>
       <div class="sidecol">
-        <div><div class="tray-label">På stranden</div><div class="tray" data-drop="shore">${shore.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id})).join('')||'<span class="hint">Alla sitter på flotten.</span>'}</div></div>
-        <div><div class="tray-label">Över sjön</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+        <div><div class="tray-label">${tr('På stranden','On the shore')}</div><div class="tray" data-drop="shore">${shore.map(c=>crHTML(c,{dr:1,sel:st.sel===c.id})).join('')||`<span class="hint">${tr('Alla sitter på flotten.','Everyone is on the raft.')}</span>`}</div></div>
+        <div><div class="tray-label">${tr('Över sjön','Across the lake')}</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
       </div>
     </div>`;
   };
@@ -1280,7 +1373,7 @@ function makeRaft(troupe,L){
     if(st.done||st.sailing)return;
     if(st.sel!=null&&st.sel!==id&&seatOf(id)>=0){st.onDrop(st.sel,'seat-'+seatOf(id));return;}
     st.sel=st.sel===id?null:id;SFX.pop();
-    if(st.sel!=null){st.say=seatOf(id)>=0?'Tryck på en annan plats för att flytta den, eller på stranden för att ta av den.':st.tapSay;st.mood='';}
+    if(st.sel!=null){st.say=seatOf(id)>=0?tr('Tryck på en annan plats för att flytta den, eller på stranden för att ta av den.','Tap another seat to move it, or the shore to take it off.'):st.tapSay;st.mood='';}
     st.render();
   };
   st.onDrop=(id,zone)=>{
@@ -1294,25 +1387,25 @@ function makeRaft(troupe,L){
       st.res=null;SFX.pop();
     }else if(zone==='shore'&&from>=0){st.seats[from]=null;st.res=null;SFX.pop();}
     const left=st.seats.filter(x=>x==null).length;
-    st.say=left?`Fortsätt! ${pl(left,'plats','platser')} kvar att fylla.`:'Flotten är full. Följer alla grannar regeln? Tryck på Segla!';st.mood='';
+    st.say=left?tr(`Fortsätt! ${SEATS(left)} kvar att fylla.`,`Keep going! ${SEATS(left)} left to fill.`):tr('Flotten är full. Följer alla grannar regeln? Tryck på Segla!','The raft is full. Do all neighbours follow the rule? Tap Sail!');st.mood='';
     st.render();
   };
   st.acts.clear=()=>{st.seats.fill(null);st.res=null;st.sel=null;st.render();};
   st.acts.sail=()=>{
     if(st.sailing||st.done)return;
     const empty=st.seats.filter(x=>x==null).length;
-    if(empty){st.say=`Fyll alla ${st.k} platser först. ${pl(empty,'plats','platser')} är fortfarande ${empty===1?'tom':'tomma'}.`;st.mood='bad';SFX.bad();st.render();return;}
+    if(empty){st.say=tr(`Fyll alla ${st.k} platser först. ${SEATS(empty)} är fortfarande ${empty===1?'tom':'tomma'}.`,`Fill all ${st.k} seats first. ${SEATS(empty)} ${empty===1?'is':'are'} still empty.`);st.mood='bad';SFX.bad();st.render();return;}
     const ps=pairs();
     st.res=ps.map(([i,j])=>st.rule.test(byId(st.seats[i]),byId(st.seats[j]))?'ok':'bad');
     const bad=st.res.filter(x=>x==='bad').length;
-    if(bad){st.strike(`${bad===1?'Ett grannpar bryter':bad+' grannpar bryter'} mot regeln. Leta efter de röda markeringarna.`);st.render();return;}
+    if(bad){st.strike(tr(`${bad===1?'Ett grannpar bryter':bad+' grannpar bryter'} mot regeln. Leta efter de röda markeringarna.`,`${bad===1?'One pair of neighbours breaks':bad+' pairs of neighbours break'} the rule. Look for the red marks.`));st.render();return;}
     const riders=st.seats.map(byId);
-    st.sailing=true;SFX.ok();st.say=`${pick(PRAISE)} Alla grannpar följer regeln. Iväg de seglar!`;st.mood='good';st.render();
+    st.sailing=true;SFX.ok();st.say=`${pick(PRAISE)} ${tr('Alla grannpar följer regeln. Iväg de seglar!','Every pair of neighbours follows the rule. Off they sail!')}`;st.mood='good';st.render();
     setTimeout(()=>{
       st.sailing=false;
       st.waiting=st.waiting.filter(c=>!riders.includes(c));st.across.push(...riders);st.fx={pop:riders.map(c=>c.id)};
-      if(!st.waiting.length){st.say='Alla tog sig över sjön!';st.win();}
-      else{st.newTrip();st.say=st.k===1?'Ingen av de som är kvar kan sitta bredvid varandra enligt regeln, så en numling åker ensam. Sätt en numling på flotten!':`Flotten är tillbaka med ${pl(st.k,'plats','platser')}. Samma regel!`;st.mood='';}
+      if(!st.waiting.length){st.say=tr('Alla tog sig över sjön!','Everyone made it across the lake!');st.win();}
+      else{st.newTrip();st.say=st.k===1?tr('Ingen av de som är kvar kan sitta bredvid varandra enligt regeln, så en numling åker ensam. Sätt en numling på flotten!','None of those left can sit next to each other under the rule, so one numling goes alone. Put a numling on the raft!'):tr(`Flotten är tillbaka med ${SEATS(st.k)}. Samma regel!`,`The raft is back with ${SEATS(st.k)}. Same rule!`);st.mood='';}
       st.render();
     },reduceMotion()?200:1200);
   };
@@ -1330,8 +1423,10 @@ function owlSVG(mood){
 }
 function lockLegend(st){
   return st.mode==='color'
-    ?`<div class="legend-s"><span><i class="sq" style="background:#5cc27f"></i> Grön: rätt siffra på rätt plats.</span><span><i class="sq" style="background:#ffc63f"></i> Gul: siffran finns i koden, men på en annan plats.</span><span><i class="sq" style="background:#c9cdd4"></i> Grå: siffran finns inte i koden${st.rep?' (eller inte så många gånger)':''}.</span></div>`
-    :`<div class="legend-s"><span><i class="peg full"></i> En siffra är rätt OCH på rätt plats.</span><span><i class="peg hollow"></i> En siffra finns i koden men på fel plats.</span><span>Ugglan säger inte vilka siffror prickarna gäller!</span></div>`;
+    ?tr(`<div class="legend-s"><span><i class="sq" style="background:#5cc27f"></i> Grön: rätt siffra på rätt plats.</span><span><i class="sq" style="background:#ffc63f"></i> Gul: siffran finns i koden, men på en annan plats.</span><span><i class="sq" style="background:#c9cdd4"></i> Grå: siffran finns inte i koden${st.rep?' (eller inte så många gånger)':''}.</span></div>`,
+      `<div class="legend-s"><span><i class="sq" style="background:#5cc27f"></i> Green: the right digit in the right place.</span><span><i class="sq" style="background:#ffc63f"></i> Yellow: the digit is in the code, but in another place.</span><span><i class="sq" style="background:#c9cdd4"></i> Grey: the digit is not in the code${st.rep?' (or not that many times)':''}.</span></div>`)
+    :tr(`<div class="legend-s"><span><i class="peg full"></i> En siffra är rätt OCH på rätt plats.</span><span><i class="peg hollow"></i> En siffra finns i koden men på fel plats.</span><span>Ugglan säger inte vilka siffror prickarna gäller!</span></div>`,
+      `<div class="legend-s"><span><i class="peg full"></i> A digit is right AND in the right place.</span><span><i class="peg hollow"></i> A digit is in the code but in the wrong place.</span><span>The owl does not say which digits the dots are about!</span></div>`);
 }
 function makeLock(troupe,L){
   const st=baseStation('lock',troupe,L);
@@ -1343,9 +1438,11 @@ function makeLock(troupe,L){
   Object.assign(st,cfg);
   st.code=st.rep?A(st.slots,()=>rnd(1,st.D)):shuffle(A(st.D,i=>i+1)).slice(0,st.slots);
   st.guesses=[];st.cur=[];
-  st.say=`Gissa ugglans kod med ${st.slots} siffror. Varje siffra är från 1 till ${st.D}.${st.rep?' En siffra kan finnas flera gånger.':' Ingen siffra används två gånger.'}`;
+  st.say=tr(`Gissa ugglans kod med ${st.slots} siffror. Varje siffra är från 1 till ${st.D}.${st.rep?' En siffra kan finnas flera gånger.':' Ingen siffra används två gånger.'}`,
+    `Guess the owl's code with ${st.slots} digits. Each digit is from 1 to ${st.D}.${st.rep?' A digit can appear more than once.':' No digit is used twice.'}`);
   const freeLeft=()=>Math.max(0,st.free-st.guesses.length);
-  st.heartsHTML=()=>`<div class="tries" aria-live="polite">Gratisgissningar kvar: ${freeLeft()}</div>`;
+  const GUESSES=n=>pl(n,tr('gissning','guess'),tr('gissningar','guesses'));
+  st.heartsHTML=()=>`<div class="tries" aria-live="polite">${tr('Gratisgissningar kvar','Free guesses left')}: ${freeLeft()}</div>`;
   const feedback=g=>{
     if(st.mode==='color'){
       const res=A(g.length,()=>'no'),left={};
@@ -1360,23 +1457,23 @@ function makeLock(troupe,L){
   st.html=()=>{
     const solved=st.done&&st.guesses.length&&st.guesses[st.guesses.length-1].win;
     const mood=solved?'happy':st.guesses.length>=st.free?'sleepy':'';
-    const owlLine=solved?'Ho-hurra! Du knäckte min kod!':st.guesses.length===0?'Hoho! Kan du knäcka min kod?':st.guesses.length>=st.free?'Gääsp … jag börjar bli sömnig. Skynda dig!':'Hmm, ho-ho. Fortsätt tänka!';
-    const rows=st.guesses.map((g,gi)=>`<div class="grow"><span class="gnum">${gi+1}.</span>${g.g.map((d,i)=>`<span class="cell ${st.mode==='color'?g.fb[i]:''}">${d}</span>`).join('')}${st.mode==='count'?`<span class="pegs" role="img" aria-label="${g.fb.exact} rätt plats, ${g.fb.near} fel plats">${A(g.fb.exact,()=>'<i class="peg full"></i>').join('')}${A(g.fb.near,()=>'<i class="peg hollow"></i>').join('')}${g.fb.exact+g.fb.near===0?'<span class="hint">inga</span>':''}</span>`:''}</div>`).join('');
+    const owlLine=solved?tr('Ho-hurra! Du knäckte min kod!','Hoo-hooray! You cracked my code!'):st.guesses.length===0?tr('Hoho! Kan du knäcka min kod?','Hoo-hoo! Can you crack my code?'):st.guesses.length>=st.free?tr('Gääsp … jag börjar bli sömnig. Skynda dig!','Yaaawn … I\'m getting sleepy. Hurry up!'):tr('Hmm, ho-ho. Fortsätt tänka!','Hmm, hoo-hoo. Keep thinking!');
+    const rows=st.guesses.map((g,gi)=>`<div class="grow"><span class="gnum">${gi+1}.</span>${g.g.map((d,i)=>`<span class="cell ${st.mode==='color'?g.fb[i]:''}">${d}</span>`).join('')}${st.mode==='count'?`<span class="pegs" role="img" aria-label="${tr(`${g.fb.exact} rätt plats, ${g.fb.near} fel plats`,`${g.fb.exact} right place, ${g.fb.near} wrong place`)}">${A(g.fb.exact,()=>'<i class="peg full"></i>').join('')}${A(g.fb.near,()=>'<i class="peg hollow"></i>').join('')}${g.fb.exact+g.fb.near===0?`<span class="hint">${tr('inga','none')}</span>`:''}</span>`:''}</div>`).join('');
     const cur=A(st.slots,i=>`<span class="cell cur ${st.cur[i]!=null?'filled':''}">${st.cur[i]??''}</span>`).join('');
     return `<div class="lockscene">
       <div class="owlbox">${owlSVG(mood)}<div class="owl-say">${owlLine}</div></div>
       <div class="lockpanel panel">
         ${lockLegend(st)}
-        <div class="history">${rows||'<span class="hint">Dina gissningar visas här.</span>'}</div>
-        ${st.done?'':`<div class="grow" aria-label="Din gissning">${cur}</div>
-        <div class="numpad wide" role="group" aria-label="Siffror">${A(st.D,i=>`<button class="key" data-act="dig" data-v="${i+1}">${i+1}</button>`).join('')}<button class="key" data-act="del" aria-label="Radera">⌫</button><button class="key ok" data-act="try" ${st.cur.length<st.slots?'disabled':''} aria-label="Testa koden">Testa</button></div>`}
+        <div class="history">${rows||`<span class="hint">${tr('Dina gissningar visas här.','Your guesses show up here.')}</span>`}</div>
+        ${st.done?'':`<div class="grow" aria-label="${tr('Din gissning','Your guess')}">${cur}</div>
+        <div class="numpad wide" role="group" aria-label="${tr('Siffror','Digits')}">${A(st.D,i=>`<button class="key" data-act="dig" data-v="${i+1}">${i+1}</button>`).join('')}<button class="key" data-act="del" aria-label="${tr('Radera','Delete')}">⌫</button><button class="key ok" data-act="try" ${st.cur.length<st.slots?'disabled':''} aria-label="${tr('Testa koden','Try the code')}">${tr('Testa','Try')}</button></div>`}
       </div>
     </div>
-    <div><div class="tray-label">Väntar vid dörren</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')||'<span class="hint">Ingen väntar längre.</span>'}</div></div>`;
+    <div><div class="tray-label">${tr('Väntar vid dörren','Waiting at the door')}</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')||`<span class="hint">${tr('Ingen väntar längre.','Nobody is waiting any more.')}</span>`}</div></div>`;
   };
   st.dig=d=>{
     if(st.done||st.cur.length>=st.slots)return;
-    if(!st.rep&&st.cur.includes(d)){st.say='Ingen siffra används två gånger i den här koden. Välj en annan.';st.mood='bad';st.render();return;}
+    if(!st.rep&&st.cur.includes(d)){st.say=tr('Ingen siffra används två gånger i den här koden. Välj en annan.','No digit is used twice in this code. Pick another one.');st.mood='bad';st.render();return;}
     st.cur.push(d);SFX.key();st.render();
   };
   st.del=()=>{if(st.done)return;st.cur.pop();SFX.key();st.render();};
@@ -1387,15 +1484,15 @@ function makeLock(troupe,L){
     st.guesses.push({g,fb,win});
     if(win){
       st.across.push(...st.waiting);st.waiting=[];SFX.win();
-      st.say=`${pick(PRAISE)} Dörren knarrar upp efter ${pl(st.guesses.length,'gissning','gissningar')}. Alla går igenom!`;st.mood='good';
+      st.say=`${pick(PRAISE)} ${tr(`Dörren knarrar upp efter ${GUESSES(st.guesses.length)}. Alla går igenom!`,`The door creaks open after ${GUESSES(st.guesses.length)}. Everyone goes through!`)}`;st.mood='good';
       st.win();
     }else if(st.guesses.length>st.free){
       const c=st.waiting.pop();st.back.push(c);SFX.bad();
-      if(!st.waiting.length){st.say='Ugglan somnade, och den sista numlingen gick tillbaka till lägret.';st.mood='bad';st.done=true;setTimeout(()=>finishStation(st),1300);}
-      else{st.say=`Ugglan gäspar, och en numling går tillbaka till lägret för att vila. ${pl(st.waiting.length,'numling','numlingar')} väntar fortfarande.`;st.mood='bad';}
+      if(!st.waiting.length){st.say=tr('Ugglan somnade, och den sista numlingen gick tillbaka till lägret.','The owl fell asleep, and the last numling went back to camp.');st.mood='bad';st.done=true;setTimeout(()=>finishStation(st),1300);}
+      else{st.say=tr(`Ugglan gäspar, och en numling går tillbaka till lägret för att vila. ${NUMLINGS(st.waiting.length)} väntar fortfarande.`,`The owl yawns, and a numling goes back to camp to rest. ${NUMLINGS(st.waiting.length)} ${st.waiting.length===1?'is':'are'} still waiting.`);st.mood='bad';}
     }else{
       SFX.pop();
-      st.say=st.guesses.length===st.free?'Det var din sista gratisgissning. Tänk noga innan nästa!':pick(['Använd ledtrådarna: vilka siffror kan du stryka?','Varje ledtråd säger något. Vad vet du säkert?','Prova att bara byta en eller två siffror för att testa en idé.']);st.mood='';
+      st.say=st.guesses.length===st.free?tr('Det var din sista gratisgissning. Tänk noga innan nästa!','That was your last free guess. Think carefully before the next one!'):pick(tr(['Använd ledtrådarna: vilka siffror kan du stryka?','Varje ledtråd säger något. Vad vet du säkert?','Prova att bara byta en eller två siffror för att testa en idé.'],['Use the clues: which digits can you cross out?','Every clue tells you something. What do you know for sure?','Try changing just one or two digits to test an idea.']));st.mood='';
     }
     st.render();
   };
@@ -1403,7 +1500,7 @@ function makeLock(troupe,L){
   st.acts.del=()=>st.del();
   st.acts.try=()=>st.tryIt();
   st.onKey=k=>{if(/^[1-9]$/.test(k)&&+k<=st.D){st.dig(+k);return true;}if(k==='Backspace'){st.del();return true;}if(k==='Enter'){st.tryIt();return true;}return false;};
-  st.reveal=()=>`<p><b>Koden var:</b> ${st.code.join(' ')}</p><p>Du använde ${pl(st.guesses.length,'gissning','gissningar')}.</p>`;
+  st.reveal=()=>`<p><b>${tr('Koden var:','The code was:')}</b> ${st.code.join(' ')}</p><p>${tr('Du använde','You used')} ${GUESSES(st.guesses.length)}.</p>`;
   return st;
 }
 
@@ -1419,22 +1516,22 @@ function makeMachine(troupe,L){
   st.table=[];st.input='';st.typed=0;
   const ex=Math.min(L<=2?2:3,Math.max(0,troupe.length-1));
   for(let i=0;i<ex;i++){const c=st.waiting.shift();st.table.push({c,in:c.n,out:st.rule.f(c.n)});st.across.push(c);}
-  st.say=ex?`Maskinen visar hur den fungerar med de ${ex} första numlingarna. Vad kommer ut för nästa?`:'Vad kommer ut ur maskinen?';
+  st.say=ex?tr(`Maskinen visar hur den fungerar med de ${ex} första numlingarna. Vad kommer ut för nästa?`,`The machine shows how it works with the first ${ex} numlings. What comes out for the next one?`):tr('Vad kommer ut ur maskinen?','What comes out of the machine?');
   st.html=()=>{
     const cur=st.waiting[0];
     const keys=[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'];
     return `<div class="factory">
-      <div><div class="tray-label">Väntar</div><div class="tray">${st.waiting.map((c,i)=>crHTML(c,{sm:1,cls:i===0?'bob':''})).join('')||'<span class="hint">Alla har gått igenom.</span>'}</div></div>
+      <div><div class="tray-label">${tr('Väntar','Waiting')}</div><div class="tray">${st.waiting.map((c,i)=>crHTML(c,{sm:1,cls:i===0?'bob':''})).join('')||`<span class="hint">${tr('Alla har gått igenom.','Everyone has gone through.')}</span>`}</div></div>
       <div class="mach">${MACHINE_SVG}
         ${cur?`<div class="mdisp ${st.fx.wob?'shake':''}" aria-live="polite"><span>${cur.n}</span><span class="arrow">→</span><span class="out">${st.input||'?'}</span></div>`:''}
       </div>
-      <div><div class="tray-label">Har gått igenom</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop===c.id?'pop':''})).join('')}</div></div>
+      <div><div class="tray-label">${tr('Har gått igenom','Gone through')}</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop===c.id?'pop':''})).join('')}</div></div>
     </div>
     <div class="padrow">
-      ${cur&&!st.done?`<div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?'Radera':k==='✓'?'Kontrollera svaret':k}">${k}</button>`).join('')}</div>`:''}
+      ${cur&&!st.done?`<div class="numpad" role="group" aria-label="${tr('Sifferknappar','Number keys')}">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?tr('Radera','Delete'):k==='✓'?tr('Kontrollera svaret','Check the answer'):k}">${k}</button>`).join('')}</div>`:''}
       <div class="side">
-        <div class="ftable" role="table" aria-label="Det maskinen har gjort"><span class="h">In</span><span></span><span class="h">Ut</span>${st.table.map(r=>`<span>${r.in}</span><span class="ar">→</span><span>${r.out}</span>`).join('')}</div>
-        ${cur&&!st.done?`<button class="btn go" data-act="guess" ${st.typed<1||st.waiting.length<2?'disabled':''}>Jag vet regeln!</button>${st.typed<1?'<p class="hint">Räkna rätt på en numling först, sedan kan du gissa regeln.</p>':''}`:''}
+        <div class="ftable" role="table" aria-label="${tr('Det maskinen har gjort','What the machine has done')}"><span class="h">In</span><span></span><span class="h">${tr('Ut','Out')}</span>${st.table.map(r=>`<span>${r.in}</span><span class="ar">→</span><span>${r.out}</span>`).join('')}</div>
+        ${cur&&!st.done?`<button class="btn go" data-act="guess" ${st.typed<1||st.waiting.length<2?'disabled':''}>${tr('Jag vet regeln!','I know the rule!')}</button>${st.typed<1?`<p class="hint">${tr('Räkna rätt på en numling först, sedan kan du gissa regeln.','Get one numling right first, then you can guess the rule.')}</p>`:''}`:''}
       </div>
     </div>`;
   };
@@ -1450,11 +1547,11 @@ function makeMachine(troupe,L){
     st.input='';
     if(v===want){
       st.waiting.shift();st.table.push({c,in:c.n,out:want});st.across.push(c);st.typed++;
-      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} ${c.n} blir ${want}.`;st.mood='good';
-      if(!st.waiting.length){st.say='Alla har gått genom Talmaskinen!';st.win();}
+      SFX.ok();st.fx={pop:c.id};st.say=`${pick(PRAISE)} ${c.n} ${tr('blir','becomes')} ${want}.`;st.mood='good';
+      if(!st.waiting.length){st.say=tr('Alla har gått genom Talmaskinen!','Everyone has gone through the Number Machine!');st.win();}
     }else{
       st.fx={wob:1};
-      st.strike(`${v} stämmer inte. Titta i tabellen: vad händer med talen i maskinen?`);
+      st.strike(tr(`${v} stämmer inte. Titta i tabellen: vad händer med talen i maskinen?`,`${v} is not right. Look at the table: what happens to the numbers in the machine?`));
     }
     st.render();
   };
@@ -1465,13 +1562,13 @@ function makeMachine(troupe,L){
       if(st.done)return;
       if(r===st.rule){
         st.waiting.forEach(c=>{st.table.push({c,in:c.n,out:st.rule.f(c.n)});st.across.push(c);});
-        st.waiting=[];st.cracked=true;SFX.ok();st.say='Du knäckte maskinen! Alla som var kvar går igenom.';st.mood='good';st.render();st.win();
-      }else{st.strike('Inte den regeln. Kolla den mot talen i tabellen.');st.render();}
+        st.waiting=[];st.cracked=true;SFX.ok();st.say=tr('Du knäckte maskinen! Alla som var kvar går igenom.','You cracked the machine! Everyone left goes through.');st.mood='good';st.render();st.win();
+      }else{st.strike(tr('Inte den regeln. Kolla den mot talen i tabellen.','Not that rule. Check it against the numbers in the table.'));st.render();}
     });
-    modal(`<h3>Vad gör Talmaskinen?</h3><p>Kolla varje rad i tabellen. Bara en regel passar alla.</p><div class="opts">${opts.map((r,i)=>`<button class="btn" data-m="o${i}">${cap(r.txt)}</button>`).join('')}</div><button class="btn sm" data-m="close">Inte än</button>`,h);
+    modal(`<h3>${tr('Vad gör Talmaskinen?','What does the Number Machine do?')}</h3><p>${tr('Kolla varje rad i tabellen. Bara en regel passar alla.','Check every row in the table. Only one rule fits them all.')}</p><div class="opts">${opts.map((r,i)=>`<button class="btn" data-m="o${i}">${cap(r.txt)}</button>`).join('')}</div><button class="btn sm" data-m="close">${tr('Inte än','Not yet')}</button>`,h);
   };
   st.onKey=k=>{if(/^[0-9]$/.test(k)){st.press(+k);return true;}if(k==='Backspace'){st.press('⌫');return true;}if(k==='Enter'){st.press('✓');return true;}return false;};
-  st.reveal=()=>`<p><b>Maskinens regel:</b> ${cap(st.rule.txt)}</p><p>${st.rule.expl}</p>${st.cracked?'<p><b>Du listade ut regeln. Snyggt!</b></p>':''}`;
+  st.reveal=()=>`<p><b>${tr('Maskinens regel:','The machine\'s rule:')}</b> ${cap(st.rule.txt)}</p><p>${st.rule.expl}</p>${st.cracked?`<p><b>${tr('Du listade ut regeln. Snyggt!','You worked out the rule. Nice!')}</b></p>`:''}`;
   return st;
 }
 
@@ -1496,8 +1593,9 @@ function makeGarden(troupe,L){
     st.diagT=sp.diag?sum(A(sp.r,i=>sol[i*sp.c+i])):null;
   };
   st.newTrip();
-  st.say='Sätt numlingarna i landet så att varje rad och kolumn får rätt summa. Talen på stenarna räknas också.';
-  st.tapSay='Tryck nu på en ruta i landet.';
+  st.say=tr('Sätt numlingarna i landet så att varje rad och kolumn får rätt summa. Talen på stenarna räknas också.','Put the numlings in the patch so every row and column gets the right sum. The numbers on the stones count too.');
+  st.tapSay=tr('Tryck nu på en ruta i landet.','Now tap a square in the patch.');
+  const SQUARES=n=>pl(n,tr('ruta','square'),tr('rutor','squares'));
   const byId=id=>st.waiting.find(c=>c.id===id)||st.across.find(c=>c.id===id);
   const val=i=>{const x=st.cells[i];if(x.rock!=null)return x.rock;return x.id!=null?byId(x.id).n:0;};
   const filled=i=>st.cells[i].rock!=null||st.cells[i].id!=null;
@@ -1512,7 +1610,7 @@ function makeGarden(troupe,L){
   const sumBox=(ln,label)=>{
     const now=sum(ln.cells.map(val)),full=ln.cells.every(filled);
     const cls=st.res?(now===ln.t?'ok':'wrong'):now>ln.t?'over':full&&now===ln.t?'ok':'';
-    return `<div class="tsum ${cls}" aria-label="${label}: ska bli ${ln.t}, nu ${now}"><b>${label?label+' ':''}${ln.t}</b><small>nu ${now}</small></div>`;
+    return `<div class="tsum ${cls}" aria-label="${label}: ${tr('ska bli','should be')} ${ln.t}, ${tr('nu','now')} ${now}"><b>${label?label+' ':''}${ln.t}</b><small>${tr('nu','now')} ${now}</small></div>`;
   };
   st.html=()=>{
     const {r,c}=st.spec,ls=lines();
@@ -1520,8 +1618,8 @@ function makeGarden(troupe,L){
     for(let y=0;y<r;y++){
       for(let x=0;x<c;x++){
         const i=y*c+x,cell=st.cells[i];
-        if(cell.rock!=null)g+=`<div class="rock" aria-label="Sten med talet ${cell.rock}">${cell.rock}</div>`;
-        else{const cr=cell.id!=null?byId(cell.id):null;g+=`<div class="plot ${cr?'':'empty'}" data-drop="plot-${i}" tabindex="0" aria-label="Ruta ${i+1}${cr?': '+describe(cr):', tom'}">${cr?crHTML(cr,{dr:1,sel:st.sel===cr.id}):''}</div>`;}
+        if(cell.rock!=null)g+=`<div class="rock" aria-label="${tr('Sten med talet','Stone with the number')} ${cell.rock}">${cell.rock}</div>`;
+        else{const cr=cell.id!=null?byId(cell.id):null;g+=`<div class="plot ${cr?'':'empty'}" data-drop="plot-${i}" tabindex="0" aria-label="${tr('Ruta','Square')} ${i+1}${cr?': '+describe(cr):tr(', tom',', empty')}">${cr?crHTML(cr,{dr:1,sel:st.sel===cr.id}):''}</div>`;}
       }
       g+=sumBox(ls.find(l=>l.kind==='row'&&l.idx===y),'');
     }
@@ -1530,18 +1628,18 @@ function makeGarden(troupe,L){
     const loose=st.waiting.filter(cr=>cellOf(cr.id)<0);
     return `<div class="sidewrap"><div class="sidemain">
       <div class="garden"><div class="plots" style="--c:${c}">${g}</div></div>
-      <div class="actions"><button class="btn go big" data-act="plant" ${st.done?'disabled':''}>Plantera!</button>${st.cells.some(x=>x.id!=null)?'<button class="btn" data-act="clear">Töm landet</button>':''}</div>
+      <div class="actions"><button class="btn go big" data-act="plant" ${st.done?'disabled':''}>${tr('Plantera!','Plant!')}</button>${st.cells.some(x=>x.id!=null)?`<button class="btn" data-act="clear">${tr('Töm landet','Clear the patch')}</button>`:''}</div>
     </div>
     <div class="sidecol">
-      <div><div class="tray-label">Väntar</div><div class="tray" data-drop="tray">${loose.map(cr=>crHTML(cr,{dr:1,sel:st.sel===cr.id})).join('')||'<span class="hint">Alla står i landet.</span>'}</div></div>
-      <div><div class="tray-label">Klara</div><div class="tray">${st.across.map(cr=>crHTML(cr,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(cr.id)?'pop':''})).join('')}</div></div>
+      <div><div class="tray-label">${tr('Väntar','Waiting')}</div><div class="tray" data-drop="tray">${loose.map(cr=>crHTML(cr,{dr:1,sel:st.sel===cr.id})).join('')||`<span class="hint">${tr('Alla står i landet.','Everyone is in the patch.')}</span>`}</div></div>
+      <div><div class="tray-label">${tr('Klara','Done')}</div><div class="tray">${st.across.map(cr=>crHTML(cr,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(cr.id)?'pop':''})).join('')}</div></div>
     </div></div>`;
   };
   st.onTap=id=>{
     if(st.done)return;
     if(st.sel!=null&&st.sel!==id&&cellOf(id)>=0){st.onDrop(st.sel,'plot-'+cellOf(id));return;}
     st.sel=st.sel===id?null:id;SFX.pop();
-    if(st.sel!=null){st.say=cellOf(id)>=0?'Tryck på en annan ruta för att flytta den, eller på Väntar för att ta bort den.':st.tapSay;st.mood='';}
+    if(st.sel!=null){st.say=cellOf(id)>=0?tr('Tryck på en annan ruta för att flytta den, eller på Väntar för att ta bort den.','Tap another square to move it, or Waiting to take it out.'):st.tapSay;st.mood='';}
     st.render();
   };
   st.onDrop=(id,zone)=>{
@@ -1554,20 +1652,20 @@ function makeGarden(troupe,L){
       st.res=null;SFX.pop();
     }else if(zone==='tray'&&from>=0){st.cells[from].id=null;st.res=null;SFX.pop();}
     const left=st.cells.filter(x=>x.rock==null&&x.id==null).length;
-    st.say=left?`Fortsätt! ${pl(left,'ruta','rutor')} kvar att fylla.`:'Alla rutor är fyllda. Stämmer summorna? Tryck på Plantera!';st.mood='';
+    st.say=left?tr(`Fortsätt! ${SQUARES(left)} kvar att fylla.`,`Keep going! ${SQUARES(left)} left to fill.`):tr('Alla rutor är fyllda. Stämmer summorna? Tryck på Plantera!','All squares are filled. Are the sums right? Tap Plant!');st.mood='';
     st.render();
   };
   st.acts.clear=()=>{st.cells.forEach(x=>{if(x.rock==null)x.id=null;});st.res=null;st.sel=null;st.render();};
   st.acts.plant=()=>{
     if(st.done)return;
     const empty=st.cells.filter(x=>x.rock==null&&x.id==null).length;
-    if(empty){st.say=`Fyll alla rutor först. ${pl(empty,'ruta','rutor')} är fortfarande ${empty===1?'tom':'tomma'}.`;st.mood='bad';SFX.bad();st.render();return;}
+    if(empty){st.say=tr(`Fyll alla rutor först. ${SQUARES(empty)} är fortfarande ${empty===1?'tom':'tomma'}.`,`Fill all the squares first. ${SQUARES(empty)} ${empty===1?'is':'are'} still empty.`);st.mood='bad';SFX.bad();st.render();return;}
     const wrong=lines().filter(l=>sum(l.cells.map(val))!==l.t).length;
-    if(wrong){st.res=true;st.strike(`${wrong===1?'En summa':wrong+' summor'} stämmer inte. Kolla de röda rutorna vid kanten.`);st.render();return;}
+    if(wrong){st.res=true;st.strike(tr(`${wrong===1?'En summa':wrong+' summor'} stämmer inte. Kolla de röda rutorna vid kanten.`,`${wrong===1?'One sum is':wrong+' sums are'} not right. Check the red boxes at the edge.`));st.render();return;}
     const movers=st.cells.filter(x=>x.id!=null).map(x=>byId(x.id));
     st.waiting=st.waiting.filter(cr=>!movers.includes(cr));st.across.push(...movers);st.fx={pop:movers.map(cr=>cr.id)};
-    SFX.ok();st.say=`${pick(PRAISE)} Alla summor stämmer och ${pl(movers.length,'numling','numlingar')} växer sig starka.`;st.mood='good';
-    if(!st.waiting.length){st.say='Hela truppen är klar i Trädgårdslandet!';st.win();}
+    SFX.ok();st.say=`${pick(PRAISE)} ${tr(`Alla summor stämmer och ${NUMLINGS(movers.length)} växer sig starka.`,`All the sums are right and ${NUMLINGS(movers.length)} grow strong.`)}`;st.mood='good';
+    if(!st.waiting.length){st.say=tr('Hela truppen är klar i Trädgårdslandet!','The whole troupe is done in the Garden Patch!');st.win();}
     else st.newTrip();
     st.render();
   };
@@ -1599,9 +1697,14 @@ function makeShare(troupe,L){
     st.group=st.waiting.slice(0,g);
   };
   st.newTrip();
-  st.say='Hjälp numlingarna att dela bären lika!';
-  const LAB={each:'Var och en får',left:'Över blir',total:'Bär i busken'};
+  st.say=tr('Hjälp numlingarna att dela bären lika!','Help the numlings share the berries equally!');
+  const LAB=tr({each:'Var och en får',left:'Över blir',total:'Bär i busken'},{each:'Each one gets',left:'Left over',total:'Berries in the bush'});
   const question=()=>{const {g,q,r,N,rev}=st.p;
+    if(LANG==='en'){
+      if(rev)return `${g} numlings shared the berries equally. Each one got ${q}, and ${r} were left over. How many berries were there in the bush?`;
+      if(st.boxes.length===2)return `${N} berries are to be shared equally between ${g} numlings. How many does each one get, and how many are left over?`;
+      return `${N} berries are to be shared equally between ${NUMLINGS(g)}. How many berries does each one get?`;
+    }
     if(rev)return `${g} numlingar delade lika på bären. Var och en fick ${q}, och ${r} blev över. Hur många bär fanns det i busken?`;
     if(st.boxes.length===2)return `${N} bär ska delas lika mellan ${g} numlingar. Hur många får var och en, och hur många blir över?`;
     return `${N} bär ska delas lika mellan ${pl(g,'numling','numlingar')}. Hur många bär får var och en?`;};
@@ -1609,14 +1712,14 @@ function makeShare(troupe,L){
     const keys=[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'];
     const gids=new Set(st.group.map(c=>c.id));
     return `<div class="bushscene">
-      <div><div class="tray-label">Väntar</div><div class="tray">${st.waiting.filter(c=>!gids.has(c.id)).map(c=>crHTML(c,{sm:1})).join('')||'<span class="hint">Alla är vid busken.</span>'}</div></div>
-      <div class="bush">${bushSVG(st.p.N,st.p.rev)}<div class="group" aria-label="Numlingarna som delar">${st.group.map(c=>crHTML(c,{sm:1,cls:'bob'})).join('')}</div></div>
-      <div><div class="tray-label">Mätta och glada</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+      <div><div class="tray-label">${tr('Väntar','Waiting')}</div><div class="tray">${st.waiting.filter(c=>!gids.has(c.id)).map(c=>crHTML(c,{sm:1})).join('')||`<span class="hint">${tr('Alla är vid busken.','Everyone is at the bush.')}</span>`}</div></div>
+      <div class="bush">${bushSVG(st.p.N,st.p.rev)}<div class="group" aria-label="${tr('Numlingarna som delar','The numlings who share')}">${st.group.map(c=>crHTML(c,{sm:1,cls:'bob'})).join('')}</div></div>
+      <div><div class="tray-label">${tr('Mätta och glada','Full and happy')}</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
     </div>
     <div class="padrow">
       <div class="qcol"><p class="question panel">${question()}</p>
       <div class="answers">${st.boxes.map(b=>`<button class="ans ${st.active===b?'on':''} ${st.fx.wob?'shake':''}" data-act="box" data-v="${b}" aria-pressed="${st.active===b}"><small>${LAB[b]}</small><b>${st.vals[b]??''}</b></button>`).join('')}</div></div>
-      ${st.done?'':`<div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?'Radera':k==='✓'?'Kontrollera svaret':k}">${k}</button>`).join('')}</div>`}
+      ${st.done?'':`<div class="numpad" role="group" aria-label="${tr('Sifferknappar','Number keys')}">${keys.map(k=>`<button class="key ${k==='✓'?'ok':''}" data-act="key" data-v="${k}" aria-label="${k==='⌫'?tr('Radera','Delete'):k==='✓'?tr('Kontrollera svaret','Check the answer'):k}">${k}</button>`).join('')}</div>`}
     </div>`;
   };
   st.press=k=>{
@@ -1635,22 +1738,22 @@ function makeShare(troupe,L){
     let ok,msg='';
     if(rev){
       const x=+st.vals.total;ok=x===N;
-      if(!ok)msg=`Tänk: ${g} numlingar fick ${q} var, det blir ${g} · ${q}. Glöm inte de ${r} som blev över.`;
+      if(!ok)msg=tr(`Tänk: ${g} numlingar fick ${q} var, det blir ${g} · ${q}. Glöm inte de ${r} som blev över.`,`Think: ${g} numlings got ${q} each, that makes ${g} · ${q}. Don't forget the ${r} left over.`);
     }else{
       const a=+st.vals.each,b=st.boxes.includes('left')?+st.vals.left:0;
       ok=a===q&&b===r;
       if(!ok){
-        if(g*a>N)msg=`För många! ${g} · ${a} = ${g*a}, men busken har bara ${N} bär.`;
-        else if(st.boxes.includes('left')&&b>=g)msg=`Om ${b} blir över kan alla få ett bär till!`;
-        else if(g*a+b!==N)msg=st.boxes.includes('left')?`${g} · ${a} + ${b} = ${g*a+b}, men busken har ${N} bär.`:`${g} · ${a} = ${g*a}. Det finns bär kvar att dela ut!`;
-        else msg='Det stämmer inte. Prova igen!';
+        if(g*a>N)msg=tr(`För många! ${g} · ${a} = ${g*a}, men busken har bara ${N} bär.`,`Too many! ${g} · ${a} = ${g*a}, but the bush only has ${N} berries.`);
+        else if(st.boxes.includes('left')&&b>=g)msg=tr(`Om ${b} blir över kan alla få ett bär till!`,`If ${b} are left over, everyone can get one more berry!`);
+        else if(g*a+b!==N)msg=st.boxes.includes('left')?tr(`${g} · ${a} + ${b} = ${g*a+b}, men busken har ${N} bär.`,`${g} · ${a} + ${b} = ${g*a+b}, but the bush has ${N} berries.`):tr(`${g} · ${a} = ${g*a}. Det finns bär kvar att dela ut!`,`${g} · ${a} = ${g*a}. There are berries left to hand out!`);
+        else msg=tr('Det stämmer inte. Prova igen!','That is not right. Try again!');
       }
     }
     if(ok){
       const movers=st.group.slice();
       st.waiting=st.waiting.filter(c=>!movers.includes(c));st.across.push(...movers);st.fx={pop:movers.map(c=>c.id)};
-      SFX.ok();st.say=`${pick(PRAISE)} ${N} delat med ${g} blir ${q}${r?`, och ${r} blir över`:''}. Mums!`;st.mood='good';
-      if(!st.waiting.length){st.say='Alla har ätit sig mätta vid Bärbusken!';st.win();}
+      SFX.ok();st.say=`${pick(PRAISE)} ${tr(`${N} delat med ${g} blir ${q}${r?`, och ${r} blir över`:''}. Mums!`,`${N} divided by ${g} is ${q}${r?`, and ${r} are left over`:''}. Yum!`)}`;st.mood='good';
+      if(!st.waiting.length){st.say=tr('Alla har ätit sig mätta vid Bärbusken!','Everyone has eaten their fill at the Berry Bush!');st.win();}
       else st.newTrip();
     }else{
       st.vals={};st.active=st.boxes[0];st.fx={wob:1};
@@ -1679,7 +1782,7 @@ function makePathStation(troupe,L){
     st.pz=makePath(st.L,start);st.choice=st.pz.rows.map(()=>null);st.solved=false;st.trail=null;
   };
   st.next();
-  st.say='Välj en sten på varje rad, nerifrån och upp, så att du når toppen med exakt rätt tal.';
+  st.say=tr('Välj en sten på varje rad, nerifrån och upp, så att du når toppen med exakt rätt tal.','Pick a stone on every row, from the bottom up, so you reach the top with exactly the right number.');
   const runVals=()=>{const v=[st.pz.start];for(let r=0;r<st.pz.rows.length;r++){const ci=st.choice[r];if(ci==null)break;v.push(st.pz.rows[r][ci].f(v[v.length-1]));}return v;};
   st.html=()=>{
     const R=st.pz.rows.length,rv=runVals(),showRun=st.L===1||st.solved;
@@ -1690,17 +1793,17 @@ function makePathStation(troupe,L){
     }
     const lead=st.waiting[0];
     return `<div class="sidewrap"><div class="sidemain"><div class="mountain">${MOUNTAIN_BG}
-      <div class="peak">${FLAG}<span>Toppen: ${st.pz.target}</span></div>
+      <div class="peak">${FLAG}<span>${tr('Toppen','Top')}: ${st.pz.target}</span></div>
       ${rows}
       <div class="base">${lead?crHTML(lead):''}<span>Start: ${st.pz.start}</span></div>
-      ${st.trail?`<div class="trail">Din stig: ${st.trail}</div>`:''}
+      ${st.trail?`<div class="trail">${tr('Din stig','Your path')}: ${st.trail}</div>`:''}
     </div>
-    <div class="actions">${st.solved?(st.waiting.length?'<button class="btn go big" data-act="next">Nästa stig</button>':''):`<button class="btn go big" data-act="climb" ${st.choice.some(x=>x==null)||st.done?'disabled':''}>Klättra!</button>`}</div>
-    ${!st.solved&&st.choice.some(x=>x==null)?'<p class="hint" style="text-align:center">Välj en sten på varje rad.</p>':''}
+    <div class="actions">${st.solved?(st.waiting.length?`<button class="btn go big" data-act="next">${tr('Nästa stig','Next path')}</button>`:''):`<button class="btn go big" data-act="climb" ${st.choice.some(x=>x==null)||st.done?'disabled':''}>${tr('Klättra!','Climb!')}</button>`}</div>
+    ${!st.solved&&st.choice.some(x=>x==null)?`<p class="hint" style="text-align:center">${tr('Välj en sten på varje rad.','Pick a stone on every row.')}</p>`:''}
     </div>
     <div class="sidecol">
-      <div><div class="tray-label">Väntar vid foten</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')||'<span class="hint">Alla är uppe.</span>'}</div></div>
-      <div><div class="tray-label">Uppe på toppen</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
+      <div><div class="tray-label">${tr('Väntar vid foten','Waiting at the foot')}</div><div class="tray">${st.waiting.map(c=>crHTML(c,{sm:1})).join('')||`<span class="hint">${tr('Alla är uppe.','Everyone is up.')}</span>`}</div></div>
+      <div><div class="tray-label">${tr('Uppe på toppen','Up at the top')}</div><div class="tray">${st.across.map(c=>crHTML(c,{sm:1,cls:st.fx.pop&&st.fx.pop.includes(c.id)?'pop':''})).join('')}</div></div>
     </div></div>`;
   };
   st.acts.op=b=>{if(st.done||st.solved)return;const [r,i]=b.dataset.v.split('-').map(Number);st.choice[r]=st.choice[r]===i?null:i;st.trail=null;SFX.pop();st.render();};
@@ -1709,8 +1812,8 @@ function makePathStation(troupe,L){
     const vals=[st.pz.start];let bad=null;
     for(let r=0;r<st.pz.rows.length;r++){
       const o=st.pz.rows[r][st.choice[r]],prev=vals[vals.length-1],nv=o.f(prev);
-      if(Number.isNaN(nv)){bad=`${prev} kan inte delas jämnt med ${o.t.replace('/ ','')}.`;break;}
-      if(nv<0){bad=`${prev} ${o.t} blir mindre än noll. Så långt ner går inte stigen!`;break;}
+      if(Number.isNaN(nv)){bad=tr(`${prev} kan inte delas jämnt med ${o.t.replace('/ ','')}.`,`${prev} cannot be divided evenly by ${o.t.replace('/ ','')}.`);break;}
+      if(nv<0){bad=tr(`${prev} ${o.t} blir mindre än noll. Så långt ner går inte stigen!`,`${prev} ${o.t} is less than zero. The path does not go that far down!`);break;}
       vals.push(nv);
     }
     st.trail=vals.join(' → ');
@@ -1720,12 +1823,12 @@ function makePathStation(troupe,L){
       st.solved=true;
       const movers=st.waiting.slice(0,st.per);
       st.waiting=st.waiting.slice(movers.length);st.across.push(...movers);st.fx={pop:movers.map(c=>c.id)};
-      SFX.ok();st.say=`${pick(PRAISE)} Exakt ${end}! ${pl(movers.length,'numling','numlingar')} klättrar upp till toppen.`;st.mood='good';
-      if(!st.waiting.length){st.say='Alla har klättrat upp på Bergsstigen!';st.win();}
-    }else st.strike(`Stigen slutade på ${end}, men toppen är ${st.pz.target}.`);
+      SFX.ok();st.say=`${pick(PRAISE)} ${tr(`Exakt ${end}! ${NUMLINGS(movers.length)} klättrar upp till toppen.`,`Exactly ${end}! ${NUMLINGS(movers.length)} climb up to the top.`)}`;st.mood='good';
+      if(!st.waiting.length){st.say=tr('Alla har klättrat upp på Bergsstigen!','Everyone has climbed up the Mountain Path!');st.win();}
+    }else st.strike(tr(`Stigen slutade på ${end}, men toppen är ${st.pz.target}.`,`The path ended at ${end}, but the top is ${st.pz.target}.`));
     st.render();
   };
-  st.acts.next=()=>{st.next();st.say='En ny stig! Vilka stenar leder till toppen?';st.mood='';st.render();};
+  st.acts.next=()=>{st.next();st.say=tr('En ny stig! Vilka stenar leder till toppen?','A new path! Which stones lead to the top?');st.mood='';st.render();};
   return st;
 }
 
@@ -1752,26 +1855,27 @@ function showTitle(){
   CUR=null;closeModal();
   const parade=[2,3,5,7,11,13,17].map((n,i)=>({id:'p'+i,shape:SHAPES[i%4],color:COLOR_NAMES[(i*3+1)%4],eyes:(i%3)+1,n}));
   go(`<main class="title">
-    <h1 class="logo" aria-label="Numlingarnas resa"><span>Numlingarnas</span><span>resa</span></h1>
-    <p class="tag">Led en trupp numlingar genom kluriga mattebanor till Numeria, deras nya hem.</p>
+    <h1 class="logo" aria-label="${tr('Numlingarnas resa','The Numlings\' Journey')}"><span>${tr('Numlingarnas','The Numlings\'')}</span><span>${tr('resa','Journey')}</span></h1>
+    <p class="tag">${tr('Led en trupp numlingar genom kluriga mattebanor till Numeria, deras nya hem.','Lead a troupe of numlings through tricky maths stops to Numeria, their new home.')}</p>
     <div class="parade">${parade.map((c,i)=>crHTML(c,{cls:'bob',style:`animation-delay:${(i*.18).toFixed(2)}s`})).join('')}</div>
     <div class="title-btns">
-      ${S.journey?'<button class="btn go big" data-act="cont">Fortsätt resan</button>':'<button class="btn go big" data-act="new">Starta en resa</button>'}
-      <div class="row" style="justify-content:center"><button class="btn" data-act="home">Besök Numeria (${S.home.length})</button><button class="btn" data-act="settings">Inställningar</button></div>
+      ${S.journey?`<button class="btn go big" data-act="cont">${tr('Fortsätt resan','Continue the journey')}</button>`:`<button class="btn go big" data-act="new">${tr('Starta en resa','Start a journey')}</button>`}
+      <div class="row" style="justify-content:center"><button class="btn" data-act="home">${tr('Besök Numeria','Visit Numeria')} (${S.home.length})</button><button class="btn" data-act="settings">${tr('Inställningar','Settings')}</button></div>
     </div>
-    ${S.camp.length&&!S.journey?`<p class="note">${pl(S.camp.length,'numling','numlingar')} väntar i lägret.</p>`:''}
+    ${S.camp.length&&!S.journey?`<p class="note">${NUMLINGS(S.camp.length)} ${tr('väntar i lägret.',S.camp.length===1?'is waiting at camp.':'are waiting at camp.')}</p>`:''}
   </main>`,{new:()=>S.chosen?showBuilder():showChallenge(),cont:showMap,home:showHome,settings:showSettings});
   document.body.classList.add('at-title');
 }
 
 function showChallenge(){
   CUR=null;
-  const opts=[[1,'Jämnt och udda, större och mindre, addera små tal.'],[2,'Delbarhet, dubblering, hemliga regler, större summor.'],[3,'Primtal och kvadrattal, OCH/ELLER-regler, längre koder.'],[4,'Kubtal, delare, tre cirklar i dammen, rund flotte.']];
+  const opts=tr([[1,'Jämnt och udda, större och mindre, addera små tal.'],[2,'Delbarhet, dubblering, hemliga regler, större summor.'],[3,'Primtal och kvadrattal, OCH/ELLER-regler, längre koder.'],[4,'Kubtal, delare, tre cirklar i dammen, rund flotte.']],
+    [[1,'Even and odd, bigger and smaller, adding small numbers.'],[2,'Divisibility, doubling, secret rules, bigger sums.'],[3,'Primes and square numbers, AND/OR rules, longer codes.'],[4,'Cube numbers, factors, three circles in the pond, a round raft.']]);
   go(`<main class="panel page">
-    <h2>Hur svåra ska gåtorna vara från början?</h2>
-    <p>Varje gång hela truppen klarar en bana föreslås den banan på en högre nivå nästa gång. Före varje bana kan du också välja en lättare nivå. Du kan ändra detta i Inställningar.</p>
+    <h2>${tr('Hur svåra ska gåtorna vara från början?','How hard should the puzzles be to start with?')}</h2>
+    <p>${tr('Varje gång hela truppen klarar en bana föreslås den banan på en högre nivå nästa gång. Före varje bana kan du också välja en lättare nivå. Du kan ändra detta i Inställningar.','Every time the whole troupe clears a stop, that stop is suggested at a higher level next time. Before every stop you can also pick an easier level. You can change this in Settings.')}</p>
     <div class="choices">${opts.map(o=>`<button class="choice" data-act="lv" data-v="${o[0]}">${stars(o[0])}<b>${LEVEL_NAMES[o[0]]}</b><span>${o[1]}</span></button>`).join('')}</div>
-    <p class="note">Ligger du före i matte? Prova Klurig eller Listig.</p>
+    <p class="note">${tr('Ligger du före i matte? Prova Klurig eller Listig.','Ahead in maths? Try Tricky or Clever.')}</p>
   </main>`,{lv:b=>{const l=+b.dataset.v;ALL.forEach(k=>S.levels[k]=l);S.startLevel=l;S.chosen=true;save();showBuilder();}});
 }
 
@@ -1780,26 +1884,26 @@ function showBuilder(){CUR=null;if(!B)B={shape:'circle',color:'blue',eyes:2,n:7,
 function renderBuilder(scroll=false){
   const prev={id:'preview',shape:B.shape,color:B.color,eyes:B.eyes,n:B.n};
   const campIds=new Set(S.camp.map(c=>c.id)),full=B.draft.length>=10;
-  const slots=A(10,i=>{const c=B.draft[i];if(!c)return '<div class="slot" aria-hidden="true"></div>';return `<button class="slot" data-act="rm" data-v="${c.id}" aria-label="Ta bort ${describe(c)}">${crHTML(c)}${campIds.has(c.id)?`<span class="tent" title="Från lägret">${ICONS.tent}</span>`:''}</button>`;}).join('');
+  const slots=A(10,i=>{const c=B.draft[i];if(!c)return '<div class="slot" aria-hidden="true"></div>';return `<button class="slot" data-act="rm" data-v="${c.id}" aria-label="${tr('Ta bort','Remove')} ${describe(c)}">${crHTML(c)}${campIds.has(c.id)?`<span class="tent" title="${tr('Från lägret','From camp')}">${ICONS.tent}</span>`:''}</button>`;}).join('');
   go(`<main class="station">
-    <header class="top"><button class="btn sm" data-act="back">Tillbaka</button><h2>Bygg din trupp</h2></header>
+    <header class="top"><button class="btn sm" data-act="back">${tr('Tillbaka','Back')}</button><h2>${tr('Bygg din trupp','Build your troupe')}</h2></header>
     <div class="build-grid">
-      <section class="panel maker" aria-label="Gör en numling">
+      <section class="panel maker" aria-label="${tr('Gör en numling','Make a numling')}">
         <div class="preview">${crHTML(prev,{cls:'big bob'})}</div>
-        <div class="prow"><span class="plabel">Form</span>${SHAPES.map(s=>`<button class="chip ${B.shape===s?'on':''}" data-act="shape" data-v="${s}" aria-pressed="${B.shape===s}" aria-label="${SHAPE_SV[s]}" title="${SHAPE_SV[s]}">${shapeIcon(s)}</button>`).join('')}</div>
-        <div class="prow"><span class="plabel">Färg</span>${COLOR_NAMES.map(c=>`<button class="chip swatch ${B.color===c?'on':''}" data-act="color" data-v="${c}" aria-pressed="${B.color===c}" aria-label="${COLOR_SV[c]}" title="${COLOR_SV[c]}" style="--sw:${COLORS[c].f}"></button>`).join('')}</div>
-        <div class="prow"><span class="plabel">Ögon</span>${[1,2,3].map(e=>`<button class="chip ${B.eyes===e?'on':''}" data-act="eyes" data-v="${e}" aria-pressed="${B.eyes===e}" aria-label="${pl(e,'öga','ögon')}">${eyeIcon(e)}</button>`).join('')}</div>
-        <div><span class="plabel">Tal</span><div class="numgrid" role="group" aria-label="Tal">${A(30,i=>`<button class="num ${B.n===i+1?'on':''}" data-act="num" data-v="${i+1}" aria-pressed="${B.n===i+1}">${i+1}</button>`).join('')}</div></div>
-        <div class="maker-btns"><button class="btn" data-act="dice">Överraska mig</button><button class="btn go" data-act="add" ${full?'disabled':''}>Lägg till i truppen</button></div>
+        <div class="prow"><span class="plabel">${tr('Form','Shape')}</span>${SHAPES.map(s=>`<button class="chip ${B.shape===s?'on':''}" data-act="shape" data-v="${s}" aria-pressed="${B.shape===s}" aria-label="${SHAPE_SV[s]}" title="${SHAPE_SV[s]}">${shapeIcon(s)}</button>`).join('')}</div>
+        <div class="prow"><span class="plabel">${tr('Färg','Colour')}</span>${COLOR_NAMES.map(c=>`<button class="chip swatch ${B.color===c?'on':''}" data-act="color" data-v="${c}" aria-pressed="${B.color===c}" aria-label="${COLOR_SV[c]}" title="${COLOR_SV[c]}" style="--sw:${COLORS[c].f}"></button>`).join('')}</div>
+        <div class="prow"><span class="plabel">${tr('Ögon','Eyes')}</span>${[1,2,3].map(e=>`<button class="chip ${B.eyes===e?'on':''}" data-act="eyes" data-v="${e}" aria-pressed="${B.eyes===e}" aria-label="${EYES(e)}">${eyeIcon(e)}</button>`).join('')}</div>
+        <div><span class="plabel">${tr('Tal','Number')}</span><div class="numgrid" role="group" aria-label="${tr('Tal','Number')}">${A(30,i=>`<button class="num ${B.n===i+1?'on':''}" data-act="num" data-v="${i+1}" aria-pressed="${B.n===i+1}">${i+1}</button>`).join('')}</div></div>
+        <div class="maker-btns"><button class="btn" data-act="dice">${tr('Överraska mig','Surprise me')}</button><button class="btn go" data-act="add" ${full?'disabled':''}>${tr('Lägg till i truppen','Add to the troupe')}</button></div>
         <p class="bmsg" role="status">${B.msg}</p>
       </section>
-      <section class="panel troupe" aria-label="Din trupp">
-        <h3>Din trupp <span class="count">${B.draft.length} / 10</span></h3>
-        <p class="hint">Tryck på en numling för att ta bort den.${B.draft.some(c=>campIds.has(c.id))?' Numlingar med tält är tillbaka från lägret för ett nytt försök.':''}</p>
+      <section class="panel troupe" aria-label="${tr('Din trupp','Your troupe')}">
+        <h3>${tr('Din trupp','Your troupe')} <span class="count">${B.draft.length} / 10</span></h3>
+        <p class="hint">${tr('Tryck på en numling för att ta bort den.','Tap a numling to remove it.')}${B.draft.some(c=>campIds.has(c.id))?tr(' Numlingar med tält är tillbaka från lägret för ett nytt försök.',' Numlings with a tent are back from camp for another try.'):''}</p>
         <div class="slots">${slots}</div>
-        <div class="troupe-btns"><button class="btn" data-act="fill" ${full?'disabled':''}>Fyll med slumpade numlingar</button></div>
-        <div class="troupe-btns"><button class="btn go big" data-act="start" ${B.draft.length<4?'disabled':''}>Starta resan</button></div>
-        ${B.draft.length<4?'<p class="hint" style="text-align:center">Du behöver minst 4 numlingar.</p>':''}
+        <div class="troupe-btns"><button class="btn" data-act="fill" ${full?'disabled':''}>${tr('Fyll med slumpade numlingar','Fill with random numlings')}</button></div>
+        <div class="troupe-btns"><button class="btn go big" data-act="start" ${B.draft.length<4?'disabled':''}>${tr('Starta resan','Start the journey')}</button></div>
+        ${B.draft.length<4?`<p class="hint" style="text-align:center">${tr('Du behöver minst 4 numlingar.','You need at least 4 numlings.')}</p>`:''}
       </section>
     </div>
   </main>`,{
@@ -1812,7 +1916,7 @@ function renderBuilder(scroll=false){
     add:()=>{
       if(B.draft.length>=10)return;
       const c={shape:B.shape,color:B.color,eyes:B.eyes,n:B.n};
-      if(B.draft.some(d=>sameLook(d,c))){B.msg='Du har redan en numling som ser ut exakt så. Ändra något!';SFX.bad();renderBuilder();return;}
+      if(B.draft.some(d=>sameLook(d,c))){B.msg=tr('Du har redan en numling som ser ut exakt så. Ändra något!','You already have a numling that looks exactly like that. Change something!');SFX.bad();renderBuilder();return;}
       B.draft.push(newCreature(c));B.msg='';SFX.ok();renderBuilder();
     },
     rm:b=>{const id=+b.dataset.v;B.draft=B.draft.filter(c=>c.id!==id);SFX.pop();renderBuilder();},
@@ -1854,38 +1958,39 @@ function showMap(scroll){
   const nextKey=route[j.station],sug=S.levels[nextKey];
   if(!PICK||PICK.key!==nextKey||PICK.station!==j.station)PICK={key:nextKey,station:j.station,L:sug};
   if(PICK.L>sug)PICK.L=sug;
-  const lvpick=[1,2,3,4].map(l=>`<button class="lvopt ${PICK.L===l?'on':''}" data-act="pickL" data-v="${l}" aria-pressed="${PICK.L===l}" ${l>sug?'disabled':''}><span class="st">${'★'.repeat(l)}</span><small>${LEVEL_NAMES[l]}</small>${l===sug?'<span class="sug">Föreslagen</span>':''}</button>`).join('');
+  const lvpick=[1,2,3,4].map(l=>`<button class="lvopt ${PICK.L===l?'on':''}" data-act="pickL" data-v="${l}" aria-pressed="${PICK.L===l}" ${l>sug?'disabled':''}><span class="st">${'★'.repeat(l)}</span><small>${LEVEL_NAMES[l]}</small>${l===sug?`<span class="sug">${tr('Föreslagen','Suggested')}</span>`:''}</button>`).join('');
   go(`<main class="station">
-    <header class="top"><button class="btn sm" data-act="title">Lägret</button><h2>Vägen till Numeria</h2><div class="spacer"></div><button class="iconbtn" data-act="sound" aria-label="Ljud ${S.sound?'på':'av'}">${S.sound?ICONS.soundOn:ICONS.soundOff}</button></header>
-    <div class="panel mapwrap"><svg viewBox="0 0 940 340" role="img" aria-label="Resekarta. Nästa stopp: ${META[nextKey].name}">
+    <header class="top"><button class="btn sm" data-act="title">${tr('Lägret','Camp')}</button><h2>${tr('Vägen till Numeria','The road to Numeria')}</h2><div class="spacer"></div><button class="iconbtn" data-act="sound" aria-label="${tr('Ljud','Sound')} ${S.sound?tr('på','on'):tr('av','off')}">${S.sound?ICONS.soundOn:ICONS.soundOff}</button></header>
+    <div class="panel mapwrap"><svg viewBox="0 0 940 340" role="img" aria-label="${tr('Resekarta. Nästa stopp:','Journey map. Next stop:')} ${META[nextKey].name}">
       <rect x="0" y="0" width="940" height="340" rx="18" fill="#a9d99f"/>
       <path d="M0 300 C120 290 180 330 300 316 S520 280 620 312 820 336 940 300 V340 H0Z" fill="#8cc98a"/>
       <path d="M380 0 C360 60 420 110 390 170 S350 280 400 340" fill="none" stroke="#5fb3d6" stroke-width="22" stroke-linecap="round"/>
       <g fill="#7c8aa3" stroke="#17335b" stroke-width="3" stroke-linejoin="round"><path d="M600 40l40-34 40 34z"/><path d="M650 40l30-24 30 24z" fill="#95a2b8"/></g>
       <g stroke="#17335b" stroke-width="3"><circle cx="110" cy="70" r="20" fill="#5aa57f"/><circle cx="140" cy="84" r="16" fill="#4e9a73"/><circle cx="520" cy="270" r="18" fill="#5aa57f"/><circle cx="760" cy="300" r="16" fill="#4e9a73"/><circle cx="240" cy="280" r="15" fill="#5aa57f"/></g>
       <path d="${smoothPath(P)}" fill="none" stroke="#8a5a2b" stroke-width="8" stroke-dasharray="2 16" stroke-linecap="round"/>
-      ${nestIcon(ICONS.tent,30,224,60)}<text x="60" y="312" text-anchor="middle" font-size="18" font-weight="900" fill="#17335b" style="font-family:var(--font)">Lägret</text>
+      ${nestIcon(ICONS.tent,30,224,60)}<text x="60" y="312" text-anchor="middle" font-size="18" font-weight="900" fill="#17335b" style="font-family:var(--font)">${tr('Lägret','Camp')}</text>
       ${nestIcon(ICONS.home,846,208,68)}<text x="880" y="300" text-anchor="middle" font-size="18" font-weight="900" fill="#17335b" style="font-family:var(--font)">Numeria</text>
       ${nodes}${mini}
     </svg></div>
     <section class="panel next">
       <div class="what">
-        <div class="row">${ICONS[nextKey]}<h3>Nästa stopp: ${META[nextKey].name}</h3></div>
+        <div class="row">${ICONS[nextKey]}<h3>${tr('Nästa stopp:','Next stop:')} ${META[nextKey].name}</h3></div>
         <p>${META[nextKey].blurb}</p>
-        <p class="hint">Välj nivå. ${LEVEL_NAMES[sug]} föreslås, men du kan alltid välja en lättare.</p>
-        <div class="lvpick" role="group" aria-label="Välj nivå">${lvpick}</div>
+        <p class="hint">${tr(`Välj nivå. ${LEVEL_NAMES[sug]} föreslås, men du kan alltid välja en lättare.`,`Pick a level. ${LEVEL_NAMES[sug]} is suggested, but you can always pick an easier one.`)}</p>
+        <div class="lvpick" role="group" aria-label="${tr('Välj nivå','Pick a level')}">${lvpick}</div>
       </div>
-      <button class="btn go big" data-act="go">Kör!</button>
+      <button class="btn go big" data-act="go">${tr('Kör!','Go!')}</button>
     </section>
-    <div><div class="tray-label">Din trupp (${pl(j.troupe.length,'numling','numlingar')})</div><div class="tray">${j.troupe.map(c=>crHTML(c,{sm:1})).join('')}</div></div>
+    <div><div class="tray-label">${tr('Din trupp','Your troupe')} (${NUMLINGS(j.troupe.length)})</div><div class="tray">${j.troupe.map(c=>crHTML(c,{sm:1})).join('')}</div></div>
   </main>`,{title:showTitle,go:()=>startStation(j.station,PICK.L),pickL:b=>{PICK.L=Math.min(sug,+b.dataset.v);SFX.pop();showMap(false);},sound:()=>{toggleSound();showMap(false);}},scroll!==false);
 }
 
-const MILESTONES=[[5,'Första nybyggarna'],[15,'Liten by'],[30,'Livlig stad'],[60,'Stor stad'],[100,'Numeria city'],[200,'Stora Numeria']];
+const MILESTONES=tr([[5,'Första nybyggarna'],[15,'Liten by'],[30,'Livlig stad'],[60,'Stor stad'],[100,'Numeria city'],[200,'Stora Numeria']],
+  [[5,'First settlers'],[15,'Little village'],[30,'Busy town'],[60,'Big city'],[100,'Numeria City'],[200,'Great Numeria']]);
 function milestoneHTML(n){
   const next=MILESTONES.find(m=>m[0]>n);
   return `<div class="badges">${MILESTONES.map(m=>`<span class="badge ${n>=m[0]?'got':''}">${m[1]} (${m[0]})</span>`).join('')}</div>
-    ${next?`<p><b>${next[0]-n}</b> till för att nå ”${next[1]}”.</p><div class="bar" role="img" aria-label="${n} av ${next[0]}"><i style="width:${Math.min(100,n/next[0]*100).toFixed(1)}%"></i></div>`:'<p><b>Alla milstolpar klara. Numeria blomstrar!</b></p>'}`;
+    ${next?`<p>${tr(`<b>${next[0]-n}</b> till för att nå ”${next[1]}”.`,`<b>${next[0]-n}</b> more to reach “${next[1]}”.`)}</p><div class="bar" role="img" aria-label="${n} ${tr('av','of')} ${next[0]}"><i style="width:${Math.min(100,n/next[0]*100).toFixed(1)}%"></i></div>`:`<p><b>${tr('Alla milstolpar klara. Numeria blomstrar!','All milestones reached. Numeria is blooming!')}</b></p>`}`;
 }
 function showArrival(){
   CUR=null;closeModal();
@@ -1896,27 +2001,27 @@ function showArrival(){
   SFX.win();confetti();
   go(`<main class="panel page" style="text-align:center;align-items:center">
     ${ICONS.home.replace('<svg ','<svg width="90" height="90" ')}
-    <h2>Välkommen till Numeria!</h2>
+    <h2>${tr('Välkommen till Numeria!','Welcome to Numeria!')}</h2>
     <div class="crowd">${arrived.map((c,i)=>crHTML(c,{cls:'bob',style:`animation-delay:${(i*.12).toFixed(2)}s`})).join('')}</div>
-    <p><b>${arrived.length} av ${j.start}</b> numlingar kom hem den här resan.${j.lost?` ${pl(j.lost,'numling','numlingar')} gick tillbaka till lägret och försöker igen nästa gång.`:' Hela truppen klarade det!'}</p>
-    <p>Numeria har nu <b>${S.home.length}</b> numlingar.</p>
+    <p>${tr(`<b>${arrived.length} av ${j.start}</b> numlingar kom hem den här resan.`,`<b>${arrived.length} of ${j.start}</b> numlings came home on this journey.`)}${j.lost?tr(` ${NUMLINGS(j.lost)} gick tillbaka till lägret och försöker igen nästa gång.`,` ${NUMLINGS(j.lost)} went back to camp and will try again next time.`):tr(' Hela truppen klarade det!',' The whole troupe made it!')}</p>
+    <p>${tr(`Numeria har nu <b>${S.home.length}</b> numlingar.`,`Numeria now has <b>${S.home.length}</b> numlings.`)}</p>
     ${milestoneHTML(S.home.length)}
-    <div class="row" style="justify-content:center"><button class="btn go big" data-act="new">Starta en ny resa</button><button class="btn" data-act="home">Besök Numeria</button><button class="btn" data-act="title">Lägret</button></div>
+    <div class="row" style="justify-content:center"><button class="btn go big" data-act="new">${tr('Starta en ny resa','Start a new journey')}</button><button class="btn" data-act="home">${tr('Besök Numeria','Visit Numeria')}</button><button class="btn" data-act="title">${tr('Lägret','Camp')}</button></div>
   </main>`,{new:showBuilder,home:showHome,title:showTitle});
 }
 function showAllBack(){
   CUR=null;
   go(`<main class="panel page" style="text-align:center;align-items:center">${ICONS.tent.replace('<svg ','<svg width="90" height="90" ')}
-    <h2>Tillbaka till lägret</h2><p>Inga numlingar är kvar på den här resan. Alla är trygga i lägret och redo för nästa resa.</p>
+    <h2>${tr('Tillbaka till lägret','Back to camp')}</h2><p>${tr('Inga numlingar är kvar på den här resan. Alla är trygga i lägret och redo för nästa resa.','No numlings are left on this journey. Everyone is safe at camp and ready for the next journey.')}</p>
     <div class="crowd">${S.camp.slice(-12).map(c=>crHTML(c,{sm:1})).join('')}</div>
-    <div class="row" style="justify-content:center"><button class="btn go big" data-act="new">Försök igen</button><button class="btn" data-act="title">Lägret</button></div></main>`,{new:showBuilder,title:showTitle});
+    <div class="row" style="justify-content:center"><button class="btn go big" data-act="new">${tr('Försök igen','Try again')}</button><button class="btn" data-act="title">${tr('Lägret','Camp')}</button></div></main>`,{new:showBuilder,title:showTitle});
 }
 function showHome(){
   CUR=null;
   const n=S.home.length;
   go(`<main class="panel page">
-    <div class="row"><button class="btn sm" data-act="back">Tillbaka</button><h2>Numeria</h2></div>
-    <p>${n?`<b>${n}</b> numlingar bor här än så länge.`:'Ingen bor här än. Klara en resa för att ta hem de första numlingarna!'}</p>
+    <div class="row"><button class="btn sm" data-act="back">${tr('Tillbaka','Back')}</button><h2>Numeria</h2></div>
+    <p>${n?tr(`<b>${n}</b> numlingar bor här än så länge.`,`<b>${n}</b> ${n===1?'numling lives':'numlings live'} here so far.`):tr('Ingen bor här än. Klara en resa för att ta hem de första numlingarna!','Nobody lives here yet. Finish a journey to bring home the first numlings!')}</p>
     ${milestoneHTML(n)}
     ${n?`<div class="gallery">${S.home.slice(-300).map(c=>crHTML(c,{xs:1})).join('')}</div>`:''}
   </main>`,{back:showTitle});
@@ -1924,20 +2029,21 @@ function showHome(){
 function showSettings(){
   CUR=null;
   go(`<main class="panel page">
-    <div class="row"><button class="btn sm" data-act="back">Tillbaka</button><h2>Inställningar</h2></div>
-    <div class="row"><b>Ljud</b><button class="btn sm" data-act="snd">${S.sound?'På':'Av'}</button></div>
-    <div><h3>Föreslagen nivå för varje bana</h3><p class="hint">En bana föreslås på en högre nivå när hela truppen klarar den. Före varje bana kan man alltid välja en lättare nivå.</p>
-    ${ALL.map(k=>`<div class="lvlrow"><span class="nm">${ICONS[k]}${META[k].name}</span>${[1,2,3,4].map(l=>`<button class="lvbtn ${S.levels[k]===l?'on':''}" data-act="lv" data-k="${k}" data-v="${l}" aria-pressed="${S.levels[k]===l}" aria-label="${META[k].name} nivå ${l}">${'★'.repeat(l)}</button>`).join('')}</div>`).join('')}
-    <div class="row" style="margin-top:10px"><span class="hint">Sätt alla till:</span>${[1,2,3,4].map(l=>`<button class="lvbtn" data-act="all" data-v="${l}" aria-label="Alla banor nivå ${l}">${'★'.repeat(l)}</button>`).join('')}</div></div>
-    <div><h3>För vuxna</h3><p class="hint">Vad varje bana tränar:</p><ul class="skills">${ALL.map(k=>`<li><b>${META[k].name}:</b> ${META[k].skill}</li>`).join('')}</ul>
-    <p class="hint" style="margin-top:8px">Framstegen sparas på den här enheten. Troféen på spelets kort i Stalman games visar hur många numlingar som bor i Numeria. Varje resa går genom 6 av de 10 banorna, och banor som spelats minst väljs först. Hjärtan begränsar gissande: när de tar slut går de numlingar som väntar tillbaka till lägret och följer med på nästa resa, så ingen försvinner för alltid.</p></div>
-    <div class="row"><button class="btn sm" data-act="reset">Radera alla framsteg</button></div>
+    <div class="row"><button class="btn sm" data-act="back">${tr('Tillbaka','Back')}</button><h2>${tr('Inställningar','Settings')}</h2></div>
+    <div class="row"><b>${tr('Ljud','Sound')}</b><button class="btn sm" data-act="snd">${S.sound?tr('På','On'):tr('Av','Off')}</button></div>
+    <div><h3>${tr('Föreslagen nivå för varje bana','Suggested level for each stop')}</h3><p class="hint">${tr('En bana föreslås på en högre nivå när hela truppen klarar den. Före varje bana kan man alltid välja en lättare nivå.','A stop is suggested at a higher level when the whole troupe clears it. Before every stop you can always pick an easier level.')}</p>
+    ${ALL.map(k=>`<div class="lvlrow"><span class="nm">${ICONS[k]}${META[k].name}</span>${[1,2,3,4].map(l=>`<button class="lvbtn ${S.levels[k]===l?'on':''}" data-act="lv" data-k="${k}" data-v="${l}" aria-pressed="${S.levels[k]===l}" aria-label="${META[k].name} ${tr('nivå','level')} ${l}">${'★'.repeat(l)}</button>`).join('')}</div>`).join('')}
+    <div class="row" style="margin-top:10px"><span class="hint">${tr('Sätt alla till:','Set all to:')}</span>${[1,2,3,4].map(l=>`<button class="lvbtn" data-act="all" data-v="${l}" aria-label="${tr('Alla banor nivå','All stops level')} ${l}">${'★'.repeat(l)}</button>`).join('')}</div></div>
+    <div><h3>${tr('För vuxna','For grown-ups')}</h3><p class="hint">${tr('Vad varje bana tränar:','What each stop practises:')}</p><ul class="skills">${ALL.map(k=>`<li><b>${META[k].name}:</b> ${META[k].skill}</li>`).join('')}</ul>
+    <p class="hint" style="margin-top:8px">${tr('Framstegen sparas på den här enheten. Troféen på spelets kort i Stalman games visar hur många numlingar som bor i Numeria. Varje resa går genom 6 av de 10 banorna, och banor som spelats minst väljs först. Hjärtan begränsar gissande: när de tar slut går de numlingar som väntar tillbaka till lägret och följer med på nästa resa, så ingen försvinner för alltid.','Progress is saved on this device. The trophy on the game\'s card in Stalman games shows how many numlings live in Numeria. Every journey goes through 6 of the 10 stops, and the stops played least are picked first. Hearts limit guessing: when they run out, the numlings still waiting go back to camp and come along on the next journey, so nobody is lost for ever.')}</p></div>
+    <div class="row"><button class="btn sm" data-act="reset">${tr('Radera alla framsteg','Erase all progress')}</button></div>
   </main>`,{
     back:showTitle,
     snd:()=>{S.sound=!S.sound;save();showSettings();},
     lv:b=>{S.levels[b.dataset.k]=+b.dataset.v;S.chosen=true;save();showSettings();},
     all:b=>{ALL.forEach(k=>S.levels[k]=+b.dataset.v);S.startLevel=+b.dataset.v;S.chosen=true;save();showSettings();},
-    reset:()=>modal(`<h3>Radera allt?</h3><p>Det här tar bort Numeria, lägret, nivåerna och den pågående resan.</p><div class="row"><button class="btn go" data-m="close">Behåll mina framsteg</button><button class="btn" data-m="yes">Radera</button></div>`,{yes:()=>{S=freshState();B=null;PICK=null;save();try{localStorage.removeItem(SCORE_KEY);}catch(e){}showTitle();}})
+    reset:()=>modal(tr(`<h3>Radera allt?</h3><p>Det här tar bort Numeria, lägret, nivåerna och den pågående resan.</p><div class="row"><button class="btn go" data-m="close">Behåll mina framsteg</button><button class="btn" data-m="yes">Radera</button></div>`,
+      `<h3>Erase everything?</h3><p>This removes Numeria, the camp, the levels and the journey in progress.</p><div class="row"><button class="btn go" data-m="close">Keep my progress</button><button class="btn" data-m="yes">Erase</button></div>`),{yes:()=>{S=freshState();B=null;PICK=null;save();try{localStorage.removeItem(SCORE_KEY);}catch(e){}showTitle();}})
   });
 }
 

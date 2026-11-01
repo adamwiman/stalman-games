@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Slemrören</title>
+<title data-en="Goo Pipes">Slemrören</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
 <style>
   :root {
     --bg:#ffffff; --panel:#f4f6f9; --line:#d6dce4;
@@ -106,20 +107,20 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="back" href="../index.html">← Spel</a>
-    <h1><span>SLEM<span class="goo">RÖREN</span></span><span id="diff"></span></h1>
+    <a class="back" href="../index.html" data-en="← Games">← Spel</a>
+    <h1><span data-en='GOO <span class="goo">PIPES</span>'>SLEM<span class="goo">RÖREN</span></span><span id="diff"></span></h1>
   </div>
   <div class="bar">
-    <div class="box"><div class="lbl">POÄNG</div><div class="val" id="score">0</div></div>
-    <div class="box"><div class="lbl">REKORD</div><div class="val" id="best">0</div></div>
-    <div class="box"><div class="lbl">NIVÅ</div><div class="val" id="level">1</div></div>
-    <div class="box"><div class="lbl">RÖR</div><div class="val" id="dist">0/8</div></div>
+    <div class="box"><div class="lbl" data-en="SCORE">POÄNG</div><div class="val" id="score">0</div></div>
+    <div class="box"><div class="lbl" data-en="BEST">REKORD</div><div class="val" id="best">0</div></div>
+    <div class="box"><div class="lbl" data-en="LEVEL">NIVÅ</div><div class="val" id="level">1</div></div>
+    <div class="box"><div class="lbl" data-en="PIPE">RÖR</div><div class="val" id="dist">0/8</div></div>
   </div>
   <div class="ctrl">
-    <div class="qwrap"><span class="qlbl">NÄSTA</span><canvas id="queue"></canvas></div>
+    <div class="qwrap"><span class="qlbl" data-en="NEXT">NÄSTA</span><canvas id="queue"></canvas></div>
     <div class="status" id="status"></div>
-    <button class="btn" id="fast">⏩ Snabbt</button>
-    <button class="btn" id="new">Nytt spel</button>
+    <button class="btn" id="fast" data-en="⏩ Fast">⏩ Snabbt</button>
+    <button class="btn" id="new" data-en="New game">Nytt spel</button>
   </div>
   <div class="board-outer">
     <div id="boardWrap">
@@ -131,7 +132,8 @@
       </div>
     </div>
   </div>
-  <p class="hint">
+  <p class="hint" data-en="Tap a square to lay the next pipe before the goo gets there – build a pipe at least as long
+    as the goal under PIPE! Keyboard: arrows move, Enter lays the pipe, Space = fast goo (bonus points).">
     Tryck på en ruta för att lägga nästa rör innan slemmet kommer dit – bygg ett rör som är
     minst lika långt som målet under RÖR! Tangentbord: pilarna flyttar, Enter lägger röret,
     mellanslag = snabbt slem (bonuspoäng).
@@ -239,10 +241,13 @@ function segmentScore(secondPass, fast) { return (secondPass ? 100 : 50) + (fast
 // a longer pipe, a faster goo and a shorter countdown. "svar" is the original game.
 var DIFFICULTIES = {
   latt:   { name: "Lätt",   kid: "Långsamt slem och korta rör",
+            en: { name: "Easy", kid: "Slow goo and short pipes" },
             required: [5, 1, 16],   fill: [4400, 0.94, 1600], countdown: [20, 10] },
   mellan: { name: "Mellan", kid: "Lite snabbare slem",
+            en: { name: "Medium", kid: "Slightly faster goo" },
             required: [6, 1.5, 20], fill: [3400, 0.91, 1100], countdown: [16, 6] },
   svar:   { name: "Svår",   kid: "Snabbt slem och långa rör",
+            en: { name: "Hard", kid: "Fast goo and long pipes" },
             required: [8, 2, 24],   fill: [2600, 0.88, 700],  countdown: [12, 4] }
 };
 var DIFFICULTY_ORDER = ["latt", "mellan", "svar"];
@@ -296,6 +301,11 @@ function makeRand(seed) {
 /*LOGIC-END*/
 
 // ================= rendering & game shell =================
+I18N.apply();
+var tr = I18N.t;
+var NUM_LOCALE = tr("sv-SE", "en-GB");
+// a difficulty's name and description in the hub's language
+function diffText(id) { return I18N.lang === "en" ? DIFFICULTIES[id].en : DIFFICULTIES[id]; }
 var SCORE_KEY = "score.goopipes";
 var STATE_KEY = "state.goopipes";   // { difficulty } — the last one picked
 var REPLACE_PENALTY = 50, REPLACE_MS = 500, DIST_BONUS = 100, STUB_MS = 450;
@@ -450,10 +460,10 @@ function resize() {
 
 // ---------- HUD ----------
 function syncScore() {
-  scoreEl.textContent = game.score.toLocaleString("sv-SE");
+  scoreEl.textContent = game.score.toLocaleString(NUM_LOCALE);
   var best = Number(localStorage.getItem(SCORE_KEY) || 0);
   if (game.score > best) { best = game.score; localStorage.setItem(SCORE_KEY, String(best)); }
-  bestEl.textContent = best.toLocaleString("sv-SE");
+  bestEl.textContent = best.toLocaleString(NUM_LOCALE);
 }
 function addScore(delta) {
   game.score = Math.max(0, game.score + delta);
@@ -466,13 +476,13 @@ function syncDist() {
 function syncStatus() {
   if (game.phase === "countdown") {
     var s = Math.ceil(game.countLeft / 1000);
-    statusEl.textContent = "SLEMMET KOMMER OM " + s + " s";
+    statusEl.textContent = tr("SLEMMET KOMMER OM ", "GOO IN ") + s + " s";
     statusEl.classList.toggle("hot", s <= 3);
   } else if (game.phase === "flow") {
-    statusEl.textContent = game.fast ? "SNABBT! ⏩" : "SLEMMET RINNER…";
+    statusEl.textContent = game.fast ? tr("SNABBT! ⏩", "FAST! ⏩") : tr("SLEMMET RINNER…", "GOO FLOWING…");
     statusEl.classList.remove("hot");
   } else {
-    statusEl.textContent = "RUNDAN ÄR SLUT";
+    statusEl.textContent = tr("RUNDAN ÄR SLUT", "ROUND OVER");
     statusEl.classList.remove("hot");
   }
 }
@@ -505,10 +515,10 @@ function lastDifficulty() {
 function showPicker() {
   var pref = game ? game.difficulty : lastDifficulty();
   var playing = game && game.phase !== "done";
-  showModal("Välj svårighet", "Hur snabbt ska slemmet rinna?", []);
+  showModal(tr("Välj svårighet", "Choose difficulty"), tr("Hur snabbt ska slemmet rinna?", "How fast should the goo flow?"), []);
   var wrap = document.getElementById("modalBtns");
   DIFFICULTY_ORDER.forEach(function (id) {
-    var d = DIFFICULTIES[id];
+    var d = diffText(id);
     var btn = document.createElement("button");
     btn.className = "diff" + (id === pref ? " pref" : "");
     btn.dataset.diff = id;
@@ -521,7 +531,7 @@ function showPicker() {
   if (playing) {
     var back = document.createElement("button");
     back.className = "alt";
-    back.textContent = "Fortsätt";
+    back.textContent = tr("Fortsätt", "Continue");
     back.onclick = hideModal;
     wrap.appendChild(back);
   }
@@ -532,7 +542,7 @@ function newGame(difficulty) {
   difficulty = DIFFICULTIES[difficulty] ? difficulty : (game ? game.difficulty : lastDifficulty());
   try { localStorage.setItem(STATE_KEY, JSON.stringify({ difficulty: difficulty })); } catch (e) {}
   game = { level: 1, score: 0, difficulty: difficulty, nextPiece: makePieceBag(Math.random) };
-  document.getElementById("diff").textContent = DIFFICULTIES[difficulty].name.toUpperCase();
+  document.getElementById("diff").textContent = diffText(difficulty).name.toUpperCase();
   hideModal();
   startLevel();
   syncScore();
@@ -644,17 +654,21 @@ function endRound(res) {
     addScore(bonus);
     setTimeout(function () {
       if (game !== g) return;
-      showModal("Nivå " + g.level + " klar! 🎉",
-        "Röret blev " + g.dist + " långt (målet var " + g.params.required + ")" +
-        (bonus ? " – längdbonus +" + bonus : "") + ". Nu blir slemmet snabbare …",
-        [["Nästa nivå", nextLevel]]);
+      showModal(tr("Nivå " + g.level + " klar! 🎉", "Level " + g.level + " complete! 🎉"),
+        tr("Röret blev " + g.dist + " långt (målet var " + g.params.required + ")" +
+          (bonus ? " – längdbonus +" + bonus : "") + ". Nu blir slemmet snabbare …",
+          "The pipe was " + g.dist + " long (the goal was " + g.params.required + ")" +
+          (bonus ? " – length bonus +" + bonus : "") + ". Now the goo gets faster …"),
+        [[tr("Nästa nivå", "Next level"), nextLevel]]);
     }, 700);
   } else {
     setTimeout(function () {
       if (game !== g) return;
-      showModal("Slemmet rann ut! ☠️",
-        "Röret blev " + g.dist + " långt, men målet var " + g.params.required + ".",
-        [["Försök igen", function () { newGame(g.difficulty); }], ["Byt svårighet", showPicker, "alt"]]);
+      showModal(tr("Slemmet rann ut! ☠️", "The goo spilled! ☠️"),
+        tr("Röret blev " + g.dist + " långt, men målet var " + g.params.required + ".",
+          "The pipe was " + g.dist + " long, but the goal was " + g.params.required + "."),
+        [[tr("Försök igen", "Try again"), function () { newGame(g.difficulty); }],
+         [tr("Byt svårighet", "Change difficulty"), showPicker, "alt"]]);
     }, 700);
   }
 }
@@ -848,7 +862,7 @@ window.addEventListener("resize", resize);
 
 // ---------- boot ----------
 resize();
-bestEl.textContent = Number(localStorage.getItem(SCORE_KEY) || 0).toLocaleString("sv-SE");
+bestEl.textContent = Number(localStorage.getItem(SCORE_KEY) || 0).toLocaleString(NUM_LOCALE);
 showPicker();
 requestAnimationFrame(frame);
 

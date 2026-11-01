@@ -65,6 +65,36 @@ h1 .dot { color: var(--coral); }
 }
 .gear:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
 
+.tools { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+/* language switch: Svenska | English */
+.lang {
+  display: flex;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 5px 0 var(--ink);
+  overflow: hidden;
+  height: 54px;
+}
+.lang button {
+  font: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lang button + button { border-left: 3px solid var(--ink); }
+.lang button[aria-pressed="true"] { background: var(--sun); }
+@media (max-width: 520px) {
+  .lang .lname { display: none; }
+  .lang button { font-size: 22px; padding: 0 12px; }
+}
+
 /* ---------- game grid ---------- */
 .grid {
   display: grid;

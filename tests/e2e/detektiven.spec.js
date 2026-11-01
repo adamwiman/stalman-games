@@ -222,21 +222,23 @@ test("a case in progress is saved: reload, Fortsätt fallet, and starting a new 
   await expect(stat(page, "mistakes")).toHaveText("0");
 });
 
-test("every level can be played once unlocked, and the board fits with every clue showing", async ({ page, touch }) => {
+// in both languages: English clues are worded differently and must fit the cards too
+for (const lang of ["sv", "en"]) test(`every level can be played once unlocked, and the board fits with every clue showing (${lang})`, async ({ page, touch }) => {
   test.setTimeout(120000);
-  await seedStorage(page, { "state.detektiven": { prog: { unlocked: 4, solved: [1, 1, 1, 1, 0] } } });
+  const en = lang === "en";
+  await seedStorage(page, { "hub.lang": lang, "state.detektiven": { prog: { unlocked: 4, solved: [1, 1, 1, 1, 0] } } });
   await page.goto("games/detektiven.html");
   await expect(page.locator(".level.locked")).toHaveCount(0);
-  await expect(page.locator(".record")).toHaveText("🏆 Lösta fall: 4");
+  await expect(page.locator(".record")).toHaveText(en ? "🏆 Cases solved: 4" : "🏆 Lösta fall: 4");
   for (let i = 0; i < 5; i++) {
     await press(level(page, i), touch);
     if (i > 0) { // the case from the level before is not solved, so it asks first
-      await expect(page.locator(".modal h3")).toHaveText("Börja ett nytt fall?");
+      await expect(page.locator(".modal h3")).toHaveText(en ? "Start a new case?" : "Börja ett nytt fall?");
       await press(page.locator('.modal [data-m="new"]'), touch);
     }
     await expect(page.locator(".card")).toHaveCount(20, { timeout: 30000 });
-    const name = await page.evaluate(() => LEVELS[G.pz.level].name);
-    expect(name).toBe(["Lätt", "Mellan", "Svår", "Geni", "Omöjliga"][i]);
+    const name = await page.evaluate(() => lvName(LEVELS[G.pz.level]));
+    expect(name).toBe((en ? ["Easy", "Medium", "Hard", "Genius", "Impossible"] : ["Lätt", "Mellan", "Svår", "Geni", "Omöjliga"])[i]);
     await expect(page.locator(".casename b")).toContainText(name);
     await expectCardsFit(page, name + " at the start");
     await revealAllButOne(page);

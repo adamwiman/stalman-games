@@ -13,6 +13,10 @@
   if (!gameId) return;
 
   var TICK = 5; // seconds between usage updates
+  // the hub's language (see shared/i18n.js); read here too so the guard works on its own
+  var en = false;
+  try { en = localStorage.getItem("hub.lang") === "en"; } catch (e) {}
+  function t(sv, english) { return en ? english : sv; }
   var locked = false;
   var pill = null;
 
@@ -64,7 +68,7 @@
     if (left === null) { if (pill) pill.remove(); pill = null; return; }
     var p = ensurePill();
     var min = Math.ceil(left / 60);
-    p.textContent = "⏱ " + min + " min left";
+    p.textContent = "⏱ " + min + t(" min kvar", " min left");
     p.style.background = min <= 5 ? "#ff6b6b" : "#38d9a9";
     p.style.color = min <= 5 ? "#fff" : "#17335b";
   }
@@ -88,11 +92,12 @@
       "font-family:ui-rounded,'SF Pro Rounded',system-ui,sans-serif;color:#fff;padding:24px;";
     ov.innerHTML =
       '<div><div style="font-size:64px">🌙</div>' +
-      '<h1 style="font-size:32px;margin:12px 0 6px">Time\u2019s up for today!</h1>' +
-      '<p style="font-size:17px;opacity:.85;margin:0 0 24px">Great playing \u2014 come back tomorrow.</p>' +
+      '<h1 style="font-size:32px;margin:12px 0 6px">' + t("Tiden är slut för idag!", "Time\u2019s up for today!") + "</h1>" +
+      '<p style="font-size:17px;opacity:.85;margin:0 0 24px">' +
+      t("Bra spelat \u2014 välkommen tillbaka i morgon.", "Great playing \u2014 come back tomorrow.") + "</p>" +
       '<a href="../index.html" style="display:inline-block;font-weight:800;font-size:18px;' +
       "color:#17335b;background:#ffc63f;border:2px solid #fff;border-radius:16px;" +
-      'padding:12px 26px;text-decoration:none">\u2190 Back to games</a></div>';
+      'padding:12px 26px;text-decoration:none">\u2190 ' + t("Tillbaka till spelen", "Back to games") + "</a></div>";
     document.body.appendChild(ov);
     overlay = ov;
     ["keydown", "keyup", "touchstart", "touchmove", "pointerdown"].forEach(function (t) {

@@ -19,7 +19,7 @@ const L = new Function(m[1] + `
     CLUES_MAX, STAMP, MISS_MIN, makeRand, shuffle, ratio, poolFor, decoyPool, areaAll, missCount,
     makeOptions, pickSpread, newRound, nextQuestion, currentQ, roundOver, roundScore, roundCleared,
     answer, guessMystery, moreClue, fmtPop, fmtArea, timesText, compareText, listSv, cluesFor,
-    searchCountries, cleanProgress, recordRound, applyTouched, stampCount };
+    searchCountries, cleanProgress, recordRound, applyTouched, stampCount, setLang, COUNTRIES_EN };
 `)();
 
 let passed = 0, failed = 0;
@@ -297,6 +297,52 @@ eq("empty search gives nothing", L.searchCountries(all, "  "), []);
   eq("three right answers give a stamp, and the misses are gone", [L.stampCount(pass), miss.se], [1, undefined]);
   for (let i = 0; i < 5; i++) L.applyTouched(pass, miss, [["dk", false]]);
   eq("misses stop at 5", miss.dk, 5);
+}
+
+// ---- 10. English ----
+{
+  const EN = L.COUNTRIES_EN;
+  eq("an English name and capital for every country", codes.filter((c) => !(EN[c] && EN[c][0] && EN[c][1])), []);
+  eq("no extra English entries", Object.keys(EN).filter((c) => !BY[c]), []);
+  eq("every capital note has an English version", C.filter((c) => c.cn && !EN[c.c][2]).map((c) => c.c), []);
+  L.setLang("en");
+  eq("English names are unique", new Set(C.map((c) => c.n)).size, C.length);
+  eq("English country and capital", [BY.se.n, BY.se.cap, BY.dk.cap, BY.ci.n, BY.cz.n], ["Sweden", "Stockholm", "Copenhagen", "Ivory Coast", "Czechia"]);
+  eq("English capital note", BY.au.cn, "The largest city is Sydney.");
+  eq("English level names", L.LEVELS.map((l) => l.name), ["Easy", "Medium", "Hard", "Genius", "Impossible"]);
+  eq("English mode names", L.MODES.map((m) => m.name), ["Flags", "Capitals", "Biggest first", "Continents", "Higher or lower", "Mystery country"]);
+  eq("English continents and areas", [L.CONTINENTS.map((k) => k.name), L.AREAS[0].name, L.AREAS[L.AREAS.length - 1].name],
+    [["Europe", "Asia", "Africa", "North America", "South America", "Oceania"], "The whole world", "My misses"]);
+  eq("English directions", L.MODE.flaggor.dirs.map((d) => d.name), ["Flag → country", "Country → flag", "Mix"]);
+  eq("English population", [10596620, 1463865525, 800, 392404, 1000000].map(L.fmtPop),
+    ["10.6 million", "1.46 billion", "800", "392,000", "1 million"]);
+  eq("English area", [450295, 0.44, 17098242, 41284].map(L.fmtArea), ["450,000 km²", "0.44 km²", "17.1 million km²", "41,300 km²"]);
+  eq("English comparisons", [L.compareText("ru", "se", "a"), L.compareText("se", "no", "p"), L.compareText("in", "cn", "p")],
+    ["Russia is about 38 times as big as Sweden.", "Sweden has about 1.9 times as many people as Norway.",
+      "India and China have almost the same number of people."]);
+  eq("English lists", [L.listSv(["a", "b"]), L.listSv(["a", "b", "c"])], ["a and b", "a, b and c"]);
+  eq("English clues for Sweden", L.cluesFor(BY.se).map((c) => c.text), [
+    "The country is in Europe.",
+    "About 10.6 million people live in the country.",
+    "The country is 450,000 km² in size – about 1.3 times as big as Finland.",
+    "The country has a coast and 2 neighbouring countries.",
+    "The flag has the colours blue and yellow.",
+    "One of the neighbours is Finland.",
+    "The capital starts with S.",
+    "The country's name has 6 letters and starts with S."]);
+  eq("English clue for a country in two continents", L.cluesFor(BY.ru)[0].text, "The country is in both Europe and Asia.");
+  eq("English clue when the capital has the country's name", L.cluesFor(BY.mc)[6].text, "The capital is named after the country!");
+  const sv = /[åäö]|\b(och|är|landet|huvudstaden|grannland|miljoner|ungefär)\b/i;
+  check("every English clue is free of Swedish words", C.every((c) => L.cluesFor(c).every((x) => !sv.test(x.text) && !/undefined|NaN/.test(x.text)) || /[åäö]/i.test(c.n + c.cap)));
+  eq("English search", [L.searchCountries(all, "swe"), L.searchCountries(all, "GERM")], [["se"], ["de"]]);
+  // a whole flags round in English: options are English names
+  const R = L.newRound({ mode: "huvudstader", lvl: 0, area: "world", dir: "n2c" }, 5, {});
+  const q = L.nextQuestion(R);
+  check("an English capitals question has English capitals to pick from", q.options.includes(q.target) && q.options.every((c) => BY[c].cap === EN[c][1]));
+  L.setLang("sv");
+  eq("back to Swedish", [BY.se.n, BY.dk.cap, L.LEVELS[0].name, L.MODES[0].name, L.CONTINENTS[0].name, BY.au.cn, L.fmtPop(10596620)],
+    ["Sverige", "Köpenhamn", "Lätt", "Flaggor", "Europa", "Den största staden är Sydney.", "10,6 miljoner"]);
+  check("Swedish countries without a capital note get none back", BY.se.cn === undefined);
 }
 
 console.log(`${passed} passed, ${failed} failed`);

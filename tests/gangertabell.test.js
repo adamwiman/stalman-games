@@ -14,7 +14,7 @@ if (!m) { console.error("LOGIC block not found in gangertabell.html"); process.e
 const L = new Function(m[1] + `
   return { TABLES, MAX_DIGITS, makeRand, shuffled, cleanTables, tableFacts, sameFact, formatFact,
     newRound, nextQuestion, parseAnswer, answer, stopRound, missedList, summary, verdict,
-    tableName, listSv, plural };
+    tableName, listAnd, plural, setLang };
 `)();
 
 let passed = 0, failed = 0;
@@ -205,12 +205,27 @@ eq("verdict 30 %", L.verdict({ asked: 10, correct: 3, percent: 30, complete: tru
 eq("verdict nothing answered", L.verdict({ asked: 0, correct: 0, percent: 0 }), "Ingen fråga besvarad");
 
 // ---- 7. small Swedish text helpers ----
-eq("table name", L.tableName(7), "7:ans");
-eq("list of one", L.listSv([3]), "3");
-eq("list of two", L.listSv([3, 5]), "3 och 5");
-eq("list of three", L.listSv([3, 5, 7]), "3, 5 och 7");
+eq("table name", L.tableName(7), "7:ans tabell");
+eq("list of one", L.listAnd([3]), "3");
+eq("list of two", L.listAnd([3, 5]), "3 och 5");
+eq("list of three", L.listAnd([3, 5, 7]), "3, 5 och 7");
 eq("plural one", L.plural(1, "fråga", "frågor"), "1 fråga");
 eq("plural many", L.plural(20, "fråga", "frågor"), "20 frågor");
+
+// ---- English ----
+L.setLang("en");
+eq("en: table name", L.tableName(7), "7 times table");
+eq("en: lists", [L.listAnd([3]), L.listAnd([3, 5]), L.listAnd([3, 5, 7])], ["3", "3 and 5", "3, 5 and 7"]);
+eq("en: verdicts", [
+  L.verdict({ asked: 10, correct: 10, percent: 100, complete: true }),
+  L.verdict({ asked: 10, correct: 10, percent: 100, complete: false }),
+  L.verdict({ asked: 20, correct: 17, percent: 85, complete: true }),
+  L.verdict({ asked: 10, correct: 7, percent: 70, complete: true }),
+  L.verdict({ asked: 10, correct: 3, percent: 30, complete: true }),
+  L.verdict({ asked: 0, correct: 0, percent: 0 })],
+  ["All right! 🌟", "Only right answers! 🌟", "Great job!", "Good effort!", "Good that you practise!", "No questions answered"]);
+L.setLang("sv");
+eq("back to Swedish", [L.tableName(7), L.listAnd([3, 5])], ["7:ans tabell", "3 och 5"]);
 
 {
   let threw = false;

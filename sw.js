@@ -3,7 +3,7 @@
    IMPORTANT: whenever you change any file (or add a game),
    bump CACHE_VERSION so devices pick up the new files.
    ============================================================ */
-const CACHE_VERSION = "stalman-games-v10";
+const CACHE_VERSION = "stalman-games-v11";
 
 const ASSETS = [
   "./",
@@ -13,6 +13,7 @@ const ASSETS = [
   "./config.js",
   "./manifest.webmanifest",
   "./shared/guard.js",
+  "./shared/i18n.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",

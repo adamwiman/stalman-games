@@ -200,6 +200,8 @@ eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
 {
   eq("three difficulties, easiest first", L.DIFFICULTY_ORDER, ["latt", "mellan", "svar"]);
   eq("difficulty names are Swedish", L.DIFFICULTY_ORDER.map((d) => L.DIFFICULTIES[d].name), ["Lätt", "Mellan", "Svår"]);
+  eq("difficulty names in English", L.DIFFICULTY_ORDER.map((d) => L.DIFFICULTIES[d].en.name), ["Easy", "Medium", "Hard"]);
+  check("every difficulty has an English description", L.DIFFICULTY_ORDER.every((d) => L.DIFFICULTIES[d].en.kid.length > 0));
   eq("Svår is the original game", L.levelParams(1, "svar"), { required: 8, fillMs: 2600, countdownMs: 12000, fastMs: 110 });
   eq("no difficulty means Svår", L.levelParams(7), L.levelParams(7, "svar"));
   eq("Lätt level 1: short pipe, slow goo, long countdown", L.levelParams(1, "latt"),

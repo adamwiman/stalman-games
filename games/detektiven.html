@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Detektiven</title>
+<title data-en="The Detective">Detektiven</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
 <!--
   Detektiven — logikpussel: vem är skurk och vem är oskyldig? (spel-id: detektiven)
   Del av Stalman games. Helt fristående: inga nätverksresurser.
@@ -234,9 +235,9 @@ h3{font-size:1.2rem;font-weight:900}
 </style>
 </head>
 <body>
-<nav class="hubnav"><a class="back" href="../index.html">← Spel</a></nav>
+<nav class="hubnav"><a class="back" href="../index.html" data-en="← Games">← Spel</a></nav>
 <div id="app"></div>
-<noscript>Det här spelet behöver JavaScript.</noscript>
+<noscript>Det här spelet behöver JavaScript. / This game needs JavaScript.</noscript>
 <script>
 'use strict';
 /* =========================================================
@@ -244,6 +245,10 @@ h3{font-size:1.2rem;font-weight:900}
    ========================================================= */
 
 /*LOGIC-START*/
+// Språket: 'sv' (standard) eller 'en'. Spelet sätter det från hubben (I18N.lang).
+let LANG='sv';
+function setLang(l){LANG=l==='en'?'en':'sv';}
+const tr=(sv,en)=>LANG==='en'?en:sv;
 // Ren spellogik utan DOM (testas i tests/detektiven.test.js).
 // 20 personer i ett rutnät med 4 kolumner (A–D) och 5 rader (1–5).
 // Varje person är antingen skurk eller oskyldig. Alla talar sanning.
@@ -327,32 +332,34 @@ const NAMES={
   'Ö':['Örjan','Östen','Ölvi']
 };
 const JOBS=[
-  {id:'polis',sg:'polis',pl:'poliser',defSg:'polisen',defPl:'poliserna',e:'👮'},
-  {id:'domare',sg:'domare',pl:'domare',defSg:'domaren',defPl:'domarna',e:'⚖️'},
-  {id:'kock',sg:'kock',pl:'kockar',defSg:'kocken',defPl:'kockarna',e:'🍳'},
-  {id:'bagare',sg:'bagare',pl:'bagare',defSg:'bagaren',defPl:'bagarna',e:'🥐'},
-  {id:'lakare',sg:'läkare',pl:'läkare',defSg:'läkaren',defPl:'läkarna',e:'🩺'},
-  {id:'larare',sg:'lärare',pl:'lärare',defSg:'läraren',defPl:'lärarna',e:'📚'},
-  {id:'bonde',sg:'bonde',pl:'bönder',defSg:'bonden',defPl:'bönderna',e:'🚜'},
-  {id:'pilot',sg:'pilot',pl:'piloter',defSg:'piloten',defPl:'piloterna',e:'✈️'},
-  {id:'malare',sg:'målare',pl:'målare',defSg:'målaren',defPl:'målarna',e:'🎨'},
-  {id:'sangare',sg:'sångare',pl:'sångare',defSg:'sångaren',defPl:'sångarna',e:'🎤'},
-  {id:'mekaniker',sg:'mekaniker',pl:'mekaniker',defSg:'mekanikern',defPl:'mekanikerna',e:'🔧'},
-  {id:'frisor',sg:'frisör',pl:'frisörer',defSg:'frisören',defPl:'frisörerna',e:'✂️'},
-  {id:'snickare',sg:'snickare',pl:'snickare',defSg:'snickaren',defPl:'snickarna',e:'🔨'},
-  {id:'brandman',sg:'brandman',pl:'brandmän',defSg:'brandmannen',defPl:'brandmännen',e:'🚒'},
-  {id:'fiskare',sg:'fiskare',pl:'fiskare',defSg:'fiskaren',defPl:'fiskarna',e:'🎣'},
-  {id:'clown',sg:'clown',pl:'clowner',defSg:'clownen',defPl:'clownerna',e:'🤡'},
-  {id:'astronaut',sg:'astronaut',pl:'astronauter',defSg:'astronauten',defPl:'astronauterna',e:'🚀'},
-  {id:'tandlakare',sg:'tandläkare',pl:'tandläkare',defSg:'tandläkaren',defPl:'tandläkarna',e:'🦷'},
-  {id:'postbud',sg:'postbud',pl:'postbud',defSg:'postbudet',defPl:'postbuden',e:'📮'},
-  {id:'programmerare',sg:'programmerare',pl:'programmerare',defSg:'programmeraren',defPl:'programmerarna',e:'💻'},
-  {id:'vakt',sg:'vakt',pl:'vakter',defSg:'vakten',defPl:'vakterna',e:'💂'},
-  {id:'detektiv',sg:'detektiv',pl:'detektiver',defSg:'detektiven',defPl:'detektiverna',e:'🔍'},
-  {id:'byggare',sg:'byggare',pl:'byggare',defSg:'byggaren',defPl:'byggarna',e:'👷'},
-  {id:'kassor',sg:'kassör',pl:'kassörer',defSg:'kassören',defPl:'kassörerna',e:'🧾'}
+  {id:'polis',en:{sg:'police officer',pl:'police officers'},sg:'polis',pl:'poliser',defSg:'polisen',defPl:'poliserna',e:'👮'},
+  {id:'domare',en:{sg:'judge',pl:'judges'},sg:'domare',pl:'domare',defSg:'domaren',defPl:'domarna',e:'⚖️'},
+  {id:'kock',en:{sg:'cook',pl:'cooks'},sg:'kock',pl:'kockar',defSg:'kocken',defPl:'kockarna',e:'🍳'},
+  {id:'bagare',en:{sg:'baker',pl:'bakers'},sg:'bagare',pl:'bagare',defSg:'bagaren',defPl:'bagarna',e:'🥐'},
+  {id:'lakare',en:{sg:'doctor',pl:'doctors'},sg:'läkare',pl:'läkare',defSg:'läkaren',defPl:'läkarna',e:'🩺'},
+  {id:'larare',en:{sg:'teacher',pl:'teachers'},sg:'lärare',pl:'lärare',defSg:'läraren',defPl:'lärarna',e:'📚'},
+  {id:'bonde',en:{sg:'farmer',pl:'farmers'},sg:'bonde',pl:'bönder',defSg:'bonden',defPl:'bönderna',e:'🚜'},
+  {id:'pilot',en:{sg:'pilot',pl:'pilots'},sg:'pilot',pl:'piloter',defSg:'piloten',defPl:'piloterna',e:'✈️'},
+  {id:'malare',en:{sg:'painter',pl:'painters'},sg:'målare',pl:'målare',defSg:'målaren',defPl:'målarna',e:'🎨'},
+  {id:'sangare',en:{sg:'singer',pl:'singers'},sg:'sångare',pl:'sångare',defSg:'sångaren',defPl:'sångarna',e:'🎤'},
+  {id:'mekaniker',en:{sg:'mechanic',pl:'mechanics'},sg:'mekaniker',pl:'mekaniker',defSg:'mekanikern',defPl:'mekanikerna',e:'🔧'},
+  {id:'frisor',en:{sg:'hairdresser',pl:'hairdressers'},sg:'frisör',pl:'frisörer',defSg:'frisören',defPl:'frisörerna',e:'✂️'},
+  {id:'snickare',en:{sg:'carpenter',pl:'carpenters'},sg:'snickare',pl:'snickare',defSg:'snickaren',defPl:'snickarna',e:'🔨'},
+  {id:'brandman',en:{sg:'firefighter',pl:'firefighters'},sg:'brandman',pl:'brandmän',defSg:'brandmannen',defPl:'brandmännen',e:'🚒'},
+  {id:'fiskare',en:{sg:'fisher',pl:'fishers'},sg:'fiskare',pl:'fiskare',defSg:'fiskaren',defPl:'fiskarna',e:'🎣'},
+  {id:'clown',en:{sg:'clown',pl:'clowns'},sg:'clown',pl:'clowner',defSg:'clownen',defPl:'clownerna',e:'🤡'},
+  {id:'astronaut',en:{sg:'astronaut',pl:'astronauts'},sg:'astronaut',pl:'astronauter',defSg:'astronauten',defPl:'astronauterna',e:'🚀'},
+  {id:'tandlakare',en:{sg:'dentist',pl:'dentists'},sg:'tandläkare',pl:'tandläkare',defSg:'tandläkaren',defPl:'tandläkarna',e:'🦷'},
+  {id:'postbud',en:{sg:'postal worker',pl:'postal workers'},sg:'postbud',pl:'postbud',defSg:'postbudet',defPl:'postbuden',e:'📮'},
+  {id:'programmerare',en:{sg:'programmer',pl:'programmers'},sg:'programmerare',pl:'programmerare',defSg:'programmeraren',defPl:'programmerarna',e:'💻'},
+  {id:'vakt',en:{sg:'guard',pl:'guards'},sg:'vakt',pl:'vakter',defSg:'vakten',defPl:'vakterna',e:'💂'},
+  {id:'detektiv',en:{sg:'detective',pl:'detectives'},sg:'detektiv',pl:'detektiver',defSg:'detektiven',defPl:'detektiverna',e:'🔍'},
+  {id:'byggare',en:{sg:'builder',pl:'builders'},sg:'byggare',pl:'byggare',defSg:'byggaren',defPl:'byggarna',e:'👷'},
+  {id:'kassor',en:{sg:'cashier',pl:'cashiers'},sg:'kassör',pl:'kassörer',defSg:'kassören',defPl:'kassörerna',e:'🧾'}
 ];
 const JOB_BY_ID=Object.fromEntries(JOBS.map(j=>[j.id,j]));
+// yrket i singular, på spelets språk
+const jobName=J=>LANG==='en'?J.en.sg:J.sg;
 
 // Genitiv: "Klaras", men "Nils" och "Max" utan extra s.
 const gen=name=>/[sxz]$/i.test(name)?name:name+'s';
@@ -480,9 +487,12 @@ const DIRK={above:1,below:1,left:1,right:1};
 // Fraser till personer som inte har någon ledtråd.
 const FLAVOR_INNO=['Tack för att du trodde på mig!','Jag visste att du skulle fatta!','Hurra, jag är fri!','Du är en riktig detektiv!','Puh, vilken tur!','Snyggt löst!','Jag sa ju att jag var snäll!','Toppen, tack!'];
 const FLAVOR_CRIM=['Åh nej, jag blev påkommen!','Hur kunde du veta det?','Det var inte meningen!','Jag ger mig!','Attans, avslöjad!','Nästa gång lurar jag dig!'];
-function flavorText(P,p,crim){const L=crim?FLAVOR_CRIM:FLAVOR_INNO;return L[(p*7+(P.flavorSeed||0))%L.length];}
+const FLAVOR_INNO_EN=['Thanks for believing in me!','I knew you would get it!','Hooray, I\'m free!','You are a real detective!','Phew, what luck!','Nicely solved!','I told you I was nice!','Great, thanks!'];
+const FLAVOR_CRIM_EN=['Oh no, I got caught!','How could you know?','I didn\'t mean to!','I give up!','Drat, found out!','Next time I\'ll fool you!'];
+function flavorText(P,p,crim){const L=LANG==='en'?(crim?FLAVOR_CRIM_EN:FLAVOR_INNO_EN):(crim?FLAVOR_CRIM:FLAVOR_INNO);return L[(p*7+(P.flavorSeed||0))%L.length];}
 
 function clueText(sp,P){
+  if(LANG==='en')return clueTextEn(sp,P);
   const nm=i=>P.names[i];
   const size=R=>pc(regionMask(R,P));
   const where=R=>{switch(R.k){
@@ -656,6 +666,197 @@ function clueText(sp,P){
       const n=sp.n,has=n===0?`inga ${STGP(s)}`:`exakt ${n} ${STG(s,n)}`;
       if(R.k==='job')return `Bara en av ${P.jobs[R.a].defPl} har ${has}.`;
       return `Bara en person ${where(R)} har ${has}.`;
+    }
+  }
+  return '?';
+}
+// Samma ledtrådar på engelska. Grammatiken skiljer sig för mycket för att dela kod med clueText.
+function clueTextEn(sp,P){
+  const nm=i=>P.names[i];
+  const poss=x=>/s$/i.test(x)?x+"'":x+"'s";             // Klara's, Nils'
+  const size=R=>pc(regionMask(R,P));
+  const J=i=>P.jobs[i].en;
+  const SG=s=>s?'criminal':'innocent';
+  const STn=(s,n)=>SG(s)+(n===1?'':'s');                  // criminal(s), innocent(s)
+  const STP=s=>s?'criminals':'innocents';
+  const ADJ=s=>s?'criminals':'innocent';                  // "are criminals" / "are innocent"
+  const ONE=s=>s?'a criminal':'innocent';                 // "is a criminal" / "is innocent"
+  const PRED=(s,n)=>n===1?ONE(s):ADJ(s);
+  const STG=(s,n)=>SG(s)+' neighbour'+(n===1?'':'s');
+  const STGP=s=>SG(s)+' neighbours';
+  const isAre=n=>n===1?'is':'are';
+  const LINE={row:'row',col:'column'};
+  const lineName=(lines,i)=>lines==='row'?'Row '+(i+1):'Column '+COL_LETTERS[i];
+  const DIR={l:'directly to their left',r:'directly to their right',u:'directly above them',d:'directly below them'};
+  const where=R=>{switch(R.k){
+    case 'row':return 'in row '+(R.a+1);
+    case 'col':return 'in column '+COL_LETTERS[R.a];
+    case 'edge':return 'on the edge';
+    case 'corners':return 'in the corners';
+    case 'above':return 'above '+nm(R.a);
+    case 'below':return 'below '+nm(R.a);
+    case 'left':return 'to the left of '+nm(R.a);
+    case 'right':return 'to the right of '+nm(R.a);
+    case 'between':return 'between '+nm(R.a)+' and '+nm(R.b);
+  }return '?';};
+  const pred=R=>{switch(R.k){
+    case 'nb':return {sg:'is a neighbour of '+nm(R.a),pl:'are neighbours of '+nm(R.a),neg:'is not a neighbour of '+nm(R.a)};
+    case 'job':{const j=J(R.a);const a=/^[aeiou]/.test(j.sg)?'an ':'a ';return {sg:'is '+a+j.sg,pl:'are '+j.pl,neg:'is not '+a+j.sg};}
+  }const w=where(R);return {sg:'is '+w,pl:'are '+w,neg:'is not '+w};};
+  function count(R,s,q){
+    const exact=q.n!=null,mn=q.min!=null,par=q.odd!=null,n=exact?q.n:mn?q.min:2;
+    const qty=exact?(n===0?'no':'exactly '+n):mn?'at least '+n:'an '+(q.odd?'odd':'even')+' number of';
+    const many=par||n!==1;
+    const there=par?'There is':many?'There are':'There is';
+    switch(R.k){
+      case 'nb':{
+        const X=nm(R.a);
+        if(exact&&n===size(R))return `All of ${poss(X)} neighbours are ${ADJ(s)}.`;
+        return `${X} has ${qty} ${many?STGP(s):STG(s,1)}.`;
+      }
+      case 'job':{
+        const j=J(R.a),sz=size(R);
+        if(exact&&n===0)return `None of the ${j.pl} are ${ADJ(s)}.`;
+        if(exact&&n===sz)return `All the ${j.pl} are ${ADJ(s)}.`;
+        if(exact)return `Exactly ${n} of the ${sz} ${j.pl} ${isAre(n)} ${PRED(s,n)}.`;
+        if(mn)return `At least ${n} of the ${j.pl} ${isAre(n)} ${PRED(s,n)}.`;
+        return `An ${q.odd?'odd':'even'} number of the ${j.pl} are ${ADJ(s)}.`;
+      }
+      case 'common':{
+        const X=nm(R.a),Y=nm(R.b);
+        return `${X} and ${Y} have ${qty} ${many?STGP(s):STG(s,1)} in common.`;
+      }
+      case 'and':{
+        const A=R.A,B=R.B;
+        if(A.k==='nb'){
+          const X=nm(A.a),tail=B.k==='job'?(many?'who are '+J(B.a).pl:pred(B).sg.replace(/^is/,'who is')):where(B);
+          return `${X} has ${qty} ${many?STGP(s):STG(s,1)} ${tail}.`;
+        }
+        if(A.k==='corners'){
+          const w='in the corners '+where(B).replace(/^in /,'of ');
+          if(exact&&n===0)return `Neither of the two people ${w} is ${ONE(s)}.`;
+          if(exact&&n===2)return `Both people ${w} are ${ADJ(s)}.`;
+          return `Exactly one of the two people ${w} is ${ONE(s)}.`;
+        }
+        if(DIRK[A.k]&&B.k==='job'){
+          const j=J(B.a);
+          return `${there} ${qty} ${many?j.pl:j.sg} ${where(A)} who ${many?'are':'is'} ${many?ADJ(s):ONE(s)}.`;
+        }
+        return '?';
+      }
+    }
+    const w=where(R),sz=size(R);
+    if(exact&&n===sz&&sz>1)return `Everyone ${w} is ${ONE(s)}.`;
+    return `${there} ${qty} ${many?STP(s):STn(s,1)} ${w}.`;
+  }
+  // subjektet: "All criminals in row 3", "Both …", "The only …"
+  const group=(R,s)=>{
+    if(R.k==='nb'){const X=poss(nm(R.a));return {all:`All of ${X} ${STGP(s)}`,both:`Both of ${X} ${STGP(s)}`,one:`${X} only ${STG(s,1)}`};}
+    if(R.k==='job'){const j=J(R.a);return {all:s?`All ${j.pl} who are criminals`:`All innocent ${j.pl}`,both:s?`Both ${j.pl} who are criminals`:`Both innocent ${j.pl}`,one:s?`The only ${j.sg} who is a criminal`:`The only innocent ${j.sg}`};}
+    const w=where(R);
+    return {all:`All ${STP(s)} ${w}`,both:`Both ${STP(s)} ${w}`,one:`The only ${SG(s)} ${w}`};
+  };
+  const s=sp.s,R=sp.R;
+  switch(sp.t){
+    case 'cnt':return count(R,s,{n:sp.n});
+    case 'min':return count(R,s,{min:sp.n});
+    case 'par':return count(R,s,{odd:sp.odd});
+    case 'cmpS':{
+      if(R.k==='nb'){
+        const X=nm(R.a);
+        if(sp.eq)return `Half of ${poss(X)} neighbours are criminals.`;
+        return `${X} has more ${STGP(s)} than ${STGP(1-s)}.`;
+      }
+      if(R.k==='job'){
+        const j=J(R.a);
+        if(sp.eq)return `Half of the ${j.pl} are criminals.`;
+        return `The ${j.pl} include more ${STP(s)} than ${STP(1-s)}.`;
+      }
+      if(sp.eq)return `There are as many criminals as innocents ${where(R)}.`;
+      return `There are more ${STP(s)} than ${STP(1-s)} ${where(R)}.`;
+    }
+    case 'cmpR':{
+      const R2=sp.R2;
+      if(R.k==='nb'){
+        if(sp.eq)return `${nm(R.a)} and ${nm(R2.a)} have the same number of ${STGP(s)}.`;
+        return `${nm(R.a)} has more ${STGP(s)} than ${nm(R2.a)}.`;
+      }
+      if(R.k==='job'){
+        const A=J(R.a),B=J(R2.a);
+        if(sp.eq)return `As many ${A.pl} as ${B.pl} are ${ADJ(s)}.`;
+        return `More ${A.pl} than ${B.pl} are ${ADJ(s)}.`;
+      }
+      if(sp.eq)return `There are as many ${STP(s)} ${where(R)} as ${where(R2)}.`;
+      return `There are more ${STP(s)} ${where(R)} than ${where(R2)}.`;
+    }
+    case 'member':{
+      const X=nm(sp.p),n=sp.n;
+      if(R.k==='nb'){
+        const Y=nm(R.a);
+        if(n===1)return `${X} is ${poss(Y)} only ${STG(s,1)}.`;
+        return `${X} is one of ${poss(Y)} ${n} ${STG(s,n)}.`;
+      }
+      if(R.k==='job'){
+        const j=J(R.a);
+        if(n===1)return s?`${X} is the only ${j.sg} who is a criminal.`:`${X} is the only innocent ${j.sg}.`;
+        return s?`${X} is one of ${n} ${j.pl} who are criminals.`:`${X} is one of ${n} innocent ${j.pl}.`;
+      }
+      if(n===1)return `${X} is the only ${SG(s)} ${where(R)}.`;
+      return `${X} is one of ${n} ${STn(s,n)} ${where(R)}.`;
+    }
+    case 'conn':return `${group(R,s).all} are connected.`;
+    case 'both':return `${group(R,s).both} are connected.`;
+    case 'allIn':return `${group(R,s).all} ${pred(sp.R2).pl}.`;
+    case 'subcnt':{
+      const k=sp.k,n=sp.n,pr=pred(sp.R2),g=group(R,s);
+      if(k===1)return `${cap(g.one)} ${n?pr.sg:pr.neg}.`;
+      if(k===2&&n===2)return `${g.both} ${pr.pl}.`;
+      let lead;
+      if(R.k==='nb')lead=`${nm(R.a)} has exactly ${k} ${STG(s,k)}`;
+      else if(R.k==='job'){const j=J(R.a);lead=`Exactly ${k} of the ${j.pl} ${isAre(k)} ${PRED(s,k)}`;}
+      else lead=`There ${isAre(k)} exactly ${k} ${STn(s,k)} ${where(R)}`;
+      if(n===0)return `${lead}, but none of them ${pr.sg}.`;
+      if(n===k)return `${lead}, and all of them ${pr.pl}.`;
+      return `${lead}, and exactly ${n} of them ${n===1?pr.sg:pr.pl}.`;
+    }
+    case 'most':return `${lineName(sp.lines,sp.idx)} has the most ${STP(s)}.`;
+    case 'only':{
+      const L=lineName(sp.lines,sp.idx),w=LINE[sp.lines];
+      if(sp.n===0)return `${L} is the only ${w} without ${STP(s)}.`;
+      return `${L} is the only ${w} with exactly ${sp.n} ${STn(s,sp.n)}.`;
+    }
+    case 'each':return `Every ${LINE[sp.lines]} has at least ${sp.n} ${STn(s,sp.n)}.`;
+    case 'total':return `There ${isAre(sp.n)} ${sp.n} ${STn(s,sp.n)} in total.`;
+    case 'mostR':{
+      if(R.k==='nb')return `${nm(R.a)} has the most ${STGP(s)} of everyone.`;
+      return `The ${J(R.a).pl} have the most ${STP(s)} of all the jobs.`;
+    }
+    case 'onlyNb':{
+      const X=nm(sp.p),n=sp.n;
+      if(n===0)return `${X} is the only one with no ${STGP(s)}.`;
+      return `${X} is the only one with exactly ${n} ${STG(s,n)}.`;
+    }
+    case 'oneHas':{
+      const n=sp.n;
+      if(sp.fam==='nb')return n===0?`Only one person has no ${STGP(s)}.`:`Only one person has exactly ${n} ${STG(s,n)}.`;
+      const w=LINE[sp.fam];
+      return n===0?`Only one ${w} has no ${STP(s)}.`:`Only one ${w} has exactly ${n} ${STn(s,n)}.`;
+    }
+    case 'dirnb':{
+      const n=sp.n,d=DIR[sp.d];
+      let sg,pl;
+      if(R.k==='job'){const j=J(R.a);sg=j.sg;pl=j.pl;}
+      else if(sp.s1==null){sg='person '+where(R);pl='people '+where(R);}
+      else{sg=SG(sp.s1)+' '+where(R);pl=STP(sp.s1)+' '+where(R);}
+      const obj=`${sp.s2?'a criminal':'an innocent'} ${d}`;
+      if(n===0)return `No ${sg} has ${obj}.`;
+      if(n===1)return `Only one ${sg} has ${obj}.`;
+      return `Exactly ${n} ${pl} have ${obj}.`;
+    }
+    case 'onlyOneNb':{
+      const n=sp.n,has=n===0?`no ${STGP(s)}`:`exactly ${n} ${STG(s,n)}`;
+      if(R.k==='job')return `Only one of the ${J(R.a).pl} has ${has}.`;
+      return `Only one person ${where(R)} has ${has}.`;
     }
   }
   return '?';
@@ -971,19 +1172,24 @@ function nextStep(S,maxTier){
 const LEVELS=[
   {id:'latt',name:'Lätt',icon:'🐣',crim:[5,9],clues:[11,15],maxCx:2,maxTier:1,minOptions:2,maxNew:4,quota:{},
     types:{cnt:5,member:2,min:1,both:1.2,total:.2},
-    kid:'Bra att börja med. En ledtråd i taget räcker, och det finns ofta flera att ta.'},
+    kid:'Bra att börja med. En ledtråd i taget räcker, och det finns ofta flera att ta.',
+    en:{name:'Easy',kid:'A good place to start. One clue at a time is enough, and there are often several to choose from.'}},
   {id:'mellan',name:'Mellan',icon:'🔎',crim:[6,11],clues:[9,12],maxCx:3,maxTier:2,minOptions:1,maxNew:3,quota:{2:[0,3]},hardChance:.7,
     types:{cnt:4,member:1.5,min:1,both:1.2,cmpS:1,cmpR:1,conn:.6,allIn:.7,subcnt:1,total:.3},
-    kid:'Fler sorters ledtrådar. Ibland behöver du lägga ihop två.'},
+    kid:'Fler sorters ledtrådar. Ibland behöver du lägga ihop två.',
+    en:{name:'Medium',kid:'More kinds of clues. Sometimes you need to put two together.'}},
   {id:'svar',name:'Svår',icon:'🕵️',crim:[7,14],clues:[10,14],maxCx:4,maxTier:2,weak:true,quota:{2:[3,6]},hardChance:.4,
     types:{cnt:3,member:1.2,min:.8,both:1,cmpS:1,cmpR:1.2,conn:.8,allIn:1,subcnt:1.3,par:.8,most:.4,only:.4,oneHas:.4,each:.3,total:.3,mostR:.3,dirnb:.4,onlyNb:.2,onlyOneNb:.2},
-    kid:'Flera gånger måste du lägga ihop två ledtrådar.'},
+    kid:'Flera gånger måste du lägga ihop två ledtrådar.',
+    en:{name:'Hard',kid:'Several times you must put two clues together.'}},
   {id:'geni',name:'Geni',icon:'🧠',crim:[6,15],clues:[8,12],maxCx:4,maxTier:4,weak:true,quota:{2:[2,9],3:[2,8],4:[0,1]},hardChance:.6,
     types:{cnt:2.5,member:1,min:.8,both:.8,cmpS:1,cmpR:1.3,conn:1,allIn:1.1,subcnt:1.5,par:1,most:.5,only:.5,oneHas:.5,each:.4,total:.3,mostR:.4,dirnb:.6,onlyNb:.3,onlyOneNb:.3},
-    kid:'Lägg ihop två eller tre ledtrådar för att komma vidare.'},
+    kid:'Lägg ihop två eller tre ledtrådar för att komma vidare.',
+    en:{name:'Genius',kid:'Put two or three clues together to get further.'}},
   {id:'omojliga',name:'Omöjliga',icon:'💀',crim:[9,16],clues:[10,13],maxCx:4,maxTier:4,weak:true,quota:{2:[2,8],3:[3,6],4:[2,4]},hardChance:.6,
     types:{cnt:2,member:1,min:.8,both:.8,cmpS:1,cmpR:1.4,conn:1.1,allIn:1.1,subcnt:1.7,par:1.2,most:.6,only:.6,oneHas:.6,each:.5,total:.3,mostR:.5,dirnb:.7,onlyNb:.4,onlyOneNb:.4},
-    kid:'För de modigaste. Ibland måste fyra ledtrådar eller fler vägas ihop.'}
+    kid:'För de modigaste. Ibland måste fyra ledtrådar eller fler vägas ihop.',
+    en:{name:'Impossible',kid:'For the bravest. Sometimes four clues or more must be weighed together.'}}
 ];
 const MAX_SCOPE_UNKNOWN=14;  // ledtrådar med fler okända celler än så väljs inte (blir för tunga)
 const MAX_EXACT_UNKNOWN=17;  // svårighet 4 räknas bara när högst så många är okända
@@ -1250,12 +1456,17 @@ const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
 const GAME_ID='detektiven';
 const SCORE_KEY='score.'+GAME_ID;   // hubbens trofé: antal lösta fall (alla nivåer)
 const SAVE_KEY='state.'+GAME_ID;    // upplåsta nivåer, lösta fall och pågående fall (hubbens konvention: state.<id>)
-const NOTES=[{id:'gul',label:'gul'},{id:'bla',label:'blå'},{id:'lila',label:'lila'}];
-const PRAISE=['Rätt!','Snyggt!','Bra slutsats!','Precis!','Helt rätt!'];
+setLang(I18N.lang);
+I18N.apply();
+const NOTES=[{id:'gul',label:tr('gul','yellow')},{id:'bla',label:tr('blå','blue')},{id:'lila',label:tr('lila','purple')}];
+const PRAISE=tr(['Rätt!','Snyggt!','Bra slutsats!','Precis!','Helt rätt!'],['Right!','Nice!','Good deduction!','Exactly!','Spot on!']);
+// nivåns namn och beskrivning på spelets språk
+const lvName=L=>LANG==='en'?L.en.name:L.name;
+const lvKid=L=>LANG==='en'?L.en.kid:L.kid;
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // [a, b, c] → "a, b och c"
-const listSv=xs=>xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+' och '+xs[xs.length-1];
+const listSv=xs=>xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+tr(' och ',' and ')+xs[xs.length-1];
 const fmtTime=s=>{s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 
 function readSave(){
@@ -1300,15 +1511,15 @@ function showMenu(msg){
   go(`<main class="menu">
     <header class="hero">
       <div class="logo" aria-hidden="true">🕵️</div>
-      <h1>Detektiven</h1>
-      <p class="sub">Vem är skurk och vem är oskyldig? Lös fallet med hjälp av ledtrådarna – utan att gissa!</p>
+      <h1>${tr('Detektiven','The Detective')}</h1>
+      <p class="sub">${tr('Vem är skurk och vem är oskyldig? Lös fallet med hjälp av ledtrådarna – utan att gissa!','Who is a criminal and who is innocent? Solve the case with the clues – without guessing!')}</p>
     </header>
-    ${resume?`<button class="resume panel" data-act="resume"><span class="ico" aria-hidden="true">${LEVELS[G.pz.level].icon}</span><span><b>Fortsätt fallet</b>${LEVELS[G.pz.level].name} · ${pc(G.S.known)} av 20 avslöjade</span></button>`:''}
-    <h2 class="pickh">${resume?'Eller välj nivå för ett nytt fall':'Välj nivå för ett nytt fall'}</h2>
+    ${resume?`<button class="resume panel" data-act="resume"><span class="ico" aria-hidden="true">${LEVELS[G.pz.level].icon}</span><span><b>${tr('Fortsätt fallet','Continue the case')}</b>${lvName(LEVELS[G.pz.level])} · ${pc(G.S.known)} ${tr('av 20 avslöjade','of 20 revealed')}</span></button>`:''}
+    <h2 class="pickh">${resume?tr('Eller välj nivå för ett nytt fall','Or pick a level for a new case'):tr('Välj nivå för ett nytt fall','Pick a level for a new case')}</h2>
     <p class="menumsg" role="status">${msg?esc(msg):''}</p>
     <div class="levels">${LEVELS.map(levelButton).join('')}</div>
-    <div class="row center"><button class="btn" data-act="rules">📖 Så spelar du</button></div>
-    <p class="record">${total?`🏆 Lösta fall: <b>${total}</b>`:'🏆 Lös ditt första fall!'}</p>
+    <div class="row center"><button class="btn" data-act="rules">📖 ${tr('Så spelar du','How to play')}</button></div>
+    <p class="record">${total?`🏆 ${tr('Lösta fall','Cases solved')}: <b>${total}</b>`:tr('🏆 Lös ditt första fall!','🏆 Solve your first case!')}</p>
   </main>`,{
     resume:()=>renderPlay(),
     level:b=>chooseLevel(+b.dataset.lvl),
@@ -1319,21 +1530,21 @@ function levelButton(L,i){
   const locked=i>PROG.unlocked,n=PROG.solved[i];
   return `<button class="level lv-${L.id}${locked?' locked':''}" data-act="level" data-lvl="${i}">
     <span class="ico" aria-hidden="true">${locked?'🔒':L.icon}</span>
-    <span class="nm">${L.name}</span>
-    <span class="ds">${locked?`Lös ett fall på ${LEVELS[i-1].name} för att låsa upp.`:L.kid}</span>
-    <span class="tag">${locked?'Låst':n?plural(n,'löst fall','lösta fall'):'Inget löst fall än'}</span>
+    <span class="nm">${lvName(L)}</span>
+    <span class="ds">${locked?tr(`Lös ett fall på ${lvName(LEVELS[i-1])} för att låsa upp.`,`Solve a case on ${lvName(LEVELS[i-1])} to unlock.`):lvKid(L)}</span>
+    <span class="tag">${locked?tr('Låst','Locked'):n?plural(n,tr('löst fall','case solved'),tr('lösta fall','cases solved')):tr('Inget löst fall än','No case solved yet')}</span>
   </button>`;
 }
 function chooseLevel(i){
   if(i>PROG.unlocked){
     const m=app.querySelector('.menumsg');
-    if(m){m.textContent=`${LEVELS[i].name} är låst. Lös ett fall på ${LEVELS[i-1].name} först!`;}
+    if(m){m.textContent=tr(`${lvName(LEVELS[i])} är låst. Lös ett fall på ${lvName(LEVELS[i-1])} först!`,`${lvName(LEVELS[i])} is locked. Solve a case on ${lvName(LEVELS[i-1])} first!`);}
     return;
   }
   if(G&&!G.done&&G.order.length>1){
-    modal(`<h3>Börja ett nytt fall?</h3>
-      <p>Du har ett fall på <b>${LEVELS[G.pz.level].name}</b> som inte är löst. Det försvinner om du börjar ett nytt.</p>
-      <div class="row center"><button class="btn go" data-m="close">Fortsätt det gamla</button><button class="btn" data-m="new">Börja nytt</button></div>`,
+    modal(`<h3>${tr('Börja ett nytt fall?','Start a new case?')}</h3>
+      <p>${tr(`Du har ett fall på <b>${lvName(LEVELS[G.pz.level])}</b> som inte är löst. Det försvinner om du börjar ett nytt.`,`You have an unsolved case on <b>${lvName(LEVELS[G.pz.level])}</b>. It will be lost if you start a new one.`)}</p>
+      <div class="row center"><button class="btn go" data-m="close">${tr('Fortsätt det gamla','Continue the old one')}</button><button class="btn" data-m="new">${tr('Börja nytt','Start new')}</button></div>`,
       {close:()=>renderPlay(),new:()=>startLevel(i)});
     return;
   }
@@ -1354,12 +1565,12 @@ let making=0;
 function startLevel(i){
   stopTimer();
   const ticket=++making;
-  go(`<main class="loading" role="status"><div class="spin" aria-hidden="true">🔎</div><p>Detektiven letar efter ett nytt fall …</p></main>`,{},'loading');
+  go(`<main class="loading" role="status"><div class="spin" aria-hidden="true">🔎</div><p>${tr('Detektiven letar efter ett nytt fall …','The detective is looking for a new case …')}</p></main>`,{},'loading');
   // låt skärmen ritas innan fallet skapas
   setTimeout(async()=>{
     const pz=await makeCase(i);
     if(ticket!==making)return;            // man hann lämna skärmen
-    if(!pz){showMenu('Det gick inte att hitta ett fall. Försök igen!');return;}
+    if(!pz){showMenu(tr('Det gick inte att hitta ett fall. Försök igen!','Could not find a case. Try again!'));return;}
     G=newGame(pz);VIEW=viewFrom(null);
     persist();renderPlay();
   },60);
@@ -1376,17 +1587,17 @@ function renderPlay(){
   }
   go(`<main class="play">
     <header class="bar">
-      <button class="btn sm" data-act="menu">Meny</button>
-      <div class="casename"><b><span aria-hidden="true">${L.icon}</span> ${L.name}</b><small>Fall ${PROG.solved[G.pz.level]+1}</small></div>
+      <button class="btn sm" data-act="menu">${tr('Meny','Menu')}</button>
+      <div class="casename"><b><span aria-hidden="true">${L.icon}</span> ${lvName(L)}</b><small>${tr('Fall','Case')} ${PROG.solved[G.pz.level]+1}</small></div>
       <div class="stats">
-        <div class="stat good" data-stat="found"><span class="n"></span><span class="l">av 20</span></div>
-        <div class="stat bad" data-stat="mistakes"><span class="n"></span><span class="l">misstag</span></div>
+        <div class="stat good" data-stat="found"><span class="n"></span><span class="l">${tr('av 20','of 20')}</span></div>
+        <div class="stat bad" data-stat="mistakes"><span class="n"></span><span class="l">${tr('misstag','mistakes')}</span></div>
       </div>
-      <button class="btn sm" data-act="hint">💡 Tips</button>
-      <button class="btn sm" data-act="rules" aria-label="Så spelar du">📖</button>
+      <button class="btn sm" data-act="hint">💡 ${tr('Tips','Hint')}</button>
+      <button class="btn sm" data-act="rules" aria-label="${tr('Så spelar du','How to play')}">📖</button>
     </header>
     <p class="msg" role="status" aria-live="polite"></p>
-    <section class="board" aria-label="De misstänkta">${cells}</section>
+    <section class="board" aria-label="${tr('De misstänkta','The suspects')}">${cells}</section>
   </main>`,{
     menu:()=>{persist();showMenu();},
     hint:useHint,
@@ -1395,19 +1606,20 @@ function renderPlay(){
   });
   refreshBoard();
   if(VIEW.hint)showHintMsg();
-  else setMsg(G.order.length===1?`Börja med ledtråden från ${G.P.names[G.pz.start]}. Tryck på en person när du vet vad hen är.`:'');
+  else setMsg(G.order.length===1?tr(`Börja med ledtråden från ${G.P.names[G.pz.start]}. Tryck på en person när du vet vad hen är.`,`Start with the clue from ${G.P.names[G.pz.start]}. Tap a person when you know what they are.`):'');
   startTimer();
 }
 // Ledtråden, eller det personen säger om hen inte har någon ledtråd.
 const cardText=p=>G.pz.clues[p]?clueText(G.pz.clues[p],G.P):flavorText(G.P,p,isCriminal(G,p));
 // Långa yrken får ett mjukt bindestreck så att de kan brytas på smala kort.
-const JOB_SHY={programmerare:'program\u00admerare',tandlakare:'tand\u00adläkare',astronaut:'astro\u00adnaut',mekaniker:'meka\u00adniker'};
+const JOB_SHY=tr({programmerare:'program\u00admerare',tandlakare:'tand\u00adläkare',astronaut:'astro\u00adnaut',mekaniker:'meka\u00adniker'},
+  {programmerare:'program\u00admer',frisor:'hair\u00addresser',brandman:'fire\u00adfighter',astronaut:'astro\u00adnaut',mekaniker:'mech\u00adanic',snickare:'car\u00adpenter',detektiv:'detec\u00adtive'});
 function cardInner(p){
   const P=G.P,J=P.jobs[P.jobOf[p]],known=isKnown(G,p),crim=isCriminal(G,p);
   return `<span class="coord" aria-hidden="true">${cellName(p)}</span>
     ${known?`<span class="badge" aria-hidden="true">${crim?'🦹':'😇'}</span>`:''}
     <span class="who${P.names[p].length>=7?' long':''}"><span class="nm">${esc(P.names[p])}</span></span>
-    <span class="job">${known?`<span class="em" aria-hidden="true">${J.e}</span>`:''}${JOB_SHY[J.id]||J.sg}</span>
+    <span class="job">${known?`<span class="em" aria-hidden="true">${J.e}</span>`:''}${JOB_SHY[J.id]||jobName(J)}</span>
     ${known?`<span class="clue${G.pz.clues[p]?'':' flavor'}">${esc(cardText(p))}</span>`:`<span class="face" aria-hidden="true">${J.e}</span>`}`;
 }
 function refreshCard(p,anim){
@@ -1423,7 +1635,7 @@ function refreshCard(p,anim){
   if(b.dataset.html!==html){b.innerHTML=html;b.dataset.html=html;}
   b.className=cls.join(' ');
   const J=G.P.jobs[G.P.jobOf[p]];
-  b.setAttribute('aria-label',`${G.P.names[p]}, ${J.sg}, ${cellName(p)}: ${known?(crim?'skurk':'oskyldig')+'. '+(G.pz.clues[p]?'':'Ingen ledtråd: ')+cardText(p):'inte avslöjad'}`);
+  b.setAttribute('aria-label',`${G.P.names[p]}, ${jobName(J)}, ${cellName(p)}: ${known?(crim?tr('skurk','criminal'):tr('oskyldig','innocent'))+'. '+(G.pz.clues[p]?'':tr('Ingen ledtråd: ','No clue: '))+cardText(p):tr('inte avslöjad','not revealed')}`);
   if(anim)setTimeout(()=>b.classList.remove(anim),500);
 }
 function refreshBoard(anim){
@@ -1452,14 +1664,14 @@ function tapCard(p){
 }
 function openChoice(p){
   const P=G.P,J=P.jobs[P.jobOf[p]],note=VIEW.notes[p]||'';
-  modal(`<p class="cwho"><span aria-hidden="true">${J.e}</span> <b>${esc(P.names[p])}</b><small>${J.sg} · ${cellName(p)}</small></p>
-    <h3>Vad är ${esc(P.names[p])}?</h3>
-    <div class="cbtns"><button class="btn big inno" data-m="inno">😇 Oskyldig</button><button class="btn big crim" data-m="crim">🦹 Skurk</button></div>
-    <p class="small">Färgmärk bara för dig själv:</p>
-    <div class="notes">${NOTES.map(n=>`<button class="sw sw-${n.id}" data-m="note" data-note="${n.id}" aria-pressed="${note===n.id}" aria-label="Märk ${n.label}"></button>`).join('')}<button class="sw" data-m="note" data-note="" aria-pressed="${!note}" aria-label="Ingen märkning">✕</button></div>
-    <button class="btn sm" data-m="close">Avbryt</button>`,
+  modal(`<p class="cwho"><span aria-hidden="true">${J.e}</span> <b>${esc(P.names[p])}</b><small>${jobName(J)} · ${cellName(p)}</small></p>
+    <h3>${tr('Vad är','What is')} ${esc(P.names[p])}?</h3>
+    <div class="cbtns"><button class="btn big inno" data-m="inno">😇 ${tr('Oskyldig','Innocent')}</button><button class="btn big crim" data-m="crim">🦹 ${tr('Skurk','Criminal')}</button></div>
+    <p class="small">${tr('Färgmärk bara för dig själv:','Colour mark, just for you:')}</p>
+    <div class="notes">${NOTES.map(n=>`<button class="sw sw-${n.id}" data-m="note" data-note="${n.id}" aria-pressed="${note===n.id}" aria-label="${tr('Märk','Mark')} ${n.label}"></button>`).join('')}<button class="sw" data-m="note" data-note="" aria-pressed="${!note}" aria-label="${tr('Ingen märkning','No mark')}">✕</button></div>
+    <button class="btn sm" data-m="close">${tr('Avbryt','Cancel')}</button>`,
     {inno:()=>decide(p,0),crim:()=>decide(p,1),note:b=>{const v=b.dataset.note;if(v)VIEW.notes[p]=v;else delete VIEW.notes[p];refreshCard(p);persist();}},
-    {o:'inno',s:'crim'});
+    tr({o:'inno',s:'crim'},{i:'inno',c:'crim'}));
 }
 function decide(p,s){
   const res=mark(G,p,s),name=G.P.names[p];
@@ -1469,11 +1681,11 @@ function decide(p,s){
     VIEW.hint=null;VIEW.hintStage=0;
     refreshBoard({p,cls:'flip'});
     if(G.done){finishCase();return;}
-    setMsg(`${pick(PRAISE,Math.random)} ${name} är ${s?'skurk 🦹':'oskyldig 😇'}.`,'ok');
+    setMsg(`${pick(PRAISE,Math.random)} ${name} ${tr('är','is')} ${s?tr('skurk 🦹','a criminal 🦹'):tr('oskyldig 😇','innocent 😇')}.`,'ok');
   }else{
     refreshBoard({p,cls:'shake'});
-    if(res==='wrong')setMsg(`Hoppsan! Ledtrådarna säger något annat om ${name}. Det blev ett misstag.`,'bad');
-    else setMsg(`Det går inte att bevisa än vad ${name} är. Det blev ett misstag – leta efter fler ledtrådar!`,'bad');
+    if(res==='wrong')setMsg(tr(`Hoppsan! Ledtrådarna säger något annat om ${name}. Det blev ett misstag.`,`Oops! The clues say something else about ${name}. That was a mistake.`),'bad');
+    else setMsg(tr(`Det går inte att bevisa än vad ${name} är. Det blev ett misstag – leta efter fler ledtrådar!`,`You can't prove what ${name} is yet. That was a mistake – look for more clues!`),'bad');
   }
   persist();
 }
@@ -1489,8 +1701,8 @@ function useHint(){
 }
 function showHintMsg(){
   const h=VIEW.hint,names=xs=>listSv(xs.map(p=>G.P.names[p]));
-  if(VIEW.hintStage===1)setMsg(h.owners.length===1?`💡 Titta noga på ledtråden från ${names(h.owners)}.`:`💡 Lägg ihop ledtrådarna från ${names(h.owners)}.`,'tip');
-  else setMsg(`💡 Nu kan du lista ut vad ${names(h.cells)} är.`,'tip');
+  if(VIEW.hintStage===1)setMsg(h.owners.length===1?tr(`💡 Titta noga på ledtråden från ${names(h.owners)}.`,`💡 Look closely at the clue from ${names(h.owners)}.`):tr(`💡 Lägg ihop ledtrådarna från ${names(h.owners)}.`,`💡 Put together the clues from ${names(h.owners)}.`),'tip');
+  else setMsg(tr(`💡 Nu kan du lista ut vad ${names(h.cells)} är.`,`💡 Now you can work out what ${names(h.cells)} ${h.cells.length===1?'is':'are'}.`),'tip');
 }
 
 // ---------- tid ----------
@@ -1515,24 +1727,24 @@ function finishCase(){
 }
 function showSummary(D,unlocked,time){
   const L=LEVELS[D.pz.level],crims=pc(D.pz.truth),P=D.P;
-  const title=!D.mistakes&&!D.hints?'Perfekt detektivarbete!':!D.mistakes?'Fallet är löst – utan misstag!':'Fallet är löst!';
+  const title=!D.mistakes&&!D.hints?tr('Perfekt detektivarbete!','Perfect detective work!'):!D.mistakes?tr('Fallet är löst – utan misstag!','Case solved – without mistakes!'):tr('Fallet är löst!','Case solved!');
   const grid=[...Array(N).keys()].map(p=>{const c=(D.pz.truth>>>p)&1;return `<span class="${c?'c':''}${D.missOn[p]?' miss':''}">${c?'🦹':'😇'} ${esc(P.names[p])}</span>`;}).join('');
   go(`<main class="panel page summary">
     <div class="medal" aria-hidden="true">${!D.mistakes&&!D.hints?'🏅':'🎉'}</div>
     <h2>${title}</h2>
-    <p class="lead">Du hittade alla ${crims} skurkarna på nivå ${L.name}.</p>
+    <p class="lead">${tr(`Du hittade alla ${crims} skurkarna på nivå ${lvName(L)}.`,`You found all ${crims} criminals on ${lvName(L)}.`)}</p>
     <div class="bigstats">
-      <div class="big${D.mistakes?'':' good'}" data-sum="mistakes"><b>${D.mistakes}</b><span>misstag</span></div>
-      <div class="big" data-sum="hints"><b>${D.hints}</b><span>tips</span></div>
-      <div class="big" data-sum="time"><b>${fmtTime(time)}</b><span>tid</span></div>
+      <div class="big${D.mistakes?'':' good'}" data-sum="mistakes"><b>${D.mistakes}</b><span>${tr('misstag',D.mistakes===1?'mistake':'mistakes')}</span></div>
+      <div class="big" data-sum="hints"><b>${D.hints}</b><span>${tr('tips',D.hints===1?'hint':'hints')}</span></div>
+      <div class="big" data-sum="time"><b>${fmtTime(time)}</b><span>${tr('tid','time')}</span></div>
     </div>
-    ${unlocked>=0?`<p class="unlock">🔓 Du har låst upp ${LEVELS[unlocked].icon} ${LEVELS[unlocked].name}!</p>`:''}
+    ${unlocked>=0?`<p class="unlock">🔓 ${tr('Du har låst upp','You have unlocked')} ${LEVELS[unlocked].icon} ${lvName(LEVELS[unlocked])}!</p>`:''}
     <div class="row center">
-      <button class="btn go big" data-act="new">Nytt fall</button>
-      <button class="btn big" data-act="same">Ett till på ${L.name}</button>
+      <button class="btn go big" data-act="new">${tr('Nytt fall','New case')}</button>
+      <button class="btn big" data-act="same">${tr('Ett till på','Another on')} ${lvName(L)}</button>
     </div>
-    <div class="solved" aria-label="Lösningen">${grid}</div>
-    ${D.mistakes?'<p class="legend">Gul kant = där det blev misstag.</p>':''}
+    <div class="solved" aria-label="${tr('Lösningen','The solution')}">${grid}</div>
+    ${D.mistakes?`<p class="legend">${tr('Gul kant = där det blev misstag.','Yellow border = where a mistake was made.')}</p>`:''}
   </main>`,{
     new:()=>showMenu(),
     same:()=>startLevel(D.pz.level)
@@ -1542,6 +1754,32 @@ function showSummary(D,unlocked,time){
 
 // ---------- regler ----------
 function showRules(){
+  if(LANG==='en'){modal(`<div class="rules">
+    <h3>📖 How to play</h3>
+    <ul>
+      <li>All 20 people are either <b>a criminal 🦹</b> or <b>innocent 😇</b>. Work out who is what!</li>
+      <li><b>Everyone tells the truth</b> – even the criminals.</li>
+      <li>Not everyone has a clue. Some people just say something once you have worked them out.</li>
+      <li>Tap a person and choose Innocent or Criminal. If you are right, you get to see that person's clue.</li>
+      <li><b>No guessing.</b> The game only accepts what the clues prove. If you choose wrong, or something that cannot be proved yet, it counts as a mistake.</li>
+      <li>A person's job says nothing about whether they are a criminal, unless a clue says so.</li>
+    </ul>
+    <h3>The words in the clues</h3>
+    <ul>
+      <li><b>Rows</b> go across (1–5). <b>Columns</b> go from top to bottom (A–D).</li>
+      <li><b>Neighbours</b> are the up to 8 people around someone, diagonals included. A <b>criminal neighbour</b> is a neighbour who is a criminal.</li>
+      <li><b>Above</b> and <b>below</b> mean in the same column. <b>To the left</b> and <b>to the right</b> mean in the same row.</li>
+      <li><b>Between</b> means the people standing between two people, not the two themselves.</li>
+      <li><b>The edge</b> is the 14 people around the outside. <b>The corners</b> are the four in the corners.</li>
+      <li><b>Connected</b> means you can walk between them without jumping over anyone.</li>
+      <li><b>Directly to their left</b> (or right, above, below) means the neighbour right next to them in that direction.</li>
+      <li><b>Both</b> means exactly two. <b>All</b> means there is at least one. <b>The most</b> means more than all the others. <b>At least 2</b> means 2 or more.</li>
+      <li>Numbers are exact: <b>2 criminals</b> means exactly 2.</li>
+      <li><b>Odd</b> is 1, 3, 5 … and <b>even</b> is 0, 2, 4 …</li>
+    </ul>
+    <p class="ex">💡 <b>Hint:</b> The first tap shows which clues to look at. The second tap shows who you can work out. Tap a revealed clue to dim it.</p>
+    <div class="row center"><button class="btn go" data-m="close">Let's go!</button></div>
+  </div>`);return;}
   modal(`<div class="rules">
     <h3>📖 Så spelar du</h3>
     <ul>

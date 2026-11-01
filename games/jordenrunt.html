@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Jorden runt</title>
+<title data-en="Around the World">Jorden runt</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
 <!--
   Jorden runt — geografispel: flaggor, huvudstäder och länder (spel-id: jordenrunt)
   Del av Stalman games. Helt fristående: inga nätverksresurser, flaggorna ligger i filen.
@@ -277,9 +278,9 @@ h3{font-size:1.15rem;font-weight:900}
 </style>
 </head>
 <body>
-<nav class="hubnav"><a class="back" href="../index.html">← Spel</a></nav>
+<nav class="hubnav"><a class="back" href="../index.html" data-en="← Games">← Spel</a></nav>
 <div id="app"></div>
-<noscript>Det här spelet behöver JavaScript.</noscript>
+<noscript>Det här spelet behöver JavaScript. / This game needs JavaScript.</noscript>
 <script>
 'use strict';
 /* =========================================================
@@ -491,13 +492,213 @@ const COUNTRIES=[
 {c:"tl",n:"Östtimor",cap:"Dili",k:"as",a:14874,p:1418517,t:4,b:["id"],f:["röd","svart","gul"],s:["ma","vn"]}
 ];
 const BY={};for(const c of COUNTRIES)BY[c.c]=c;
+// Engelska namn: [land, huvudstad, not om huvudstaden]. setLang('en') byter c.n, c.cap och c.cn.
+const COUNTRIES_EN={
+af:["Afghanistan", "Kabul"],
+al:["Albania", "Tirana"],
+dz:["Algeria", "Algiers"],
+ad:["Andorra", "Andorra la Vella"],
+ao:["Angola", "Luanda"],
+ag:["Antigua and Barbuda", "Saint John's"],
+ar:["Argentina", "Buenos Aires"],
+am:["Armenia", "Yerevan"],
+au:["Australia", "Canberra", "The largest city is Sydney."],
+az:["Azerbaijan", "Baku"],
+bs:["Bahamas", "Nassau"],
+bh:["Bahrain", "Manama"],
+bd:["Bangladesh", "Dhaka"],
+bb:["Barbados", "Bridgetown"],
+by:["Belarus", "Minsk"],
+be:["Belgium", "Brussels"],
+bz:["Belize", "Belmopan"],
+bj:["Benin", "Porto-Novo"],
+bt:["Bhutan", "Thimphu"],
+bo:["Bolivia", "Sucre", "The government sits in La Paz."],
+ba:["Bosnia and Herzegovina", "Sarajevo"],
+bw:["Botswana", "Gaborone"],
+br:["Brazil", "Brasília", "The largest city is São Paulo."],
+bn:["Brunei", "Bandar Seri Begawan"],
+bg:["Bulgaria", "Sofia"],
+bf:["Burkina Faso", "Ouagadougou"],
+bi:["Burundi", "Gitega", "It used to be Bujumbura."],
+cf:["Central African Republic", "Bangui"],
+cl:["Chile", "Santiago"],
+co:["Colombia", "Bogotá"],
+cr:["Costa Rica", "San José"],
+cy:["Cyprus", "Nicosia"],
+dk:["Denmark", "Copenhagen"],
+dj:["Djibouti", "Djibouti"],
+dm:["Dominica", "Roseau"],
+do:["Dominican Republic", "Santo Domingo"],
+ec:["Ecuador", "Quito"],
+eg:["Egypt", "Cairo"],
+gq:["Equatorial Guinea", "Ciudad de la Paz", "New capital since 2026. It used to be Malabo."],
+sv:["El Salvador", "San Salvador"],
+ci:["Ivory Coast", "Yamoussoukro", "The largest city is Abidjan."],
+er:["Eritrea", "Asmara"],
+ee:["Estonia", "Tallinn"],
+sz:["Eswatini", "Mbabane", "The king and the parliament are in Lobamba."],
+et:["Ethiopia", "Addis Ababa"],
+fj:["Fiji", "Suva"],
+ph:["Philippines", "Manila"],
+fi:["Finland", "Helsinki"],
+fr:["France", "Paris"],
+ae:["United Arab Emirates", "Abu Dhabi"],
+ga:["Gabon", "Libreville"],
+gm:["Gambia", "Banjul"],
+ge:["Georgia", "Tbilisi"],
+gh:["Ghana", "Accra"],
+gr:["Greece", "Athens"],
+gd:["Grenada", "Saint George's"],
+gt:["Guatemala", "Guatemala City"],
+gn:["Guinea", "Conakry"],
+gw:["Guinea-Bissau", "Bissau"],
+gy:["Guyana", "Georgetown"],
+ht:["Haiti", "Port-au-Prince"],
+hn:["Honduras", "Tegucigalpa"],
+in:["India", "New Delhi"],
+id:["Indonesia", "Jakarta"],
+iq:["Iraq", "Baghdad"],
+ir:["Iran", "Tehran"],
+ie:["Ireland", "Dublin"],
+is:["Iceland", "Reykjavík"],
+il:["Israel", "Jerusalem", "Disputed: most countries, Sweden too, do not recognise Jerusalem as Israel's capital."],
+it:["Italy", "Rome"],
+jm:["Jamaica", "Kingston"],
+jp:["Japan", "Tokyo"],
+ye:["Yemen", "Sanaa"],
+jo:["Jordan", "Amman"],
+kh:["Cambodia", "Phnom Penh"],
+cm:["Cameroon", "Yaoundé"],
+ca:["Canada", "Ottawa", "The largest city is Toronto."],
+cv:["Cape Verde", "Praia"],
+kz:["Kazakhstan", "Astana", "It used to be Almaty."],
+ke:["Kenya", "Nairobi"],
+cn:["China", "Beijing"],
+kg:["Kyrgyzstan", "Bishkek"],
+ki:["Kiribati", "Tarawa"],
+km:["Comoros", "Moroni"],
+cg:["Congo-Brazzaville", "Brazzaville"],
+cd:["Congo-Kinshasa", "Kinshasa"],
+hr:["Croatia", "Zagreb"],
+cu:["Cuba", "Havana"],
+kw:["Kuwait", "Kuwait City"],
+la:["Laos", "Vientiane"],
+ls:["Lesotho", "Maseru"],
+lv:["Latvia", "Riga"],
+lb:["Lebanon", "Beirut"],
+lr:["Liberia", "Monrovia"],
+ly:["Libya", "Tripoli"],
+li:["Liechtenstein", "Vaduz"],
+lt:["Lithuania", "Vilnius"],
+lu:["Luxembourg", "Luxembourg"],
+mg:["Madagascar", "Antananarivo"],
+mw:["Malawi", "Lilongwe"],
+my:["Malaysia", "Kuala Lumpur"],
+mv:["Maldives", "Malé"],
+ml:["Mali", "Bamako"],
+mt:["Malta", "Valletta"],
+ma:["Morocco", "Rabat", "The largest city is Casablanca."],
+mh:["Marshall Islands", "Majuro"],
+mr:["Mauritania", "Nouakchott"],
+mu:["Mauritius", "Port Louis"],
+mx:["Mexico", "Mexico City"],
+fm:["Micronesia", "Palikir"],
+mz:["Mozambique", "Maputo"],
+md:["Moldova", "Chișinău"],
+mc:["Monaco", "Monaco"],
+mn:["Mongolia", "Ulaanbaatar"],
+me:["Montenegro", "Podgorica"],
+mm:["Myanmar", "Naypyidaw", "The largest city is Yangon."],
+na:["Namibia", "Windhoek"],
+nr:["Nauru", "Yaren", "Nauru has no capital by law, but the government sits in Yaren."],
+nl:["Netherlands", "Amsterdam", "The government sits in The Hague."],
+np:["Nepal", "Kathmandu"],
+ni:["Nicaragua", "Managua"],
+ne:["Niger", "Niamey"],
+ng:["Nigeria", "Abuja", "The largest city is Lagos."],
+kp:["North Korea", "Pyongyang"],
+mk:["North Macedonia", "Skopje"],
+no:["Norway", "Oslo"],
+nz:["New Zealand", "Wellington", "The largest city is Auckland."],
+om:["Oman", "Muscat"],
+pk:["Pakistan", "Islamabad", "The largest city is Karachi."],
+pw:["Palau", "Ngerulmud"],
+ps:["Palestine", "Ramallah", "Palestine claims East Jerusalem as its capital. The government sits in Ramallah."],
+pa:["Panama", "Panama City"],
+pg:["Papua New Guinea", "Port Moresby"],
+py:["Paraguay", "Asunción"],
+pe:["Peru", "Lima"],
+pl:["Poland", "Warsaw"],
+pt:["Portugal", "Lisbon"],
+qa:["Qatar", "Doha"],
+ro:["Romania", "Bucharest"],
+rw:["Rwanda", "Kigali"],
+ru:["Russia", "Moscow"],
+kn:["Saint Kitts and Nevis", "Basseterre"],
+lc:["Saint Lucia", "Castries"],
+vc:["Saint Vincent and the Grenadines", "Kingstown"],
+sb:["Solomon Islands", "Honiara"],
+ws:["Samoa", "Apia"],
+sm:["San Marino", "San Marino"],
+st:["São Tomé and Príncipe", "São Tomé"],
+sa:["Saudi Arabia", "Riyadh"],
+ch:["Switzerland", "Bern", "Switzerland has no capital by law, but the government sits in Bern."],
+sn:["Senegal", "Dakar"],
+rs:["Serbia", "Belgrade"],
+sc:["Seychelles", "Victoria"],
+sl:["Sierra Leone", "Freetown"],
+sg:["Singapore", "Singapore"],
+sk:["Slovakia", "Bratislava"],
+si:["Slovenia", "Ljubljana"],
+so:["Somalia", "Mogadishu"],
+es:["Spain", "Madrid"],
+lk:["Sri Lanka", "Sri Jayawardenepura Kotte", "The largest city is Colombo."],
+gb:["United Kingdom", "London"],
+sd:["Sudan", "Khartoum"],
+sr:["Suriname", "Paramaribo"],
+se:["Sweden", "Stockholm"],
+za:["South Africa", "Pretoria", "South Africa has three capitals: Pretoria, Cape Town and Bloemfontein."],
+kr:["South Korea", "Seoul"],
+ss:["South Sudan", "Juba"],
+sy:["Syria", "Damascus"],
+tj:["Tajikistan", "Dushanbe"],
+tz:["Tanzania", "Dodoma", "The largest city is Dar es Salaam."],
+td:["Chad", "N'Djamena"],
+th:["Thailand", "Bangkok"],
+cz:["Czechia", "Prague"],
+tg:["Togo", "Lomé"],
+to:["Tonga", "Nuku'alofa"],
+tt:["Trinidad and Tobago", "Port of Spain"],
+tn:["Tunisia", "Tunis"],
+tr:["Turkey", "Ankara", "The largest city is Istanbul."],
+tm:["Turkmenistan", "Ashgabat"],
+tv:["Tuvalu", "Funafuti"],
+de:["Germany", "Berlin"],
+ug:["Uganda", "Kampala"],
+ua:["Ukraine", "Kyiv", "It used to be written Kiev in English."],
+hu:["Hungary", "Budapest"],
+uy:["Uruguay", "Montevideo"],
+us:["USA", "Washington", "The full name is Washington, D.C."],
+uz:["Uzbekistan", "Tashkent"],
+vu:["Vanuatu", "Port Vila"],
+va:["Vatican City", "Vatican City"],
+ve:["Venezuela", "Caracas"],
+vn:["Vietnam", "Hanoi", "The largest city is Ho Chi Minh City."],
+zm:["Zambia", "Lusaka"],
+zw:["Zimbabwe", "Harare"],
+at:["Austria", "Vienna"],
+tl:["East Timor", "Dili"]
+};
+for(const c of COUNTRIES)c.sv=[c.n,c.cap,c.cn];
+const COLOR_EN={svart:'black',grön:'green',röd:'red',vit:'white',blå:'blue',gul:'yellow',orange:'orange'};
 const CONTINENTS=[
-  {id:'eu',name:'Europa',icon:'🏰'},
-  {id:'as',name:'Asien',icon:'🐼'},
-  {id:'af',name:'Afrika',icon:'🦁'},
-  {id:'na',name:'Nordamerika',icon:'🦅'},
-  {id:'sa',name:'Sydamerika',icon:'🦜'},
-  {id:'oc',name:'Oceanien',icon:'🦘'}
+  {id:'eu',name:'Europa',icon:'🏰',en:'Europe'},
+  {id:'as',name:'Asien',icon:'🐼',en:'Asia'},
+  {id:'af',name:'Afrika',icon:'🦁',en:'Africa'},
+  {id:'na',name:'Nordamerika',icon:'🦅',en:'North America'},
+  {id:'sa',name:'Sydamerika',icon:'🦜',en:'South America'},
+  {id:'oc',name:'Oceanien',icon:'🦘',en:'Oceania'}
 ];
 const CONT={};for(const k of CONTINENTS)CONT[k.id]=k;
 // Flaggor som ser likadana ut i spelets 4:3-format visas aldrig samtidigt.
@@ -507,31 +708,55 @@ const twin=(a,b)=>TWINS.some(([x,y])=>(a===x&&b===y)||(a===y&&b===x));
 // pick: hur fel svar väljs. any = slumpvis, near = hälften från samma världsdel,
 // mix = några som liknar (flaggor) eller grannländer, similar = så lika som möjligt.
 const LEVELS=[
-  {id:'latt',name:'Lätt',icon:'🐣',maxTier:1,opts:3,pick:'any',sortN:3,sortMin:2,hilo:[3,Infinity],mysOpts:4,ambig:false,capFlag:true},
-  {id:'mellan',name:'Mellan',icon:'🎒',maxTier:2,opts:4,pick:'any',sortN:4,sortMin:1.6,hilo:[2,Infinity],mysOpts:6,ambig:false,capFlag:true},
-  {id:'svar',name:'Svår',icon:'🧭',maxTier:3,opts:5,pick:'near',sortN:4,sortMin:1.35,hilo:[1.5,6],mysOpts:8,ambig:true,capFlag:false},
-  {id:'geni',name:'Geni',icon:'🧠',maxTier:4,opts:6,pick:'mix',sortN:5,sortMin:1.2,hilo:[1.25,3],mysOpts:12,ambig:true,capFlag:false},
-  {id:'omojliga',name:'Omöjliga',icon:'💀',maxTier:4,opts:6,pick:'similar',sortN:6,sortMin:1.1,hilo:[1.08,1.6],mysOpts:0,ambig:true,capFlag:false}
+  {id:'latt',name:'Lätt',en:'Easy',icon:'🐣',maxTier:1,opts:3,pick:'any',sortN:3,sortMin:2,hilo:[3,Infinity],mysOpts:4,ambig:false,capFlag:true},
+  {id:'mellan',name:'Mellan',en:'Medium',icon:'🎒',maxTier:2,opts:4,pick:'any',sortN:4,sortMin:1.6,hilo:[2,Infinity],mysOpts:6,ambig:false,capFlag:true},
+  {id:'svar',name:'Svår',en:'Hard',icon:'🧭',maxTier:3,opts:5,pick:'near',sortN:4,sortMin:1.35,hilo:[1.5,6],mysOpts:8,ambig:true,capFlag:false},
+  {id:'geni',name:'Geni',en:'Genius',icon:'🧠',maxTier:4,opts:6,pick:'mix',sortN:5,sortMin:1.2,hilo:[1.25,3],mysOpts:12,ambig:true,capFlag:false},
+  {id:'omojliga',name:'Omöjliga',en:'Impossible',icon:'💀',maxTier:4,opts:6,pick:'similar',sortN:6,sortMin:1.1,hilo:[1.08,1.6],mysOpts:0,ambig:true,capFlag:false}
 ];
 const MODES=[
   {id:'flaggor',name:'Flaggor',icon:'🚩',kind:'choice',len:10,need:8,
     blurb:'Vilket land har flaggan? Eller tvärtom!',
-    dirs:[{id:'f2n',name:'Flagga → land'},{id:'n2f',name:'Land → flagga'},{id:'mix',name:'Blanda'}]},
+    en:{name:'Flags',blurb:'Which country has the flag? Or the other way round!'},
+    dirs:[{id:'f2n',name:'Flagga → land',en:'Flag → country'},{id:'n2f',name:'Land → flagga',en:'Country → flag'},{id:'mix',name:'Blanda',en:'Mix'}]},
   {id:'huvudstader',name:'Huvudstäder',icon:'🏙️',kind:'choice',len:10,need:8,
     blurb:'Vilken stad är landets huvudstad?',
-    dirs:[{id:'n2c',name:'Land → huvudstad'},{id:'c2n',name:'Huvudstad → land'},{id:'mix',name:'Blanda'}]},
+    en:{name:'Capitals',blurb:'Which city is the country\'s capital?'},
+    dirs:[{id:'n2c',name:'Land → huvudstad',en:'Country → capital'},{id:'c2n',name:'Huvudstad → land',en:'Capital → country'},{id:'mix',name:'Blanda',en:'Mix'}]},
   {id:'storlek',name:'Storleksordning',icon:'📏',kind:'sort',len:5,need:4,metric:true,
-    blurb:'Sortera länderna från störst till minst.'},
+    blurb:'Sortera länderna från störst till minst.',
+    en:{name:'Biggest first',blurb:'Sort the countries from biggest to smallest.'}},
   {id:'varldsdelar',name:'Världsdelar',icon:'🧺',kind:'continent',len:10,need:8,worldOnly:true,
-    blurb:'Lägg varje land i rätt världsdel.'},
+    blurb:'Lägg varje land i rätt världsdel.',
+    en:{name:'Continents',blurb:'Put each country in the right continent.'}},
   {id:'hogrelagre',name:'Högre eller lägre',icon:'⚖️',kind:'hilo',len:0,need:10,metric:true,
-    blurb:'Vilket av två länder är störst? Hur många rätt i rad klarar du?'},
+    blurb:'Vilket av två länder är störst? Hur många rätt i rad klarar du?',
+    en:{name:'Higher or lower',blurb:'Which of two countries is bigger? How many in a row can you get?'}},
   {id:'mysterium',name:'Mysterielandet',icon:'🔍',kind:'mystery',len:5,need:4,
-    blurb:'Gissa landet med så få ledtrådar som möjligt.'}
+    blurb:'Gissa landet med så få ledtrådar som möjligt.',
+    en:{name:'Mystery country',blurb:'Guess the country with as few clues as possible.'}}
 ];
 const MODE={};for(const m of MODES)MODE[m.id]=m;
-const METRICS=[{id:'p',name:'Befolkning'},{id:'a',name:'Yta'},{id:'mix',name:'Blanda'}];
-const AREAS=[{id:'world',name:'Hela världen',icon:'🌐'}].concat(CONTINENTS,[{id:'missar',name:'Mina missar',icon:'🎯'}]);
+const METRICS=[{id:'p',name:'Befolkning',en:'Population'},{id:'a',name:'Yta',en:'Area'},{id:'mix',name:'Blanda',en:'Mix'}];
+const AREAS=[{id:'world',name:'Hela världen',icon:'🌐',en:'The whole world'}].concat(CONTINENTS,[{id:'missar',name:'Mina missar',icon:'🎯',en:'My misses'}]);
+
+// ---------- språk ----------
+// 'sv' (standard) eller 'en'. Byter namnen på länder, huvudstäder, världsdelar,
+// nivåer och spel på plats, så att all kod kan läsa .n, .cap och .name som förut.
+let LANG='sv';
+const tr=(sv,en)=>LANG==='en'?en:sv;
+const named=[...CONTINENTS,...LEVELS,...MODES.flatMap(m=>[m,...(m.dirs||[])]),...METRICS,AREAS[0],AREAS[AREAS.length-1]];
+for(const o of named)o.sv=[o.name,o.blurb];
+function setLang(l){
+  LANG=l==='en'?'en':'sv';
+  for(const c of COUNTRIES){const v=LANG==='en'?COUNTRIES_EN[c.c]:c.sv;c.n=v[0];c.cap=v[1];if(v[2])c.cn=v[2];else delete c.cn;}
+  for(const o of named){
+    const e=typeof o.en==='string'?{name:o.en}:o.en;
+    o.name=LANG==='en'?e.name:o.sv[0];
+    if(o.sv[1]!=null)o.blurb=LANG==='en'?e.blurb:o.sv[1];
+  }
+}
+const colorName=f=>LANG==='en'?COLOR_EN[f]:f;
 const CLUES_MAX=8;     // ledtrådar i Mysterielandet; första gissningen ger 8 poäng
 const STAMP=3;         // rätt svar om ett land som ger en stämpel i passet
 const MISS_MIN=6;      // så många missar behövs för "Mina missar"
@@ -667,7 +892,7 @@ function genQuestion(R){
   const t=pickTarget(R);
   const q={type:'mystery',target:t.c,shown:1,wrong:[],clues:cluesFor(t)};
   if(L.mysOpts)q.options=makeOptions(R.rand,'land',t.c,R.decoys,L,L.mysOpts);
-  else q.domain=[...new Set(areaAll(cfg.mode,cfg.area,cfg.lvl).map(c=>c.c).concat(t.c))].sort((a,b)=>BY[a].n.localeCompare(BY[b].n,'sv'));
+  else q.domain=[...new Set(areaAll(cfg.mode,cfg.area,cfg.lvl).map(c=>c.c).concat(t.c))].sort((a,b)=>BY[a].n.localeCompare(BY[b].n,LANG));
   return q;
 }
 function nextQuestion(R){const q=genQuestion(R);R.qs.push(q);R.i=R.qs.length-1;return q;}
@@ -724,41 +949,48 @@ function finishQ(R,q,touched){
 }
 
 // ---------- tal och text ----------
-const groupNum=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+const groupNum=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,LANG==='en'?',':' ');
 function sig(n,d){if(!n)return 0;const p=Math.pow(10,Math.floor(Math.log10(Math.abs(n)))-d+1);return Math.round(Math.round(n/p)*p);}
-const decSv=(x,d)=>x.toFixed(d).replace(/\.?0+$/,'').replace('.',',');
+const decSv=(x,d)=>{const t=x.toFixed(d).replace(/\.?0+$/,'');return LANG==='en'?t:t.replace('.',',');};
+const MILLION=m=>LANG==='en'?' million':m==='1'?' miljon':' miljoner';
 function fmtPop(p){
   if(p<1000)return groupNum(sig(p,1));
   if(p<1e6)return groupNum(sig(p,3));
-  if(p<1e9){const m=p/1e6;const s=m<100?decSv(m,1):String(Math.round(m));return s+(s==='1'?' miljon':' miljoner');}
-  return decSv(p/1e9,2)+' miljarder';
+  if(p<1e9){const m=p/1e6;const s=m<100?decSv(m,1):String(Math.round(m));return s+MILLION(s);}
+  return decSv(p/1e9,2)+tr(' miljarder',' billion');
 }
 function fmtArea(a){
   if(a<10)return decSv(a,2)+' km²';
   if(a<1000)return groupNum(Math.round(a))+' km²';
   if(a<1e6)return groupNum(sig(a,3))+' km²';
-  const m=decSv(a/1e6,1);return m+(m==='1'?' miljon':' miljoner')+' km²';
+  const m=decSv(a/1e6,1);return m+MILLION(m)+' km²';
 }
-const fmtVal=(c,metric)=>metric==='p'?fmtPop(c.p)+' invånare':fmtArea(c.a);
+const fmtVal=(c,metric)=>metric==='p'?fmtPop(c.p)+tr(' invånare',' people'):fmtArea(c.a);
 function timesText(r){
-  if(r<10)return 'ungefär '+decSv(Math.round(r*10)/10,1)+' gånger';
-  if(r<100)return 'ungefär '+Math.round(r)+' gånger';
-  return 'ungefär '+groupNum(sig(r,2))+' gånger';
+  const about=tr('ungefär ','about '),times=tr(' gånger',' times');
+  if(r<10)return about+decSv(Math.round(r*10)/10,1)+times;
+  if(r<100)return about+Math.round(r)+times;
+  return about+groupNum(sig(r,2))+times;
 }
 // "Ryssland är ungefär 38 gånger så stort som Sverige."
 function compareText(a,b,metric){
   let A=BY[a],B=BY[b];
   if(A[metric]<B[metric])[A,B]=[B,A];
   const r=A[metric]/B[metric];
+  if(LANG==='en'){
+    if(r<1.05)return metric==='p'?`${A.n} and ${B.n} have almost the same number of people.`:`${A.n} and ${B.n} are almost the same size.`;
+    return metric==='p'?`${A.n} has ${timesText(r)} as many people as ${B.n}.`:`${A.n} is ${timesText(r)} as big as ${B.n}.`;
+  }
   if(r<1.05)return metric==='p'?`${A.n} och ${B.n} har nästan lika många invånare.`:`${A.n} och ${B.n} är nästan lika stora.`;
   return metric==='p'?`${A.n} har ${timesText(r)} så många invånare som ${B.n}.`:`${A.n} är ${timesText(r)} så stort som ${B.n}.`;
 }
-const listSv=xs=>xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+' och '+xs[xs.length-1];
+const listSv=xs=>xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+tr(' och ',' and ')+xs[xs.length-1];
 const letters=s=>s.replace(/[^A-Za-zÀ-ÿĀ-žȘ-ț]/g,'').length;
-function continentText(c){return c.x?`${CONT[c.k].name} och ${listSv(c.x.map(k=>CONT[k].name))}`:CONT[c.k].name;}
+function continentText(c){return c.x?`${CONT[c.k].name}${tr(' och ',' and ')}${listSv(c.x.map(k=>CONT[k].name))}`:CONT[c.k].name;}
 function famous(codes){return codes.map(x=>BY[x]).sort((a,b)=>a.t-b.t||b.p-a.p)[0];}
 // Ledtrådarna i Mysterielandet, från vaga till tydliga.
 function cluesFor(c){
+  if(LANG==='en')return cluesForEn(c);
   const ref=c.c==='se'?BY.fi:BY.se,r=c.a/ref.a;
   const size=r>=1.15?`${timesText(r)} så stort som ${ref.n}`:r<=0.87?`${ref.n} är ${timesText(1/r)} så stort`:`ungefär lika stort som ${ref.n}`;
   const nb=c.b.length,nbText=nb===1?'ett grannland':nb+' grannländer';
@@ -780,6 +1012,30 @@ function cluesFor(c){
     {icon:'🤝',text:neighbour},
     {icon:'🏙️',text:capital},
     {icon:'🔤',text:`Landets namn har ${letters(c.n)} bokstäver och börjar på ${c.n[0]}.`}
+  ];
+}
+function cluesForEn(c){
+  const ref=c.c==='se'?BY.fi:BY.se,r=c.a/ref.a;
+  const size=r>=1.15?`${timesText(r)} as big as ${ref.n}`:r<=0.87?`${ref.n} is ${timesText(1/r)} as big`:`about as big as ${ref.n}`;
+  const nb=c.b.length,nbText=nb===1?'one neighbouring country':nb+' neighbouring countries';
+  const coast=!nb?'The country is on one or more islands and has no neighbours on land.'
+    :c.ll?`The country has no coast and has ${nbText}.`
+    :`The country has a coast and ${nbText}.`;
+  const neighbour=!nb?`The capital has ${letters(c.cap)} letters.`
+    :nb===1?`The country's only neighbour is ${BY[c.b[0]].n}.`
+    :`One of the neighbours is ${famous(c.b).n}.`;
+  const capital=c.same?'The capital is named after the country!'
+    :c.nc?`The country's name ends in “${c.n.slice(-1)}”.`
+    :`The capital starts with ${c.cap[0]}.`;
+  return [
+    {icon:'🌍',text:c.x?`The country is in both ${continentText(c)}.`:`The country is in ${CONT[c.k].name}.`},
+    {icon:'👥',text:`About ${fmtPop(c.p)} people live in the country.`},
+    {icon:'📐',text:`The country is ${fmtArea(c.a)} in size – ${size}.`},
+    {icon:'🌊',text:coast},
+    {icon:'🎨',text:`The flag has the colours ${listSv(c.f.map(colorName))}.`},
+    {icon:'🤝',text:neighbour},
+    {icon:'🏙️',text:capital},
+    {icon:'🔤',text:`The country's name has ${letters(c.n)} letters and starts with ${c.n[0]}.`}
   ];
 }
 // Sökning i Mysterielandet (Omöjliga): början av namnet först, sedan var som helst.
@@ -1024,12 +1280,15 @@ const FLAGS={
 const GAME_ID='jordenrunt';
 const SCORE_KEY='score.'+GAME_ID;   // hubbens trofé: antal stämplar i passet
 const SAVE_KEY='state.'+GAME_ID;    // nivåer, rekord, pass, missar och val (hubbens konvention: state.<id>)
-const PRAISE=['Rätt!','Snyggt!','Precis!','Helt rätt!','Bra!','Toppen!'];
+setLang(I18N.lang);
+I18N.apply();
+const PRAISE=tr(['Rätt!','Snyggt!','Precis!','Helt rätt!','Bra!','Toppen!'],['Right!','Nice!','Exactly!','Spot on!','Good!','Great!']);
+const poss=n=>LANG==='en'?(/s$/.test(n)?n+"'":n+"'s"):n+'s';   // Kenyas / Kenya's
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const FLAG_URL={};
 const flagSrc=c=>FLAG_URL[c]||(FLAG_URL[c]='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(FLAGS[c]));
-const flagImg=(c,cls)=>`<img class="flag${cls?' '+cls:''}" src="${flagSrc(c)}" alt="Flagga" draggable="false">`;
+const flagImg=(c,cls)=>`<img class="flag${cls?' '+cls:''}" src="${flagSrc(c)}" alt="${tr('Flagga','Flag')}" draggable="false">`;
 
 function readSave(){
   try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&typeof s==='object'?s:{};}catch(e){return {};}
@@ -1076,17 +1335,17 @@ function showMenu(){
   go(`<main class="menu">
     <header class="hero">
       <div class="logo" aria-hidden="true">🌍</div>
-      <h1>Jorden runt</h1>
-      <p class="sub">Flaggor, huvudstäder och länder i hela världen. Vad vill du spela?</p>
+      <h1>${tr('Jorden runt','Around the World')}</h1>
+      <p class="sub">${tr('Flaggor, huvudstäder och länder i hela världen. Vad vill du spela?','Flags, capitals and countries all over the world. What do you want to play?')}</p>
     </header>
     <div class="modes">${MODES.map(M=>{const L=LEVELS[S.prog[M.id].u];return `<button class="mode m-${M.id}" data-act="mode" data-mode="${M.id}">
       <span class="ico" aria-hidden="true">${M.icon}</span><span class="nm">${M.name}</span>
       <span class="ds">${M.blurb}</span><span class="tag">${L.icon} ${L.name}</span></button>`;}).join('')}</div>
     <div class="row center tools">
-      <button class="btn" data-act="pass">🛂 Mitt pass</button>
-      <button class="btn" data-act="about">📖 Om spelet</button>
+      <button class="btn" data-act="pass">🛂 ${tr('Mitt pass','My passport')}</button>
+      <button class="btn" data-act="about">📖 ${tr('Om spelet','About the game')}</button>
     </div>
-    <p class="record">${n?`🛂 Stämplar i passet: <b>${n}</b> av ${COUNTRIES.length}`:'🛂 Svara rätt om ett land tre gånger så får du din första stämpel!'}</p>
+    <p class="record">${n?tr(`🛂 Stämplar i passet: <b>${n}</b> av ${COUNTRIES.length}`,`🛂 Stamps in the passport: <b>${n}</b> of ${COUNTRIES.length}`):tr('🛂 Svara rätt om ett land tre gånger så får du din första stämpel!','🛂 Answer right about a country three times to get your first stamp!')}</p>
   </main>`,{
     mode:b=>showSetup(b.dataset.mode),
     pass:()=>showPass(),
@@ -1094,9 +1353,16 @@ function showMenu(){
   },'at-menu');
 }
 
-const tierText=L=>['de mest kända länderna','kända länder','många länder','alla 195 länder'][L.maxTier-1];
-const spreadText=r=>r>=2?'stor skillnad':r>=1.35?'mindre skillnad':r>=1.2?'liten skillnad':'pyttelite skillnad';
+const tierText=L=>tr(['de mest kända länderna','kända länder','många länder','alla 195 länder'],['the best-known countries','well-known countries','many countries','all 195 countries'])[L.maxTier-1];
+const spreadText=r=>r>=2?tr('stor skillnad','big difference'):r>=1.35?tr('mindre skillnad','smaller difference'):r>=1.2?tr('liten skillnad','small difference'):tr('pyttelite skillnad','tiny difference');
 function levelDetail(M,L){
+  if(LANG==='en')switch(M.kind){
+    case 'choice':return `${L.opts} answers to choose from · ${tierText(L)}`+(L.pick==='similar'?(M.id==='flaggor'?' · flags that look almost the same':' · the neighbours\' capitals'):'');
+    case 'sort':return `${L.sortN} countries to sort · ${spreadText(L.sortMin)}`;
+    case 'continent':return tierText(L)+(L.ambig?' · also countries in two continents':'');
+    case 'hilo':return `${tierText(L)} · ${spreadText(L.hilo[0])}`;
+    default:return (L.mysOpts?`${L.mysOpts} countries to choose from`:'Type the country yourself')+' · '+tierText(L);
+  }
   switch(M.kind){
     case 'choice':return `${L.opts} svar att välja på · ${tierText(L)}`+(L.pick==='similar'?(M.id==='flaggor'?' · flaggor som nästan är likadana':' · grannländernas huvudstäder'):'');
     case 'sort':return `${L.sortN} länder att sortera · ${spreadText(L.sortMin)}`;
@@ -1106,6 +1372,10 @@ function levelDetail(M,L){
   }
 }
 function bestText(M,v){
+  if(LANG==='en'){
+    if(!v)return 'Not played yet';
+    return M.kind==='hilo'?`Record: ${v} in a row`:M.kind==='mystery'?`Best: ${v} points`:`Best: ${v} of ${M.len}`;
+  }
   if(!v)return 'Inte spelad än';
   switch(M.kind){
     case 'hilo':return `Rekord: ${v} i rad`;
@@ -1114,6 +1384,12 @@ function bestText(M,v){
   }
 }
 function rulesText(M){
+  if(LANG==='en')switch(M.kind){
+    case 'sort':return `${M.len} questions. Sort them exactly right ${M.need} times to unlock the next level.`;
+    case 'hilo':return `Play until you answer wrong. ${M.need} right in a row unlocks the next level.`;
+    case 'mystery':return `${M.len} countries. The fewer clues you need, the more points (at most ${CLUES_MAX}). A wrong guess costs a clue. Find ${M.need} countries to unlock the next level.`;
+    default:return `${M.len} questions. Answer ${M.need} right to unlock the next level.`;
+  }
   switch(M.kind){
     case 'sort':return `${M.len} frågor. Sortera helt rätt ${M.need} gånger så låses nästa nivå upp.`;
     case 'hilo':return `Spela tills du svarar fel. ${M.need} rätt i rad låser upp nästa nivå.`;
@@ -1135,20 +1411,20 @@ function showSetup(modeId,msg){
   const M=MODE[modeId],P=prefOf(modeId),pr=S.prog[modeId];
   const {list,nm}=areaList(M,true);
   go(`<main class="setup">
-    <div class="topbar"><button class="btn sm" data-act="menu">← Meny</button><h2>${M.icon} ${M.name}</h2></div>
+    <div class="topbar"><button class="btn sm" data-act="menu">← ${tr('Meny','Menu')}</button><h2>${M.icon} ${M.name}</h2></div>
     <p class="sub">${M.blurb}</p>
-    <section class="group"><h3>Var i världen?</h3>
+    <section class="group"><h3>${tr('Var i världen?','Where in the world?')}</h3>
       ${chipsHtml('area',list,P.area,a=>a.id==='missar'&&nm<MISS_MIN)}
-      ${nm<MISS_MIN?`<p class="small">🎯 Mina missar: länder du har svarat fel på. Det behövs minst ${MISS_MIN} för att öva på dem.</p>`:''}
+      ${nm<MISS_MIN?`<p class="small">${tr(`🎯 Mina missar: länder du har svarat fel på. Det behövs minst ${MISS_MIN} för att öva på dem.`,`🎯 My misses: countries you have answered wrong. You need at least ${MISS_MIN} to practise them.`)}</p>`:''}
     </section>
-    ${M.dirs?`<section class="group"><h3>Hur vill du spela?</h3>${chipsHtml('dir',M.dirs,P.dir)}</section>`:''}
-    ${M.metric?`<section class="group"><h3>Vad ska jämföras?</h3>${chipsHtml('metric',METRICS,P.metric)}</section>`:''}
-    <section class="group"><h3>Välj nivå</h3>
+    ${M.dirs?`<section class="group"><h3>${tr('Hur vill du spela?','How do you want to play?')}</h3>${chipsHtml('dir',M.dirs,P.dir)}</section>`:''}
+    ${M.metric?`<section class="group"><h3>${tr('Vad ska jämföras?','What should be compared?')}</h3>${chipsHtml('metric',METRICS,P.metric)}</section>`:''}
+    <section class="group"><h3>${tr('Välj nivå','Pick a level')}</h3>
       <p class="menumsg" role="status">${msg?esc(msg):''}</p>
       <div class="levels">${LEVELS.map((L,i)=>{const locked=i>pr.u;return `<button class="level lv-${L.id}${locked?' locked':''}" data-act="level" data-lvl="${i}">
         <span class="ico" aria-hidden="true">${locked?'🔒':L.icon}</span><span class="nm">${L.name}</span>
-        <span class="ds">${locked?`Klara ${LEVELS[i-1].name} för att låsa upp.`:levelDetail(M,L)}</span>
-        <span class="tag">${locked?'Låst':(pr.c[i]?'✓ ':'')+bestText(M,pr.b[i])}</span></button>`;}).join('')}</div>
+        <span class="ds">${locked?tr(`Klara ${LEVELS[i-1].name} för att låsa upp.`,`Clear ${LEVELS[i-1].name} to unlock.`):levelDetail(M,L)}</span>
+        <span class="tag">${locked?tr('Låst','Locked'):(pr.c[i]?'✓ ':'')+bestText(M,pr.b[i])}</span></button>`;}).join('')}</div>
     </section>
     <p class="rules">ℹ️ ${rulesText(M)}</p>
   </main>`,{
@@ -1158,7 +1434,7 @@ function showSetup(modeId,msg){
     metric:b=>{S.pref[modeId]=Object.assign(prefOf(modeId),{metric:b.dataset.v});persist();showSetup(modeId);},
     level:b=>{
       const i=+b.dataset.lvl;
-      if(i>pr.u){const m=app.querySelector('.menumsg');if(m)m.textContent=`${LEVELS[i].name} är låst. Klara ${LEVELS[i-1].name} först!`;return;}
+      if(i>pr.u){const m=app.querySelector('.menumsg');if(m)m.textContent=tr(`${LEVELS[i].name} är låst. Klara ${LEVELS[i-1].name} först!`,`${LEVELS[i].name} is locked. Clear ${LEVELS[i-1].name} first!`);return;}
       startRound(modeId,i);
     }
   });
@@ -1178,13 +1454,13 @@ const areaName=id=>{const a=AREAS.find(x=>x.id===id);return a?a.name:'';};
 const qNum=Q=>Math.min(Q.len,Q.answered+(currentQ(Q)&&!currentQ(Q).done?1:0));
 function statsHtml(Q){
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><span class="n">${n}</span><span class="l">${l}</span></div>`;
-  if(Q.M.kind==='hilo'&&Q.len===0)return st(Q.streak,'i rad','good')+st(Math.max(Q.best,S.prog[Q.M.id].b[Q.cfg.lvl]),'rekord');
-  return st(`${qNum(Q)}/${Q.len}`,'fråga')+(Q.M.kind==='mystery'?st(Q.points,'poäng','good'):st(Q.right,'rätt','good'));
+  if(Q.M.kind==='hilo'&&Q.len===0)return st(Q.streak,tr('i rad','in a row'),'good')+st(Math.max(Q.best,S.prog[Q.M.id].b[Q.cfg.lvl]),tr('rekord','record'));
+  return st(`${qNum(Q)}/${Q.len}`,tr('fråga','question'))+(Q.M.kind==='mystery'?st(Q.points,tr('poäng','points'),'good'):st(Q.right,tr('rätt','right'),'good'));
 }
 function barHtml(Q){
   const L=Q.L,M=Q.M;
   return `<div class="bar">
-    <button class="btn sm" data-act="quit">✕ Avsluta</button>
+    <button class="btn sm" data-act="quit">✕ ${tr('Avsluta','Stop')}</button>
     <div class="ptitle"><b>${M.icon} ${M.name}</b><small>${L.icon} ${L.name} · ${esc(areaName(Q.cfg.area))}</small></div>
     <div class="stats">${statsHtml(Q)}</div>
   </div>`;
@@ -1194,18 +1470,18 @@ function lcard(code,big){
   const c=BY[code];
   return `<div class="lcard${big?' big':''}">${flagImg(code)}<div class="info">
     <b>${esc(c.n)}</b>
-    <span>🏙️ Huvudstad: ${esc(c.cap)}</span>${c.cn?`<span class="note">${esc(c.cn)}</span>`:''}
+    <span>🏙️ ${tr('Huvudstad','Capital')}: ${esc(c.cap)}</span>${c.cn?`<span class="note">${esc(c.cn)}</span>`:''}
     <span>🌍 ${esc(continentText(c))}</span>
-    <span>👥 ${fmtPop(c.p)} invånare</span>
+    <span>👥 ${fmtPop(c.p)} ${tr('invånare','people')}</span>
     <span>📐 ${fmtArea(c.a)}</span>
-    ${big?`<span>🤝 ${c.b.length?'Grannländer: '+esc(listSv(c.b.map(x=>BY[x].n).sort((a,b)=>a.localeCompare(b,'sv')))):'Inga grannländer på land'}</span>`:''}
+    ${big?`<span>🤝 ${c.b.length?tr('Grannländer: ','Neighbours: ')+esc(listSv(c.b.map(x=>BY[x].n).sort((a,b)=>a.localeCompare(b,LANG)))):tr('Inga grannländer på land','No neighbours on land')}</span>`:''}
   </div></div>`;
 }
 function sheetHtml(Q,q,why,codes){
-  const nextLabel=roundOver(Q)?'Se resultat':'Nästa →';
+  const nextLabel=roundOver(Q)?tr('Se resultat','See results'):tr('Nästa →','Next →');
   const praise=PRAISE[(Q.answered*7+Q.right)%PRAISE.length];
   return `<div class="sheet ${q.ok?'ok':'bad'}${reduceMotion()?'':' pop'}" role="status">
-    <p class="msg">${q.ok?'✅ '+praise:'❌ Inte riktigt'}</p>
+    <p class="msg">${q.ok?'✅ '+praise:'❌ '+tr('Inte riktigt','Not quite')}</p>
     ${why?`<p class="why">${why}</p>`:''}
     <div class="foot">${(codes||[]).map(c=>lcard(c)).join('')}<button class="btn go big" data-act="next">${nextLabel}</button></div>
   </div>`;
@@ -1219,71 +1495,71 @@ function renderPlay(o){
     const t=BY[q.target];
     const flagOpts=q.dir==='n2f',capOpts=q.dir==='n2c';
     let ask;
-    if(q.dir==='f2n')ask=`<div class="prompt"><p class="ask">Vilket land har den här flaggan?</p>${flagImg(t.c,'bigflag')}</div>`;
-    else if(q.dir==='n2f')ask=`<p class="ask">Vilken flagga har <b>${esc(t.n)}</b>?</p>`;
-    else if(q.dir==='n2c')ask=`<div class="prompt">${Q.L.capFlag?flagImg(t.c,'capflag'):''}<p class="ask">Vad heter huvudstaden i <b>${esc(t.n)}</b>?</p></div>`;
-    else ask=`<p class="ask"><b>${esc(t.cap)}</b> är huvudstad i vilket land?</p>`;
+    if(q.dir==='f2n')ask=`<div class="prompt"><p class="ask">${tr('Vilket land har den här flaggan?','Which country has this flag?')}</p>${flagImg(t.c,'bigflag')}</div>`;
+    else if(q.dir==='n2f')ask=tr(`<p class="ask">Vilken flagga har <b>${esc(t.n)}</b>?</p>`,`<p class="ask">Which flag does <b>${esc(t.n)}</b> have?</p>`);
+    else if(q.dir==='n2c')ask=`<div class="prompt">${Q.L.capFlag?flagImg(t.c,'capflag'):''}<p class="ask">${tr('Vad heter huvudstaden i','What is the capital of')} <b>${esc(t.n)}</b>?</p></div>`;
+    else ask=tr(`<p class="ask"><b>${esc(t.cap)}</b> är huvudstad i vilket land?</p>`,`<p class="ask"><b>${esc(t.cap)}</b> is the capital of which country?</p>`);
     const cls=flagOpts?`flags n${q.options.length}`:q.dir==='c2n'?'cards':q.options.length===4?'':'t3';
     body=ask+`<div class="opts ${cls}">${q.options.map((c,i)=>{
       const st=q.done?(c===q.target?' right':c===q.pick?' wrong':' dim'):'';
       const mark=q.done&&c===q.target?'<span class="mark">✅</span>':q.done&&c===q.pick?'<span class="mark">❌</span>':'';
       const inner=flagOpts?flagImg(c):capOpts?esc(BY[c].cap):q.dir==='c2n'?flagImg(c)+`<span>${esc(BY[c].n)}</span>`:esc(BY[c].n);
-      return `<button class="opt${flagOpts?' f':q.dir==='c2n'?' fn':''}${st}" data-act="pick" data-c="${c}" data-i="${i+1}"${flagOpts?` aria-label="Flagga ${i+1}"`:''}${q.done?' disabled':''}>${inner}${mark}</button>`;
+      return `<button class="opt${flagOpts?' f':q.dir==='c2n'?' fn':''}${st}" data-act="pick" data-c="${c}" data-i="${i+1}"${flagOpts?` aria-label="${tr('Flagga','Flag')} ${i+1}"`:''}${q.done?' disabled':''}>${inner}${mark}</button>`;
     }).join('')}</div>`;
     if(q.done){
       let why='';
       if(!q.ok){
-        if(q.dir==='f2n'||q.dir==='n2f')why=`Det var ${esc(t.n)}s flagga. Du valde ${esc(BY[q.pick].n)}s.`;
-        else if(q.dir==='n2c')why=`Huvudstaden i ${esc(t.n)} är ${esc(t.cap)}. ${esc(BY[q.pick].cap)} är huvudstad i ${esc(BY[q.pick].n)}.`;
-        else why=`${esc(t.cap)} är huvudstad i ${esc(t.n)}.`;
+        if(q.dir==='f2n'||q.dir==='n2f')why=tr(`Det var ${esc(poss(t.n))} flagga. Du valde ${esc(poss(BY[q.pick].n))}.`,`It was ${esc(poss(t.n))} flag. You chose ${esc(poss(BY[q.pick].n))}.`);
+        else if(q.dir==='n2c')why=tr(`Huvudstaden i ${esc(t.n)} är ${esc(t.cap)}. ${esc(BY[q.pick].cap)} är huvudstad i ${esc(BY[q.pick].n)}.`,`The capital of ${esc(t.n)} is ${esc(t.cap)}. ${esc(BY[q.pick].cap)} is the capital of ${esc(BY[q.pick].n)}.`);
+        else why=tr(`${esc(t.cap)} är huvudstad i ${esc(t.n)}.`,`${esc(t.cap)} is the capital of ${esc(t.n)}.`);
       }
       sheet=sheetHtml(Q,q,why,[q.target]);
     }
   }else if(q.type==='continent'){
     const t=BY[q.target],okKs=[t.k].concat(t.x||[]);
-    body=`<div class="prompt">${flagImg(t.c,'capflag')}<p class="ask">I vilken världsdel ligger <b>${esc(t.n)}</b>?</p></div>
+    body=`<div class="prompt">${flagImg(t.c,'capflag')}${tr(`<p class="ask">I vilken världsdel ligger <b>${esc(t.n)}</b>?</p>`,`<p class="ask">Which continent is <b>${esc(t.n)}</b> in?</p>`)}</div>
       <div class="baskets">${CONTINENTS.map((k,i)=>{
         const st=q.done?(okKs.includes(k.id)?' right':k.id===q.pick?' wrong':''):'';
         const mini=(Q.baskets[k.id]||[]).map(c=>`<img src="${flagSrc(c)}" alt="">`).join('');
         return `<button class="basket${st}" data-act="cont" data-k="${k.id}" data-i="${i+1}"${q.done?' disabled':''}><span class="bi" aria-hidden="true">${k.icon}</span><span>${k.name}</span><span class="mini">${mini}</span></button>`;
       }).join('')}</div>`;
     if(q.done){
-      const why=t.x?`${esc(t.n)} ligger i både ${esc(continentText(t))}. Båda svaren är rätt.`:q.ok?'':`${esc(t.n)} ligger i ${CONT[t.k].name}.`;
+      const why=t.x?tr(`${esc(t.n)} ligger i både ${esc(continentText(t))}. Båda svaren är rätt.`,`${esc(t.n)} is in both ${esc(continentText(t))}. Both answers are right.`):q.ok?'':tr(`${esc(t.n)} ligger i ${CONT[t.k].name}.`,`${esc(t.n)} is in ${CONT[t.k].name}.`);
       sheet=sheetHtml(Q,q,why,[q.target]);
     }
   }else if(q.type==='sort'){
-    const head=q.metric==='p'?'Sortera från flest till minst invånare':'Sortera från störst till minst yta';
+    const head=q.metric==='p'?tr('Sortera från flest till minst invånare','Sort from most to fewest people'):tr('Sortera från störst till minst yta','Sort from biggest to smallest area');
     if(!q.done){
       const sel=Q.sel||(Q.sel=[]);
-      body=`<p class="ask">${head}</p><p class="small" style="text-align:center">Tryck på länderna i ordning. Tryck igen för att ångra.</p>
+      body=`<p class="ask">${head}</p><p class="small" style="text-align:center">${tr('Tryck på länderna i ordning. Tryck igen för att ångra.','Tap the countries in order. Tap again to undo.')}</p>
         <div class="sortlist">${q.items.map((c,i)=>{const k=sel.indexOf(c);return `<button class="sitem${k>=0?' picked':''}" data-act="sortpick" data-c="${c}" data-i="${i+1}"><span class="num">${k>=0?k+1:''}</span>${flagImg(c)}<span>${esc(BY[c].n)}</span><span></span></button>`;}).join('')}</div>
-        <div class="row center"><button class="btn" data-act="sortclear"${sel.length?'':' disabled'}>Börja om</button><button class="btn go big" data-act="sortdone"${sel.length===q.items.length?'':' disabled'}>Klar!</button></div>`;
+        <div class="row center"><button class="btn" data-act="sortclear"${sel.length?'':' disabled'}>${tr('Börja om','Start over')}</button><button class="btn go big" data-act="sortdone"${sel.length===q.items.length?'':' disabled'}>${tr('Klar!','Done!')}</button></div>`;
     }else{
-      body=`<p class="ask">${head}</p><div class="sortlist">${q.answer.map((c,i)=>{const yours=q.order.indexOf(c)+1;return `<button class="sitem ${q.order[i]===c?'right':'wrong'}" disabled><span class="num">${i+1}</span>${flagImg(c)}<span>${esc(BY[c].n)}<span class="yours">${q.order[i]===c?'✅ rätt plats':`❌ du satte den som nr ${yours}`}</span></span><span class="val">${fmtVal(BY[c],q.metric)}</span></button>`;}).join('')}</div>`;
-      const why=esc(compareText(q.answer[0],q.answer[q.answer.length-1],q.metric))+(q.ok?'':` Rätt ordning: ${esc(q.answer.map(c=>BY[c].n).join(' → '))}.`);
+      body=`<p class="ask">${head}</p><div class="sortlist">${q.answer.map((c,i)=>{const yours=q.order.indexOf(c)+1;return `<button class="sitem ${q.order[i]===c?'right':'wrong'}" disabled><span class="num">${i+1}</span>${flagImg(c)}<span>${esc(BY[c].n)}<span class="yours">${q.order[i]===c?tr('✅ rätt plats','✅ right place'):tr(`❌ du satte den som nr ${yours}`,`❌ you put it at no. ${yours}`)}</span></span><span class="val">${fmtVal(BY[c],q.metric)}</span></button>`;}).join('')}</div>`;
+      const why=esc(compareText(q.answer[0],q.answer[q.answer.length-1],q.metric))+(q.ok?'':` ${tr('Rätt ordning:','Right order:')} ${esc(q.answer.map(c=>BY[c].n).join(' → '))}.`);
       sheet=sheetHtml(Q,q,why,[]);
     }
   }else if(q.type==='hilo'){
-    const ask=q.metric==='p'?'Vilket land har flest invånare?':'Vilket land är störst till ytan?';
+    const ask=q.metric==='p'?tr('Vilket land har flest invånare?','Which country has the most people?'):tr('Vilket land är störst till ytan?','Which country has the biggest area?');
     body=`<p class="ask">${ask}</p><div class="duo">${q.pair.map((c,i)=>{
       const big=BY[c][q.metric]>=BY[q.pair[1-i]][q.metric];
       const st=q.done?(big?' right':c===q.pick?' wrong':''):'';
       return `<button class="hcard${st}" data-act="hilo" data-c="${c}" data-i="${i+1}"${q.done?' disabled':''}>${flagImg(c)}<span>${esc(BY[c].n)}</span><span class="val">${q.done?fmtVal(BY[c],q.metric):''}</span></button>`;
     }).join('')}</div>`;
-    if(q.done)sheet=sheetHtml(Q,q,esc(compareText(q.pair[0],q.pair[1],q.metric))+(q.ok&&Q.len===0&&Q.streak===Q.M.need&&Q.cfg.lvl<LEVELS.length-1?' 🔓 10 i rad – nästa nivå är upplåst när rundan är slut!':''),[]);
+    if(q.done)sheet=sheetHtml(Q,q,esc(compareText(q.pair[0],q.pair[1],q.metric))+(q.ok&&Q.len===0&&Q.streak===Q.M.need&&Q.cfg.lvl<LEVELS.length-1?tr(' 🔓 10 i rad – nästa nivå är upplåst när rundan är slut!',' 🔓 10 in a row – the next level unlocks when the round is over!'):''),[]);
   }else if(q.type==='mystery'){
     const clues=q.clues.slice(0,q.done?CLUES_MAX:q.shown);
-    body=`<p class="ask">Vilket land är det?</p>
+    body=`<p class="ask">${tr('Vilket land är det?','Which country is it?')}</p>
       <ol class="clues">${clues.map((cl,i)=>`<li class="${i===q.shown-1&&!q.done&&!reduceMotion()?'new':''}"><span class="ci" aria-hidden="true">${cl.icon}</span><span>${esc(cl.text)}</span></li>`).join('')}</ol>
-      ${q.done?'':`<div class="cluebar"><span class="pts">Ger nu ${CLUES_MAX+1-q.shown} poäng</span><button class="btn sm" data-act="clue"${q.shown>=CLUES_MAX?' disabled':''}>💡 Ny ledtråd</button></div>`}
+      ${q.done?'':`<div class="cluebar"><span class="pts">${tr('Ger nu','Worth now:')} ${CLUES_MAX+1-q.shown} ${tr('poäng','points')}</span><button class="btn sm" data-act="clue"${q.shown>=CLUES_MAX?' disabled':''}>💡 ${tr('Ny ledtråd','New clue')}</button></div>`}
       ${q.options?`<div class="opts cards">${q.options.map((c,i)=>{
         const st=q.done?(c===q.target?' right':' dim'):q.wrong.includes(c)?' wrong gone':'';
         return `<button class="opt fn${st}" data-act="guess" data-c="${c}" data-i="${i+1}"${q.done||q.wrong.includes(c)?' disabled':''}>${flagImg(c)}<span>${esc(BY[c].n)}</span></button>`;}).join('')}</div>`
-        :q.done?'':`<input class="search" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Skriv ett land …" aria-label="Skriv ett land" value="${esc(Q.searchText||'')}">
+        :q.done?'':`<input class="search" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="${tr('Skriv ett land …','Type a country …')}" aria-label="${tr('Skriv ett land','Type a country')}" value="${esc(Q.searchText||'')}">
           <div class="results">${resultsHtml(Q,q)}</div>`}`;
     if(q.done){
       const t=BY[q.target];
-      const why=q.ok?`Det var ${esc(t.n)}! Du fick ${q.points} poäng.`:`Det var ${esc(t.n)}.`;
+      const why=q.ok?tr(`Det var ${esc(t.n)}! Du fick ${q.points} poäng.`,`It was ${esc(t.n)}! You got ${q.points} points.`):tr(`Det var ${esc(t.n)}.`,`It was ${esc(t.n)}.`);
       sheet=sheetHtml(Q,q,why,[q.target]);
     }
   }
@@ -1293,9 +1569,9 @@ function renderPlay(o){
 }
 function resultsHtml(Q,q){
   const text=Q.searchText||'';
-  if(!text.trim())return `<p class="none">Börja skriva så kommer förslag.</p>`;
+  if(!text.trim())return `<p class="none">${tr('Börja skriva så kommer förslag.','Start typing to get suggestions.')}</p>`;
   const hits=searchCountries(q.domain,text,8);
-  if(!hits.length)return `<p class="none">Inget land heter så.</p>`;
+  if(!hits.length)return `<p class="none">${tr('Inget land heter så.','No country has that name.')}</p>`;
   return hits.map((c,i)=>`<button class="opt fn${q.wrong.includes(c)?' wrong gone':''}" data-act="guess" data-c="${c}" data-i="${i+1}"${q.wrong.includes(c)?' disabled':''}>${flagImg(c)}<span>${esc(BY[c].n)}</span></button>`).join('');
 }
 // Ett svar: pass och missar uppdateras, ett nytt svar sväljer nästa tryck en kort stund.
@@ -1318,8 +1594,10 @@ const PLAY_ACTS={
   quit:()=>{
     const Q=activeRound();
     if(Q.answered===0)return showSetup(Q.M.id);
-    modal(`<h3>Avsluta?</h3><p>Rundan räknas inte för att låsa upp nya nivåer. Stämplarna i passet finns kvar.</p>
+    modal(tr(`<h3>Avsluta?</h3><p>Rundan räknas inte för att låsa upp nya nivåer. Stämplarna i passet finns kvar.</p>
       <div class="row center"><button class="btn go" data-m="close">Spela vidare</button><button class="btn" data-m="quit">Avsluta</button></div>`,
+      `<h3>Stop?</h3><p>The round does not count towards unlocking new levels. The stamps in your passport stay.</p>
+      <div class="row center"><button class="btn go" data-m="close">Keep playing</button><button class="btn" data-m="quit">Stop</button></div>`),
       {quit:()=>showSetup(Q.M.id)});
   },
   pick:b=>{if(Date.now()<guardUntil)return;afterAnswer(answer(activeRound(),b.dataset.c));},
@@ -1351,7 +1629,21 @@ function showSummary(){
   const unlocked=recordRound(S.prog,M.id,lvl,score,cleared);
   persist();writeScore();
   let title,lead,medal,stats;
-  if(M.kind==='hilo'){
+  if(LANG==='en'){
+    if(M.kind==='hilo'){
+      title=cleared?'Level cleared!':score>prevBest&&score>0?'New record!':'Good effort!';
+      lead=`You got ${score} right in a row on ${L.name}.`+(cleared?'':` Get ${M.need} in a row to unlock the next level.`);
+      stats=`<div class="big${cleared?' good':''}" data-sum="best"><b>${score}</b><span>in a row</span></div><div class="big" data-sum="record"><b>${Math.max(score,prevBest)}</b><span>record</span></div>`;
+    }else if(M.kind==='mystery'){
+      title=Q.right===M.len?'All countries found!':cleared?'Level cleared!':'Good effort!';
+      lead=`You found ${Q.right} of ${M.len} countries and got ${Q.points} points on ${L.name}.`+(cleared?'':` Find ${M.need} countries to unlock the next level.`);
+      stats=`<div class="big${cleared?' good':''}" data-sum="right"><b>${Q.right}/${M.len}</b><span>countries</span></div><div class="big" data-sum="points"><b>${Q.points}</b><span>points</span></div>`;
+    }else{
+      title=Q.right===Q.len?'All right – perfect!':cleared?'Level cleared!':'Good effort!';
+      lead=`You got ${Q.right} of ${Q.len} right on ${L.name}.`+(cleared?'':` Answer ${M.need} right to unlock the next level.`);
+      stats=`<div class="big${cleared?' good':''}" data-sum="right"><b>${Q.right}/${Q.len}</b><span>right</span></div>`;
+    }
+  }else if(M.kind==='hilo'){
     title=cleared?'Nivån är klarad!':score>prevBest&&score>0?'Nytt rekord!':'Bra kämpat!';
     lead=`Du hade ${score} rätt i rad på ${L.name}.`+(cleared?'':` Klara ${M.need} i rad för att låsa upp nästa nivå.`);
     stats=`<div class="big${cleared?' good':''}" data-sum="best"><b>${score}</b><span>i rad</span></div><div class="big" data-sum="record"><b>${Math.max(score,prevBest)}</b><span>rekord</span></div>`;
@@ -1371,13 +1663,13 @@ function showSummary(){
     <h2>${title}</h2>
     <p class="lead">${lead}</p>
     <div class="bigstats">${stats}</div>
-    ${unlocked>=0?`<p class="unlock">🔓 Du har låst upp ${LEVELS[unlocked].icon} ${LEVELS[unlocked].name}!</p>`:''}
+    ${unlocked>=0?`<p class="unlock">🔓 ${tr('Du har låst upp','You have unlocked')} ${LEVELS[unlocked].icon} ${LEVELS[unlocked].name}!</p>`:''}
     <div class="row center">
-      <button class="btn go big" data-act="again">Spela igen</button>
-      <button class="btn big" data-act="setup">Byt nivå</button>
-      <button class="btn big" data-act="menu">Meny</button>
+      <button class="btn go big" data-act="again">${tr('Spela igen','Play again')}</button>
+      <button class="btn big" data-act="setup">${tr('Byt nivå','Change level')}</button>
+      <button class="btn big" data-act="menu">${tr('Meny','Menu')}</button>
     </div>
-    ${miss.length?`<h3>Öva mer på</h3><div class="missed">${miss.map(c=>`<button class="mtile" data-act="info" data-c="${c}">${flagImg(c)}<span>${esc(BY[c].n)}</span></button>`).join('')}</div>`:''}
+    ${miss.length?`<h3>${tr('Öva mer på','Practise more')}</h3><div class="missed">${miss.map(c=>`<button class="mtile" data-act="info" data-c="${c}">${flagImg(c)}<span>${esc(BY[c].n)}</span></button>`).join('')}</div>`:''}
   </main>`,{
     again:()=>startRound(M.id,lvl),
     setup:()=>showSetup(M.id),
@@ -1387,29 +1679,41 @@ function showSummary(){
   if(cleared)confetti();
 }
 function infoModal(code){
-  modal(`${lcard(code,true)}<div class="row center"><button class="btn go" data-m="close">Stäng</button></div>`);
+  modal(`${lcard(code,true)}<div class="row center"><button class="btn go" data-m="close">${tr('Stäng','Close')}</button></div>`);
 }
 
 // ---------- passet ----------
 function showPass(){
   const n=stampCount(S.pass);
   go(`<main class="passpage">
-    <div class="topbar"><button class="btn sm" data-act="menu">← Meny</button><h2>🛂 Mitt pass</h2></div>
-    <p class="sub">Ett land får en stämpel när du har svarat rätt om det ${STAMP} gånger, i vilket spel som helst. Tryck på ett land för att läsa om det.</p>
-    <p class="record"><b>${n}</b> av ${COUNTRIES.length} stämplar</p>
+    <div class="topbar"><button class="btn sm" data-act="menu">← ${tr('Meny','Menu')}</button><h2>🛂 ${tr('Mitt pass','My passport')}</h2></div>
+    <p class="sub">${tr(`Ett land får en stämpel när du har svarat rätt om det ${STAMP} gånger, i vilket spel som helst. Tryck på ett land för att läsa om det.`,`A country gets a stamp when you have answered right about it ${STAMP} times, in any game. Tap a country to read about it.`)}</p>
+    <p class="record"><b>${n}</b> ${tr('av','of')} ${COUNTRIES.length} ${tr('stämplar','stamps')}</p>
     <div class="meter" aria-hidden="true"><i style="width:${(100*n/COUNTRIES.length).toFixed(1)}%"></i></div>
     ${CONTINENTS.map(k=>{
-      const list=COUNTRIES.filter(c=>c.k===k.id);
+      const list=COUNTRIES.filter(c=>c.k===k.id).sort((a,b)=>a.n.localeCompare(b.n,LANG));
       const got=list.filter(c=>(S.pass[c.c]||0)>=STAMP).length;
-      return `<section class="group"><h3>${k.icon} ${k.name} <span class="small">${got} av ${list.length}</span></h3>
+      return `<section class="group"><h3>${k.icon} ${k.name} <span class="small">${got} ${tr('av','of')} ${list.length}</span></h3>
         <div class="pgrid">${list.map(c=>{const v=S.pass[c.c]||0,yes=v>=STAMP;
-          return `<button class="ptile ${yes?'yes':'no'}" data-act="info" data-c="${c.c}">${flagImg(c.c)}<span>${esc(c.n)}</span>${yes?'<span class="stamp" aria-label="stämpel">🛂</span>':`<span class="dots" aria-label="${v} av ${STAMP}">${'●'.repeat(v)}${'○'.repeat(STAMP-v)}</span>`}</button>`;}).join('')}</div></section>`;
+          return `<button class="ptile ${yes?'yes':'no'}" data-act="info" data-c="${c.c}">${flagImg(c.c)}<span>${esc(c.n)}</span>${yes?`<span class="stamp" aria-label="${tr('stämpel','stamp')}">🛂</span>`:`<span class="dots" aria-label="${v} ${tr('av','of')} ${STAMP}">${'●'.repeat(v)}${'○'.repeat(STAMP-v)}</span>`}</button>`;}).join('')}</div></section>`;
     }).join('')}
   </main>`,{menu:()=>showMenu(),info:b=>infoModal(b.dataset.c)});
 }
 
 // ---------- om spelet ----------
 function showAbout(){
+  if(LANG==='en'){modal(`<div class="about">
+    <h3>📖 About the game</h3>
+    <ul>
+      <li><b>Six games:</b> Flags, Capitals, Biggest first, Continents, Higher or lower and Mystery country.</li>
+      <li><b>Levels:</b> Easy, Medium, Hard, Genius and Impossible. The next level unlocks when you clear the level before it, in each game separately.</li>
+      <li><b>Area:</b> the whole world or one continent. <b>My misses</b> are countries you have answered wrong – they also come up more often in normal rounds.</li>
+      <li><b>The passport:</b> answer right about a country ${STAMP} times and it gets a stamp. Can you collect all ${COUNTRIES.length}?</li>
+      <li><b>The countries:</b> the UN's 193 member states plus the Vatican and Palestine, which are observers at the UN.</li>
+    </ul>
+    <p class="src">Flags: flag-icons (MIT licence). Population: World Bank 2025 (CC BY 4.0). Area, neighbours and coast: mledoze/countries (ODbL 1.0). The numbers are rounded.</p>
+    <div class="row center"><button class="btn go" data-m="close">Close</button></div>
+  </div>`);return;}
   modal(`<div class="about">
     <h3>📖 Om spelet</h3>
     <ul>

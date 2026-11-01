@@ -28,6 +28,8 @@ for (const a of ASSETS) {
   check(`sw.js asset exists: ${a}`, exists(a));
 }
 check("ASSETS has no duplicates", new Set(ASSETS).size === ASSETS.length);
+check("shared/i18n.js is precached", ASSETS.includes("./shared/i18n.js"));
+check("the hub loads shared/i18n.js", read("index.html").includes('<script src="shared/i18n.js"></script>'));
 
 // ---- the app is called Stalman games, and every icon it names is a precached PNG of that size ----
 const manifest = JSON.parse(read("manifest.webmanifest"));
@@ -69,7 +71,12 @@ for (const g of GAMES) {
 
   const html = read(g.file);
   check(`${tag} has a viewport meta with viewport-fit=cover`, /<meta name="viewport"[^>]*viewport-fit=cover/.test(html));
-  check(`${tag} back link to ../index.html`, /<a class="back" href="\.\.\/index\.html">/.test(html));
+  check(`${tag} back link to ../index.html`, /<a class="back" href="\.\.\/index\.html"[^>]*>/.test(html));
+  // both languages: shared/i18n.js loads before the game's own script, the back link has English text
+  const i18n = html.indexOf('<script src="../shared/i18n.js"></script>');
+  check(`${tag} loads ../shared/i18n.js before its own script`, i18n > 0 && i18n < html.indexOf("<script>"));
+  check(`${tag} back link has an English version`, /<a class="back" href="\.\.\/index\.html" data-en="← Games">/.test(html));
+  check(`${tag} has an English title and blurb in config.js`, g.en && typeof g.en.title === "string" && g.en.title.length > 0 && typeof g.en.blurb === "string" && g.en.blurb.length > 0);
   check(`${tag} registers ../sw.js`, /serviceWorker\.register\(["']\.\.\/sw\.js["']\)/.test(html));
   const guard = html.match(/<script src="\.\.\/shared\/guard\.js" data-game="([^"]+)"><\/script>\s*<\/body>/);
   check(`${tag} guard.js is the last script, with data-game="${g.id}"`, guard && guard[1] === g.id, guard ? guard[1] : "missing");

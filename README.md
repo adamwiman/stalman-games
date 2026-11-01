@@ -9,17 +9,39 @@ scores and PIN-protected daily time limits per game.
 
 ## The games
 
-| Game | Language | What it is |
-| ---- | -------- | ---------- |
-| 🔢 [2048](#2048-notes) | English | slide and merge tiles to reach 2048 |
-| 🧪 [Slemrören](#slemrören-notes) | Swedish | lay pipes before the goo starts flowing, three difficulties |
-| 🧮 [Numlingarnas resa](#numlingarnas-resa-notes) | Swedish | logic and number puzzles on a journey to Numeria |
-| ✖️ [Gångertabellen](#gångertabellen-notes) | Swedish | times tables 1–10 practice |
-| 🕵️ [Detektiven](#detektiven-notes) | Swedish | who is the criminal? Logic puzzles with clues |
-| 🌍 [Jorden runt](#jorden-runt-notes) | Swedish | geography: flags, capitals, sizes and continents of all 195 countries |
+| Game | In English | What it is |
+| ---- | ---------- | ---------- |
+| 🔢 [2048](#2048-notes) | 2048 | slide and merge tiles to reach 2048 |
+| 🧪 [Slemrören](#slemrören-notes) | Goo Pipes | lay pipes before the goo starts flowing, three difficulties |
+| 🧮 [Numlingarnas resa](#numlingarnas-resa-notes) | The Numlings' Journey | logic and number puzzles on a journey to Numeria |
+| ✖️ [Gångertabellen](#gångertabellen-notes) | Times Tables | times tables 1–10 practice |
+| 🕵️ [Detektiven](#detektiven-notes) | The Detective | who is the criminal? Logic puzzles with clues |
+| 🌍 [Jorden runt](#jorden-runt-notes) | Around the World | geography: flags, capitals, sizes and continents of all 195 countries |
 
 Every game works offline, saves its best score for the hub card and obeys
 the daily time limits. Notes on each game are at the end of this file.
+
+## Languages
+
+Everything is in **Swedish** by default. The **Svenska | English** switch at
+the top of the hub changes the hub, the parent settings, the time's-up screen
+and every game to **English**. The choice is saved on the device
+(`hub.lang`) and the games read it when they open; scores, progress and
+time limits are shared by both languages.
+
+- `shared/i18n.js` holds the language for every page. Static markup is
+  written in Swedish, with the English version in `data-en` (and
+  `data-en-<attribute>` for labels), and scripts pick a text with
+  `I18N.t("svenska", "English")`.
+- Games with text inside their logic block (Gångertabellen, Detektiven,
+  Jorden runt) have their own `setLang("en")`, so the unit tests can check
+  both languages.
+- Detektiven builds its clues with a separate English grammar
+  (`clueTextEn`); the people keep their Swedish names. Jorden runt has an
+  English name, capital and capital note for every country
+  (`COUNTRIES_EN`), uses English number formats (10.6 million, 450,000 km²)
+  and sorts lists by the English names. Spelling is British (colour,
+  neighbour, practise).
 
 ## Publish on GitHub Pages
 
@@ -76,8 +98,13 @@ Devices pick up new files the next time the app is opened with internet.
 > - Visual style: background #ddf1ff, ink #17335b, accents #ffc63f,
 >   #ff6b6b, #38d9a9; rounded corners; font-family
 >   `ui-rounded,"SF Pro Rounded",system-ui,sans-serif`.
+> - Swedish by default, with English as an option: in `<head>`, before
+>   any other script, include `<script src="../shared/i18n.js"></script>`.
+>   Write static text in Swedish with the English version in a `data-en`
+>   attribute, call `I18N.apply()` when the script starts, and pick every
+>   text made in JavaScript with `I18N.t("svenska", "English")`.
 > - At the top of `<body>`, a back link:
->   `<a class="back" href="../index.html">← Games</a>`
+>   `<a class="back" href="../index.html" data-en="← Games">← Spel</a>`
 > - Save the best score to localStorage under the key `score.GAME_ID`
 >   (a single number where higher is better) and show score + best.
 > - As the LAST line before `</body>`, include exactly:
@@ -104,12 +131,13 @@ config.js             ⟵ the game list — edit this to add/remove games
 sw.js                 offline cache — keep ASSETS + CACHE_VERSION updated
 manifest.webmanifest  PWA install metadata
 shared/guard.js       playtime tracking + "time's up" lock (used by all games)
+shared/i18n.js        the language: Swedish (default) or English (used by the hub and all games)
 games/2048.html       the 2048 game (fully self-contained)
-games/goopipes.html   Slemrören (formerly Goo Pipes) — pipe-laying game, in Swedish (fully self-contained)
-games/numlings.html   Numlingarnas resa — logic & number puzzles, in Swedish (fully self-contained)
-games/gangertabell.html  Gångertabellen — times tables 1–10 practice, in Swedish (fully self-contained)
-games/detektiven.html    Detektiven — who is the criminal? Logic puzzles in Swedish (fully self-contained)
-games/jordenrunt.html    Jorden runt — geography games in Swedish, flags and country data inside the file (fully self-contained)
+games/goopipes.html   Slemrören / Goo Pipes — pipe-laying game (fully self-contained)
+games/numlings.html   Numlingarnas resa / The Numlings' Journey — logic & number puzzles (fully self-contained)
+games/gangertabell.html  Gångertabellen / Times Tables — times tables 1–10 practice (fully self-contained)
+games/detektiven.html    Detektiven / The Detective — who is the criminal? Logic puzzles (fully self-contained)
+games/jordenrunt.html    Jorden runt / Around the World — geography games, flags and country data inside the file (fully self-contained)
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
@@ -132,15 +160,18 @@ Then `npm test` runs everything:
 - `npm run test:unit` — plain Node, no browser:
   `tests/goopipes.test.js` (Slemrören game logic, difficulties and piece bag),
   `tests/gangertabell.test.js` (Gångertabellen question order and
-  counting), `tests/jordenrunt.test.js` (Jorden runt country data, flags,
-  questions on every level and area, scoring, unlocking and the passport),
-  `tests/detektiven.test.js` (Detektiven clue texts, case
-  generator, solver, difficulty and unlocking) and `tests/integrity.test.js` (every game is in `config.js` and precached in
-  `sw.js`, has the back link, `guard.js`, service worker and score key, and
-  loads nothing from the network).
+  counting, texts in both languages), `tests/jordenrunt.test.js` (Jorden runt
+  country data in Swedish and English, flags, questions on every level and
+  area, scoring, unlocking and the passport), `tests/detektiven.test.js`
+  (Detektiven clue texts in both languages, case generator, solver,
+  difficulty and unlocking) and `tests/integrity.test.js` (every game is in
+  `config.js` with an English title and precached in `sw.js`, loads
+  `i18n.js`, has the back link in both languages, `guard.js`, service worker
+  and score key, and loads nothing from the network).
 - `npm run test:e2e` — Playwright, `tests/e2e/`: the hub, parent settings,
   time limits and lock, offline via the service worker, and real play in
-  every game. Runs on desktop Chrome, desktop Safari (WebKit) and iPad
+  every game. `language.spec.js` switches the hub to English and plays every
+  game in English, failing on any Swedish text left on screen. Runs on desktop Chrome, desktop Safari (WebKit) and iPad
   (WebKit with touch) in portrait, landscape and iPad mini landscape. Any
   page error or request outside the site fails the test.
 
@@ -155,12 +186,13 @@ handing it over.
 | `hub.pin`    | hashed parent PIN                              |
 | `hub.limits` | `{gameId: minutesPerDay}`                      |
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
+| `hub.lang`   | `"sv"` (default) or `"en"`, set on the hub     |
 | `score.<id>` | each game's best score                         |
 | `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, and last choices) |
 
 ## 2048 notes
 
-The classic sliding-tile game, in English. Swipe on the iPad (or use the
+The classic sliding-tile game (in Swedish by default, like the rest). Swipe on the iPad (or use the
 arrow keys) to slide all tiles; two equal tiles merge into their sum. Reach
 the 2048 tile to win, and keep going for a higher score if you like.
 
@@ -171,7 +203,7 @@ the 2048 tile to win, and keep going for a higher score if you like.
 
 ## Slemrören notes
 
-A pipe-laying game in Swedish (it was called Goo Pipes; the id, file
+A pipe-laying game, called Goo Pipes in English (the id, file
 name and `score.goopipes` are unchanged, so old records still count). Slime
 starts flowing from the pump after a countdown. Tap squares to lay the next
 pipe from the queue of five (**NÄSTA**), and build a pipe at least as long as
@@ -204,7 +236,7 @@ progress waits behind the picker and **Fortsätt** goes back to it):
 
 ## Numlingarnas resa notes
 
-A logic and number puzzle journey in Swedish for strong young math thinkers
+A logic and number puzzle journey (The Numlings' Journey in English) for strong young math thinkers
 (around age 7–10). Kids build a troupe of up to 10 numlingar and lead them
 to Numeria. Each journey visits 6 of the 10 puzzle stops, least-played
 first, so journeys vary:
@@ -236,7 +268,7 @@ first, so journeys vary:
 
 ## Gångertabellen notes
 
-Times tables 1–10 practice in Swedish. The child types the answer on a big
+Times tables 1–10 practice (Times Tables in English). The child types the answer on a big
 on-screen number pad (or a keyboard) — there is no clock and no time limit
 in the game itself. Three ways to practice:
 
@@ -260,7 +292,7 @@ in the game itself. Three ways to practice:
 
 ## Detektiven notes
 
-A logic puzzle in Swedish. Twenty people stand in a grid, columns A–D and
+A logic puzzle (The Detective in English). Twenty people stand in a grid, columns A–D and
 rows 1–5. Everyone is either a **skurk** (criminal) or **oskyldig**
 (innocent), and everyone tells the truth. One person starts revealed. Tapping
 somebody and choosing correctly reveals them. Only some people have a clue;
@@ -320,7 +352,7 @@ the steps. Averages per case:
 
 ## Jorden runt notes
 
-Geography in Swedish: six small games about the 195 countries (the 193 UN
+Geography (Around the World in English): six small games about the 195 countries (the 193 UN
 members plus the Vatican and Palestine, the two UN observer states).
 
 | Game | What comes | A level is cleared with |

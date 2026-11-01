@@ -4,7 +4,7 @@
 const { test, expect, press, swipe, seedStorage, today, loadGames } = require("./fixtures");
 
 const GAMES = loadGames();
-const lockOverlay = (page) => page.getByText("Time’s up for today!");
+const lockOverlay = (page) => page.getByText("Tiden är slut för idag!");
 
 for (const g of GAMES) {
   test(`${g.title}: locked when today's time is used up, back link still works`, async ({ page, touch }) => {
@@ -14,7 +14,7 @@ for (const g of GAMES) {
     });
     await page.goto(g.file);
     await expect(lockOverlay(page)).toBeVisible();
-    await press(page.getByRole("link", { name: "← Back to games" }), touch);
+    await press(page.getByRole("link", { name: "← Tillbaka till spelen" }), touch);
     await expect(page).toHaveURL(/index\.html$/);
     await expect(page.locator(".game-card", { hasText: g.title })).toHaveClass(/locked/);
   });
@@ -24,8 +24,8 @@ test("2048: playtime is counted, the pill counts down and the game locks at the 
   await page.clock.install();
   await seedStorage(page, { "hub.limits": { "2048": 1 } });
   await page.goto("games/2048.html");
-  const pill = page.getByText(/min left$/);
-  await expect(pill).toHaveText("⏱ 1 min left");
+  const pill = page.getByText(/min kvar$/);
+  await expect(pill).toHaveText("⏱ 1 min kvar");
 
   await page.clock.runFor(30000);
   const used = await page.evaluate(() => JSON.parse(localStorage.getItem("hub.usage")).byGame["2048"]);
@@ -46,6 +46,6 @@ test("2048: playtime is counted, the pill counts down and the game locks at the 
 
 test("no pill and no lock when there is no limit", async ({ page }) => {
   await page.goto("games/numlings.html");
-  await expect(page.getByText(/min left$/)).toHaveCount(0);
+  await expect(page.getByText(/min kvar$/)).toHaveCount(0);
   await expect(lockOverlay(page)).toHaveCount(0);
 });

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -17,18 +17,25 @@
   <meta name="theme-color" content="#ddf1ff">
 
   <link rel="stylesheet" href="styles.css">
+  <script src="shared/i18n.js"></script>
 </head>
 <body>
   <header>
     <h1>Stalman games<span class="dot">.</span></h1>
-    <button id="gear" class="gear" aria-label="Parent settings">⚙️</button>
+    <div class="tools">
+      <div class="lang" role="group" aria-label="Språk" data-en-aria-label="Language">
+        <button type="button" data-lang="sv" lang="sv" aria-label="Svenska"><span aria-hidden="true">🇸🇪</span> <span class="lname">Svenska</span></button>
+        <button type="button" data-lang="en" lang="en" aria-label="English"><span aria-hidden="true">🇬🇧</span> <span class="lname">English</span></button>
+      </div>
+      <button id="gear" class="gear" aria-label="Föräldrainställningar" data-en-aria-label="Parent settings">⚙️</button>
+    </div>
   </header>
 
   <main>
     <div id="grid" class="grid"></div>
   </main>
 
-  <footer>Works offline · high scores stay on this iPad</footer>
+  <footer data-en="Works offline · high scores stay on this iPad">Fungerar utan internet · rekorden sparas på den här iPaden</footer>
 
   <!-- settings overlay -->
   <div id="overlay" class="overlay" role="dialog" aria-modal="true">

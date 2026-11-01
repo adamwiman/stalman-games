@@ -17,7 +17,7 @@ const L = new Function(m[1] + `
     clueText, flavorText, FLAVOR_INNO, FLAVOR_CRIM, connected, dirCell, buildClue, makePool, localSolve, solverOf, solverIdentify, solverReveal, deductions,
     nextStep, exactForced, bruteForced, LEVELS, generatePuzzle, newGame, reveal, isKnown, isCriminal,
     provable, mark, findHint, validPuzzle, restoreGame, saveGame, cleanProgress, recordSolved,
-    totalSolved };
+    totalSolved, setLang, jobName, JOBS, FLAVOR_INNO_EN, FLAVOR_CRIM_EN };
 `)();
 
 let passed = 0, failed = 0;
@@ -153,6 +153,67 @@ eq("only one of a job", T({ t: "onlyOneNb", R: job(0), s: 1, n: 2 }), "Bara en a
   check("people without a clue say something friendly, criminals something else",
     L.FLAVOR_INNO.includes(L.flavorText(P2, 3, 0)) && L.FLAVOR_CRIM.includes(L.flavorText(P2, 3, 1)));
 }
+
+// ---- 3b. the same clues in English ----
+L.setLang("en");
+eq("en: count in a row", T({ t: "cnt", R: row(3), s: 1, n: 2 }), "There are exactly 2 criminals in row 3.");
+eq("en: count 1", T({ t: "cnt", R: col("B"), s: 0, n: 1 }), "There is exactly 1 innocent in column B.");
+eq("en: none", T({ t: "cnt", R: row(1), s: 1, n: 0 }), "There are no criminals in row 1.");
+eq("en: everybody", T({ t: "cnt", R: col("D"), s: 0, n: 5 }), "Everyone in column D is innocent.");
+eq("en: neighbours", T({ t: "cnt", R: nb("C3"), s: 1, n: 3 }), "Klara has exactly 3 criminal neighbours.");
+eq("en: one innocent neighbour", T({ t: "cnt", R: nb("C3"), s: 0, n: 1 }), "Klara has exactly 1 innocent neighbour.");
+eq("en: all neighbours, name ending in s", T({ t: "cnt", R: nb("B4"), s: 1, n: 8 }), "All of Nils' neighbours are criminals.");
+eq("en: a job", T({ t: "cnt", R: job(0), s: 1, n: 1 }), "Exactly 1 of the 4 cooks is a criminal.");
+eq("en: a job, none", T({ t: "cnt", R: job(4), s: 1, n: 0 }), "None of the doctors are criminals.");
+eq("en: common neighbours", T({ t: "cnt", R: { k: "common", a: cell("A1"), b: cell("C1") }, s: 1, n: 1 }), "Alma and Cleo have exactly 1 criminal neighbour in common.");
+eq("en: odd", T({ t: "par", R: row(2), s: 1, odd: 1 }), "There is an odd number of criminals in row 2.");
+eq("en: half of the neighbours", T({ t: "cmpS", R: nb("B2"), s: 1, eq: true }), "Half of Filip's neighbours are criminals.");
+eq("en: two rows compared", T({ t: "cmpR", R: row(1), R2: row(5), s: 1, eq: false }), "There are more criminals in row 1 than in row 5.");
+eq("en: one of somebody's neighbours", T({ t: "member", p: cell("B3"), R: nb("C3"), s: 1, n: 3 }), "Jack is one of Klara's 3 criminal neighbours.");
+eq("en: the only innocent of a job", T({ t: "member", p: cell("A1"), R: job(0), s: 0, n: 1 }), "Alma is the only innocent cook.");
+eq("en: connected", T({ t: "conn", R: col("C"), s: 1 }), "All criminals in column C are connected.");
+eq("en: all of somebody's criminal neighbours are …", T({ t: "allIn", R: nb("B2"), s: 1, R2: job(2) }), "All of Filip's criminal neighbours are farmers.");
+eq("en: both innocents", T({ t: "subcnt", R: col("B"), s: 0, k: 2, R2: job(3), n: 2 }), "Both innocents in column B are pilots.");
+eq("en: exactly n of them", T({ t: "subcnt", R: row(4), s: 1, k: 3, R2: job(4), n: 1 }), "There are exactly 3 criminals in row 4, and exactly 1 of them is a doctor.");
+eq("en: none of them", T({ t: "subcnt", R: nb("C2"), s: 0, k: 2, R2: nb("A1"), n: 0 }), "Greta has exactly 2 innocent neighbours, but none of them is a neighbour of Alma.");
+eq("en: the only one … is on the edge", T({ t: "subcnt", R: dir("right", "B2"), s: 1, k: 1, R2: { k: "edge" }, n: 1 }), "The only criminal to the right of Filip is on the edge.");
+eq("en: someone's only … is not in a row", T({ t: "subcnt", R: nb("B2"), s: 0, k: 1, R2: row(1), n: 0 }), "Filip's only innocent neighbour is not in row 1.");
+eq("en: the only column without", T({ t: "only", lines: "col", s: 1, n: 0, idx: 0 }), "Column A is the only column without criminals.");
+eq("en: each row", T({ t: "each", lines: "row", s: 1, n: 1 }), "Every row has at least 1 criminal.");
+eq("en: total", T({ t: "total", s: 1, n: 9 }), "There are 9 criminals in total.");
+eq("en: neighbours with a job", T({ t: "cnt", R: and(nb("C3"), job(0)), s: 1, n: 2 }), "Klara has exactly 2 criminal neighbours who are cooks.");
+eq("en: a job to the right of someone", T({ t: "cnt", R: and(dir("right", "B5"), job(0)), s: 1, n: 0 }), "There are no cooks to the right of Saga who are criminals.");
+eq("en: corners of a row", T({ t: "cnt", R: and({ k: "corners" }, row(5)), s: 1, n: 1 }), "Exactly one of the two people in the corners of row 5 is a criminal.");
+eq("en: the job with the most", T({ t: "mostR", R: job(4), s: 1 }), "The doctors have the most criminals of all the jobs.");
+eq("en: directly to the right", T({ t: "dirnb", R: row(3), s1: 0, d: "r", s2: 1, n: 1 }), "Only one innocent in row 3 has a criminal directly to their right.");
+eq("en: directly above, a job", T({ t: "dirnb", R: job(1), s1: null, d: "u", s2: 0, n: 1 }), "Only one police officer has an innocent directly above them.");
+eq("en: only one of a job", T({ t: "onlyOneNb", R: job(0), s: 1, n: 2 }), "Only one of the cooks has exactly 2 criminal neighbours.");
+{
+  const P2 = L.peopleCtx({ names: P.names, jobs: ["kock"], jobOf: new Array(20).fill(0), seed: 5 });
+  check("en: people without a clue speak English",
+    L.FLAVOR_INNO_EN.includes(L.flavorText(P2, 3, 0)) && L.FLAVOR_CRIM_EN.includes(L.flavorText(P2, 3, 1)));
+  eq("en: job names", [L.jobName(P.jobs[0]), L.jobName(P.jobs[5])], ["cook", "firefighter"]);
+  check("en: every job has an English name", L.JOBS.every((j) => j.en && j.en.sg && j.en.pl));
+  eq("en: level names", L.LEVELS.map((l) => l.en.name), ["Easy", "Medium", "Hard", "Genius", "Impossible"]);
+}
+{
+  // every true clue for random answers reads as one English sentence without Swedish words
+  let bad = 0, total = 0;
+  const sv = /\b(är|och|skurk\w*|oskyldig\w*|granne|grannar|finns|exakt|minst|rad|kolumn|hörnen|kanten)\b/i;
+  for (let k = 0; k < 25; k++) {
+    const rand = L.makeRand(300 + k);
+    const PP = L.peopleCtx(L.makePeople(rand));
+    let truth = 0; for (let i = 0; i < 20; i++) if (rand() < 0.45) truth |= 1 << i;
+    for (const e of L.makePool(truth, PP)) {
+      total++;
+      const txt = L.clueText(e.sp, PP).replace(new RegExp(PP.names.join("|"), "g"), "Name");
+      if (!/^[A-Z][^?]*\.$/.test(txt) || /undefined|NaN|  /.test(txt) || sv.test(txt)) { bad++; if (bad < 5) console.error("odd English text", txt); }
+    }
+  }
+  check(`en: ${total} pool clues read as English sentences`, bad === 0 && total > 1000);
+}
+L.setLang("sv");
+eq("back to Swedish", T({ t: "total", s: 1, n: 9 }), "Det finns totalt 9 skurkar.");
 
 // ---- 4. what clues mean ----
 {

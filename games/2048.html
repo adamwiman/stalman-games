@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>2048</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
 <style>
   :root {
     --sky:#ddf1ff; --ink:#17335b; --sun:#ffc63f; --coral:#ff6b6b; --mint:#38d9a9;
@@ -91,13 +92,13 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="back" href="../index.html">← Games</a>
+    <a class="back" href="../index.html" data-en="← Games">← Spel</a>
     <h1>2048</h1>
   </div>
   <div class="bar">
-    <div class="box"><div class="lbl">SCORE</div><div class="val" id="score">0</div></div>
-    <div class="box"><div class="lbl">BEST</div><div class="val" id="best">0</div></div>
-    <button class="newgame" id="new">New game</button>
+    <div class="box"><div class="lbl" data-en="SCORE">POÄNG</div><div class="val" id="score">0</div></div>
+    <div class="box"><div class="lbl" data-en="BEST">REKORD</div><div class="val" id="best">0</div></div>
+    <button class="newgame" id="new" data-en="New game">Nytt spel</button>
   </div>
   <div class="board-outer">
     <div id="board">
@@ -108,7 +109,7 @@
       </div>
     </div>
   </div>
-  <p class="hint">Swipe (or use arrow keys) to slide the tiles. Same numbers merge!</p>
+  <p class="hint" data-en="Swipe (or use arrow keys) to slide the tiles. Same numbers merge!">Svep (eller använd piltangenterna) för att skjuta brickorna. Lika tal slås ihop!</p>
 </div>
 
 <script>
@@ -195,6 +196,8 @@ function maxTile(grid) {
 /*LOGIC-END*/
 
 // ================= rendering & game shell =================
+I18N.apply();
+var tr = I18N.t;
 var SCORE_KEY = "score.2048";
 var STATE_KEY = "state.2048";
 var board = document.getElementById("board");
@@ -342,14 +345,16 @@ function move(dir) {
 
     if (!won && maxTile(grid) >= 2048) {
       won = true;
-      showModal("You made 2048! 🎉", "Amazing! Want to keep going for an even bigger tile?", [
-        ["Keep going", hideModal],
-        ["New game", function () { newGame(false); }]
+      showModal(tr("Du klarade 2048! 🎉", "You made 2048! 🎉"),
+        tr("Fantastiskt! Vill du fortsätta mot en ännu större bricka?", "Amazing! Want to keep going for an even bigger tile?"), [
+        [tr("Fortsätt", "Keep going"), hideModal],
+        [tr("Nytt spel", "New game"), function () { newGame(false); }]
       ]);
     } else if (!canMove(grid)) {
       over = true;
-      showModal("Game over", "No more moves. Nice run — your best score is saved!", [
-        ["Try again", function () { newGame(false); }]
+      showModal(tr("Spelet är slut", "Game over"),
+        tr("Inga drag kvar. Bra kämpat – ditt rekord är sparat!", "No more moves. Nice run — your best score is saved!"), [
+        [tr("Försök igen", "Try again"), function () { newGame(false); }]
       ]);
     }
     saveState();

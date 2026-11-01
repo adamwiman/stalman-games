@@ -63,15 +63,15 @@ test("cards show each game's best score from localStorage", async ({ page }) => 
 test("parent PIN: create, wrong PIN rejected, limits saved and shown on cards", async ({ page, touch }) => {
   await page.goto("index.html");
   await press(page.locator("#gear"), touch);
-  await expect(page.locator("#panel h2")).toHaveText("Create a parent PIN");
+  await expect(page.locator("#panel h2")).toHaveText("Skapa en föräldrakod");
 
   // too short, then mismatch, then OK
   await page.fill("#pin1", "12"); await page.fill("#pin2", "12");
   await press(page.locator("#psave"), touch);
-  await expect(page.locator("#pmsg")).toHaveText(/at least 4/);
+  await expect(page.locator("#pmsg")).toHaveText(/minst 4/);
   await page.fill("#pin1", "1234"); await page.fill("#pin2", "9999");
   await press(page.locator("#psave"), touch);
-  await expect(page.locator("#pmsg")).toHaveText(/don't match/);
+  await expect(page.locator("#pmsg")).toHaveText(/inte lika/);
   await page.fill("#pin2", "1234");
   await press(page.locator("#psave"), touch);
 
@@ -80,18 +80,18 @@ test("parent PIN: create, wrong PIN rejected, limits saved and shown on cards", 
   await page.fill('input[data-game="numlings"]', "20");
   await page.fill('input[data-game="goopipes"]', "3");
   await press(page.locator("#save"), touch);
-  await expect(page.locator("#smsg")).toHaveText("Saved.");
+  await expect(page.locator("#smsg")).toHaveText("Sparat.");
   await press(page.locator("#close"), touch);
 
-  await expect(page.locator(".game-card", { hasText: "Numlingarnas resa" }).locator(".chip.time")).toHaveText("⏱ 20 min left");
-  await expect(page.locator(".game-card", { hasText: "Slemrören" }).locator(".chip.time.low")).toHaveText("⏱ 3 min left");
+  await expect(page.locator(".game-card", { hasText: "Numlingarnas resa" }).locator(".chip.time")).toHaveText("⏱ 20 min kvar");
+  await expect(page.locator(".game-card", { hasText: "Slemrören" }).locator(".chip.time.low")).toHaveText("⏱ 3 min kvar");
   await expect(page.locator(".game-card", { hasText: "2048" }).locator(".chip.time")).toHaveCount(0);
 
   // reopen: wrong PIN, then right one
   await press(page.locator("#gear"), touch);
   await page.fill("#pin", "0000");
   await press(page.locator("#pgo"), touch);
-  await expect(page.locator("#pmsg")).toHaveText("Wrong PIN.");
+  await expect(page.locator("#pmsg")).toHaveText("Fel kod.");
   await page.fill("#pin", "1234");
   await press(page.locator("#pgo"), touch);
   await expect(page.locator('input[data-game="numlings"]')).toHaveValue("20");
@@ -110,7 +110,7 @@ test("a game whose daily time is used up is locked on the hub", async ({ page, t
   await page.goto("index.html");
   const card = page.locator(".game-card", { hasText: "Numlingarnas resa" });
   await expect(card).toHaveClass(/locked/);
-  await expect(card.locator(".chip.time")).toHaveText("Time's up today");
+  await expect(card.locator(".chip.time")).toHaveText("Tiden är slut idag");
   await press(card, touch);
   await page.waitForTimeout(300);
   await expect(page).toHaveURL(/index\.html$/); // the click did not navigate

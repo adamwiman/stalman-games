@@ -4,6 +4,7 @@
      hub.pin      — hashed parent PIN
      hub.limits   — {gameId: minutesPerDay}
      hub.usage    — {date:"YYYY-MM-DD", byGame:{gameId: seconds}}
+     hub.lang     — "sv" (default) or "en", read by shared/i18n.js
      score.<id>   — each game's best score (written by the game)
    ============================================================ */
 (function () {
@@ -11,6 +12,9 @@
 
   // ---------- tiny helpers ----------
   const $ = (sel) => document.querySelector(sel);
+  const t = (sv, en) => I18N.t(sv, en);
+  const titleOf = (g) => (I18N.lang === "en" && g.en ? g.en.title : g.title);
+  const blurbOf = (g) => (I18N.lang === "en" && g.en ? g.en.blurb : g.blurb);
   const todayStr = () => {
     const d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") +
@@ -58,14 +62,15 @@
       let timeChip = "";
       if (left !== null) {
         const cls = locked ? "" : left <= 5 ? " low" : "";
-        const label = locked ? "Time's up today" : "⏱ " + left + " min left";
+        const label = locked ? t("Tiden är slut idag", "Time's up today")
+          : "⏱ " + left + t(" min kvar", " min left");
         timeChip = '<span class="chip time' + cls + '">' + label + "</span>";
       }
 
       a.innerHTML =
         '<span class="emoji">' + g.emoji + "</span>" +
-        "<h2>" + g.title + "</h2>" +
-        '<p class="blurb">' + g.blurb + "</p>" +
+        "<h2>" + titleOf(g) + "</h2>" +
+        '<p class="blurb">' + blurbOf(g) + "</p>" +
         '<div class="chips">' +
         '<span class="chip">🏆 ' + (best ? Number(best).toLocaleString() : "—") + "</span>" +
         timeChip +
@@ -93,18 +98,18 @@
 
   function showPinCreate() {
     panel.innerHTML =
-      "<h2>Create a parent PIN</h2>" +
-      '<p class="sub">This PIN protects the settings on this device.</p>' +
-      '<label>New PIN (4+ digits)</label><input id="pin1" type="password" inputmode="numeric" autocomplete="off">' +
-      '<label>Repeat PIN</label><input id="pin2" type="password" inputmode="numeric" autocomplete="off">' +
+      "<h2>" + t("Skapa en föräldrakod", "Create a parent PIN") + "</h2>" +
+      '<p class="sub">' + t("Koden skyddar inställningarna på den här enheten.", "This PIN protects the settings on this device.") + "</p>" +
+      "<label>" + t("Ny kod (minst 4 siffror)", "New PIN (4+ digits)") + '</label><input id="pin1" type="password" inputmode="numeric" autocomplete="off">' +
+      "<label>" + t("Upprepa koden", "Repeat PIN") + '</label><input id="pin2" type="password" inputmode="numeric" autocomplete="off">' +
       '<div class="msg" id="pmsg"></div>' +
-      '<button class="btn" id="psave">Save PIN</button>' +
-      '<button class="btn quiet" id="pcancel">Cancel</button>';
+      '<button class="btn" id="psave">' + t("Spara koden", "Save PIN") + "</button>" +
+      '<button class="btn quiet" id="pcancel">' + t("Avbryt", "Cancel") + "</button>";
     $("#pcancel").onclick = closeOverlay;
     $("#psave").onclick = () => {
       const a = $("#pin1").value, b = $("#pin2").value;
-      if (a.length < 4) { $("#pmsg").textContent = "PIN needs at least 4 digits."; return; }
-      if (a !== b) { $("#pmsg").textContent = "PINs don't match."; return; }
+      if (a.length < 4) { $("#pmsg").textContent = t("Koden måste ha minst 4 siffror.", "PIN needs at least 4 digits."); return; }
+      if (a !== b) { $("#pmsg").textContent = t("Koderna är inte lika.", "PINs don't match."); return; }
       localStorage.setItem("hub.pin", hash(a));
       unlocked = true;
       showSettings();
@@ -113,19 +118,19 @@
 
   function showPinEntry() {
     panel.innerHTML =
-      "<h2>Parent settings</h2>" +
-      '<p class="sub">Enter the PIN to continue.</p>' +
-      '<label>PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off">' +
+      "<h2>" + t("Föräldrainställningar", "Parent settings") + "</h2>" +
+      '<p class="sub">' + t("Skriv koden för att fortsätta.", "Enter the PIN to continue.") + "</p>" +
+      "<label>" + t("Kod", "PIN") + '</label><input id="pin" type="password" inputmode="numeric" autocomplete="off">' +
       '<div class="msg" id="pmsg"></div>' +
-      '<button class="btn" id="pgo">Unlock</button>' +
-      '<button class="btn quiet" id="pcancel">Cancel</button>';
+      '<button class="btn" id="pgo">' + t("Lås upp", "Unlock") + "</button>" +
+      '<button class="btn quiet" id="pcancel">' + t("Avbryt", "Cancel") + "</button>";
     $("#pcancel").onclick = closeOverlay;
     const tryUnlock = () => {
       if (hash($("#pin").value) === localStorage.getItem("hub.pin")) {
         unlocked = true;
         showSettings();
       } else {
-        $("#pmsg").textContent = "Wrong PIN.";
+        $("#pmsg").textContent = t("Fel kod.", "Wrong PIN.");
         $("#pin").value = "";
       }
     };
@@ -140,20 +145,21 @@
     let rows = "";
     for (const g of GAMES) {
       rows +=
-        '<div class="limit-row"><span>' + g.emoji + " " + g.title + "</span>" +
-        '<input type="number" min="0" step="5" inputmode="numeric" placeholder="No limit" ' +
+        '<div class="limit-row"><span>' + g.emoji + " " + titleOf(g) + "</span>" +
+        '<input type="number" min="0" step="5" inputmode="numeric" placeholder="' + t("Ingen gräns", "No limit") + '" ' +
         'data-game="' + g.id + '" value="' + (limits[g.id] || "") + '"></div>';
     }
     panel.innerHTML =
-      "<h2>Parent settings</h2>" +
-      '<p class="sub">Daily play time per game, in minutes. Leave empty for no limit. Resets each day.</p>' +
+      "<h2>" + t("Föräldrainställningar", "Parent settings") + "</h2>" +
+      '<p class="sub">' + t("Speltid per dag och spel, i minuter. Lämna tomt för ingen gräns. Börjar om varje dag.",
+        "Daily play time per game, in minutes. Leave empty for no limit. Resets each day.") + "</p>" +
       rows +
       '<div class="msg" id="smsg"></div>' +
-      '<button class="btn" id="save">Save limits</button>' +
-      '<button class="btn quiet" id="resetTime">Reset today\u2019s playtime</button>' +
-      '<button class="btn quiet" id="changePin">Change PIN</button>' +
-      '<button class="btn danger" id="resetScores">Reset high scores</button>' +
-      '<button class="btn quiet" id="close">Close</button>';
+      '<button class="btn" id="save">' + t("Spara tiderna", "Save limits") + "</button>" +
+      '<button class="btn quiet" id="resetTime">' + t("Nollställ dagens speltid", "Reset today\u2019s playtime") + "</button>" +
+      '<button class="btn quiet" id="changePin">' + t("Byt kod", "Change PIN") + "</button>" +
+      '<button class="btn danger" id="resetScores">' + t("Radera rekorden", "Reset high scores") + "</button>" +
+      '<button class="btn quiet" id="close">' + t("Stäng", "Close") + "</button>";
 
     $("#save").onclick = () => {
       const next = {};
@@ -162,19 +168,36 @@
         if (v > 0) next[inp.dataset.game] = v;
       });
       localStorage.setItem("hub.limits", JSON.stringify(next));
-      const m = $("#smsg"); m.textContent = "Saved."; m.className = "msg ok";
+      const m = $("#smsg"); m.textContent = t("Sparat.", "Saved."); m.className = "msg ok";
     };
     $("#resetTime").onclick = () => {
       localStorage.removeItem("hub.usage");
-      const m = $("#smsg"); m.textContent = "Playtime reset for today."; m.className = "msg ok";
+      const m = $("#smsg"); m.textContent = t("Dagens speltid är nollställd.", "Playtime reset for today."); m.className = "msg ok";
     };
     $("#resetScores").onclick = () => {
       for (const g of GAMES) localStorage.removeItem(g.scoreKey);
-      const m = $("#smsg"); m.textContent = "High scores cleared."; m.className = "msg ok";
+      const m = $("#smsg"); m.textContent = t("Rekorden är raderade.", "High scores cleared."); m.className = "msg ok";
     };
     $("#changePin").onclick = () => { localStorage.removeItem("hub.pin"); showPinCreate(); };
     $("#close").onclick = closeOverlay;
   }
+
+  // ---------- language: Svenska | English ----------
+  function syncLang() {
+    document.querySelectorAll(".lang button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === I18N.lang));
+    });
+  }
+  document.querySelectorAll(".lang button").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (b.dataset.lang === I18N.lang) return;
+      I18N.set(b.dataset.lang);
+      syncLang();
+      renderCards();
+    });
+  });
+  I18N.apply();
+  syncLang();
 
   // ---------- keep cards fresh when returning from a game ----------
   window.addEventListener("pageshow", renderCards);

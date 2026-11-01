@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Gångertabellen</title>
+<title data-en="Times Tables">Gångertabellen</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!--
   Gångertabellen — träna multiplikationstabellerna 1–10 (spel-id: gangertabell)
@@ -15,6 +15,7 @@
   localStorage: score.gangertabell (rekord: flest rätt i rad, visas på hubbens kort)
                 state.gangertabell (senast valda tabeller)
 -->
+<script src="../shared/i18n.js"></script>
 <style>
 :root{
   /* hubbens färger */
@@ -172,9 +173,9 @@ h3{font-size:1.2rem;font-weight:900}
 </style>
 </head>
 <body>
-<nav class="hubnav"><a class="back" href="../index.html">← Spel</a></nav>
+<nav class="hubnav"><a class="back" href="../index.html" data-en="← Games">← Spel</a></nav>
 <div id="app"></div>
-<noscript>Det här spelet behöver JavaScript.</noscript>
+<noscript>Det här spelet behöver JavaScript. / This game needs JavaScript.</noscript>
 <script>
 'use strict';
 /* =========================================================
@@ -183,6 +184,11 @@ h3{font-size:1.2rem;font-weight:900}
 
 /*LOGIC-START*/
 // Ren spellogik utan DOM (testas i tests/gangertabell.test.js).
+// Språket: 'sv' (standard) eller 'en'. Spelet sätter det från hubben (I18N.lang).
+let LANG='sv';
+function setLang(l){LANG=l==='en'?'en':'sv';}
+const tr=(sv,en)=>LANG==='en'?en:sv;
+
 const TABLES=[1,2,3,4,5,6,7,8,9,10];
 const MAX_DIGITS=3;                  // största svaret är 10 · 10 = 100
 
@@ -278,15 +284,16 @@ function summary(r){
     percent:r.asked?Math.round(100*r.correct/r.asked):0,bestStreak:r.bestStreak,missed:missedList(r)};
 }
 function verdict(s){
-  if(!s.asked)return 'Ingen fråga besvarad';
-  if(s.correct===s.asked)return s.complete?'Alla rätt! 🌟':'Bara rätt svar! 🌟';
-  if(s.percent>=80)return 'Snyggt jobbat!';
-  if(s.percent>=50)return 'Bra kämpat!';
-  return 'Bra att du tränar!';
+  if(!s.asked)return tr('Ingen fråga besvarad','No questions answered');
+  if(s.correct===s.asked)return s.complete?tr('Alla rätt! 🌟','All right! 🌟'):tr('Bara rätt svar! 🌟','Only right answers! 🌟');
+  if(s.percent>=80)return tr('Snyggt jobbat!','Great job!');
+  if(s.percent>=50)return tr('Bra kämpat!','Good effort!');
+  return tr('Bra att du tränar!','Good that you practise!');
 }
-const tableName=t=>t+':ans';
-// [3, 5, 7] → "3, 5 och 7"
-function listSv(xs){return xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+' och '+xs[xs.length-1];}
+// 7 → "7:ans tabell" / "7 times table"
+const tableName=t=>tr(t+':ans tabell',t+' times table');
+// [3, 5, 7] → "3, 5 och 7" / "3, 5 and 7"
+function listAnd(xs){return xs.length<2?xs.join(''):xs.slice(0,-1).join(', ')+tr(' och ',' and ')+xs[xs.length-1];}
 const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
 /*LOGIC-END*/
 
@@ -294,12 +301,18 @@ const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
 const GAME_ID='gangertabell';
 const SCORE_KEY='score.'+GAME_ID;   // hubbens trofé: rekord i flest rätt i rad
 const SAVE_KEY='state.'+GAME_ID;    // senast valda tabeller (hubbens konvention: state.<id>)
+setLang(I18N.lang);
+I18N.apply();
 const MODES={
-  free:  {icon:'🎲',name:'Fri träning',  desc:'Tal från alla tabeller 1–10 i blandad ordning. Håll på så länge du vill.'},
-  mix:   {icon:'🧩',name:'Tabellmix',    desc:'Välj en eller flera tabeller. Alla tal i dem kommer en gång var, i blandad ordning.'},
-  ladder:{icon:'🪜',name:'Tabelltrappan',desc:'Välj en tabell och ta talen i ordning, från 1 till 10.'}
+  free:  {icon:'🎲',name:tr('Fri träning','Free practice'),
+    desc:tr('Tal från alla tabeller 1–10 i blandad ordning. Håll på så länge du vill.','Questions from all the tables 1–10 in random order. Keep going as long as you like.')},
+  mix:   {icon:'🧩',name:tr('Tabellmix','Table mix'),
+    desc:tr('Välj en eller flera tabeller. Alla tal i dem kommer en gång var, i blandad ordning.','Choose one or more tables. Every question in them comes once, in random order.')},
+  ladder:{icon:'🪜',name:tr('Tabelltrappan','Table ladder'),
+    desc:tr('Välj en tabell och ta talen i ordning, från 1 till 10.','Choose a table and take the questions in order, from 1 to 10.')}
 };
-const PRAISE=['Rätt!','Snyggt!','Helt rätt!','Toppen!','Bra!','Ja!'];
+const PRAISE=tr(['Rätt!','Snyggt!','Helt rätt!','Toppen!','Bra!','Ja!'],['Right!','Nice!','Spot on!','Great!','Good!','Yes!']);
+const Q=n=>plural(n,tr('fråga','question'),tr('frågor','questions'));
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function loadPrefs(){
@@ -335,13 +348,13 @@ function showMenu(){
   go(`<main class="menu">
     <header class="hero">
       <div class="logo" aria-hidden="true">7 · 8 = <span class="qm">?</span></div>
-      <h1>Gångertabellen</h1>
-      <p class="sub">Träna gångertabellerna 1–10. Här finns ingen klocka, så ta den tid du behöver.</p>
+      <h1>${tr('Gångertabellen','Times Tables')}</h1>
+      <p class="sub">${tr('Träna gångertabellerna 1–10. Här finns ingen klocka, så ta den tid du behöver.','Practise the times tables 1–10. There is no clock here, so take the time you need.')}</p>
     </header>
     <div class="modes">
       ${Object.keys(MODES).map(m=>`<button class="mode m-${m}" data-act="${m}"><span class="ico" aria-hidden="true">${MODES[m].icon}</span><span class="nm">${MODES[m].name}</span><span class="ds">${MODES[m].desc}</span></button>`).join('')}
     </div>
-    <p class="record">${rec?`🏆 Ditt rekord: <b>${rec}</b> rätt i rad`:'🏆 Hur många rätt i rad klarar du?'}</p>
+    <p class="record">${rec?tr(`🏆 Ditt rekord: <b>${rec}</b> rätt i rad`,`🏆 Your record: <b>${rec}</b> right in a row`):tr('🏆 Hur många rätt i rad klarar du?','🏆 How many right in a row can you get?')}</p>
   </main>`,{
     free:()=>startRound('free',{}),
     mix:showMixPicker,
@@ -351,10 +364,10 @@ function showMenu(){
 
 function showMixPicker(){
   go(`<main class="panel page picker">
-    <div class="row"><button class="btn sm" data-act="back">Tillbaka</button><h2>${MODES.mix.icon} ${MODES.mix.name}</h2></div>
-    <p class="hint">Tryck på de tabeller du vill träna på. Alla tal i dem kommer en gång var, i blandad ordning.</p>
-    <div class="tgrid" role="group" aria-label="Tabeller">${TABLES.map(t=>`<button class="tbtn" data-act="tog" data-v="${t}" aria-pressed="false" aria-label="${tableName(t)} tabell"><b>${t}</b><small>${tableName(t)} tabell</small></button>`).join('')}</div>
-    <div class="row"><button class="btn sm" data-act="all">Välj alla</button><button class="btn sm" data-act="none">Rensa</button></div>
+    <div class="row"><button class="btn sm" data-act="back">${tr('Tillbaka','Back')}</button><h2>${MODES.mix.icon} ${MODES.mix.name}</h2></div>
+    <p class="hint">${tr('Tryck på de tabeller du vill träna på. Alla tal i dem kommer en gång var, i blandad ordning.','Tap the tables you want to practise. Every question in them comes once, in random order.')}</p>
+    <div class="tgrid" role="group" aria-label="${tr('Tabeller','Tables')}">${TABLES.map(t=>`<button class="tbtn" data-act="tog" data-v="${t}" aria-pressed="false" aria-label="${tableName(t)}"><b>${t}</b><small>${tableName(t)}</small></button>`).join('')}</div>
+    <div class="row"><button class="btn sm" data-act="all">${tr('Välj alla','Select all')}</button><button class="btn sm" data-act="none">${tr('Rensa','Clear')}</button></div>
     <button class="btn go big start" data-act="start"></button>
   </main>`,{
     back:showMenu,
@@ -373,16 +386,16 @@ function refreshMixPicker(){
   app.querySelectorAll('.tbtn').forEach(b=>b.setAttribute('aria-pressed',String(PICK.has(+b.dataset.v))));
   const n=PICK.size,start=app.querySelector('.start');
   start.disabled=!n;
-  start.textContent=n?`Starta – ${plural(n*10,'fråga','frågor')}`:'Välj minst en tabell';
+  start.textContent=n?tr('Starta','Start')+' – '+Q(n*10):tr('Välj minst en tabell','Choose at least one table');
   app.querySelector('[data-act="none"]').disabled=!n;
   app.querySelector('[data-act="all"]').disabled=n===TABLES.length;
 }
 
 function showLadderPicker(){
   go(`<main class="panel page picker">
-    <div class="row"><button class="btn sm" data-act="back">Tillbaka</button><h2>${MODES.ladder.icon} ${MODES.ladder.name}</h2></div>
-    <p class="hint">Vilken tabell vill du gå uppför? Talen kommer i ordning, till exempel 7 · 1, 7 · 2, 7 · 3 … 7 · 10.</p>
-    <div class="tgrid" role="group" aria-label="Tabeller">${TABLES.map(t=>`<button class="tbtn" data-act="pick" data-v="${t}" aria-label="${tableName(t)} tabell"><b>${t}</b><small>${tableName(t)} tabell</small>${PREFS.ladder===t?'<span class="tag">senast</span>':''}</button>`).join('')}</div>
+    <div class="row"><button class="btn sm" data-act="back">${tr('Tillbaka','Back')}</button><h2>${MODES.ladder.icon} ${MODES.ladder.name}</h2></div>
+    <p class="hint">${tr('Vilken tabell vill du gå uppför? Talen kommer i ordning, till exempel 7 · 1, 7 · 2, 7 · 3 … 7 · 10.','Which table do you want to climb? The questions come in order, for example 7 · 1, 7 · 2, 7 · 3 … 7 · 10.')}</p>
+    <div class="tgrid" role="group" aria-label="${tr('Tabeller','Tables')}">${TABLES.map(t=>`<button class="tbtn" data-act="pick" data-v="${t}" aria-label="${tableName(t)}"><b>${t}</b><small>${tableName(t)}</small>${PREFS.ladder===t?`<span class="tag">${tr('senast','last time')}</span>`:''}</button>`).join('')}</div>
   </main>`,{
     back:showMenu,
     pick:b=>{PREFS.ladder=+b.dataset.v;savePrefs();startRound('ladder',{table:PREFS.ladder});}
@@ -396,33 +409,33 @@ function startRound(mode,opts){
   renderPlay();
 }
 function modeDetail(r){
-  if(r.mode==='free')return 'Alla tabeller 1–10';
-  if(r.tables.length===TABLES.length)return 'Alla tabeller';
-  if(r.tables.length===1)return tableName(r.tables[0])+' tabell';
-  return 'Tabell '+listSv(r.tables);
+  if(r.mode==='free')return tr('Alla tabeller 1–10','All tables 1–10');
+  if(r.tables.length===TABLES.length)return tr('Alla tabeller','All tables');
+  if(r.tables.length===1)return tableName(r.tables[0]);
+  return tr('Tabell ','Tables ')+listAnd(r.tables);
 }
 function renderPlay(){
   const m=MODES[R.mode];
   const keys=['1','2','3','4','5','6','7','8','9','del','0','ok'];
-  const label={del:'⌫',ok:'✓'},aria={del:'Radera',ok:'Svara'};
+  const label={del:'⌫',ok:'✓'},aria={del:tr('Radera','Delete'),ok:tr('Svara','Answer')};
   go(`<main class="play mode-${R.mode}">
     <header class="bar">
-      <button class="btn sm quit" data-act="quit">Avsluta</button>
+      <button class="btn sm quit" data-act="quit">${tr('Avsluta','Stop')}</button>
       <div class="modename"><b><span aria-hidden="true">${m.icon}</span> ${m.name}</b><small>${modeDetail(R)}</small></div>
       <div class="stats">
-        <div class="stat" data-stat="asked"><span class="n">0</span><span class="l">frågor</span></div>
-        <div class="stat good" data-stat="correct"><span class="n">0</span><span class="l">rätt</span></div>
-        <div class="stat fire" data-stat="streak"><span class="n">0</span><span class="l">i rad</span></div>
+        <div class="stat" data-stat="asked"><span class="n">0</span><span class="l">${tr('frågor','questions')}</span></div>
+        <div class="stat good" data-stat="correct"><span class="n">0</span><span class="l">${tr('rätt','right')}</span></div>
+        <div class="stat fire" data-stat="streak"><span class="n">0</span><span class="l">${tr('i rad','in a row')}</span></div>
       </div>
     </header>
-    ${R.total?`<div class="progress" role="progressbar" aria-label="Hur långt du har kommit" aria-valuemin="0" aria-valuemax="${R.total}" aria-valuenow="0"><div class="fill"></div><span class="ptext"></span></div>`:''}
+    ${R.total?`<div class="progress" role="progressbar" aria-label="${tr('Hur långt du har kommit','How far you have come')}" aria-valuemin="0" aria-valuemax="${R.total}" aria-valuenow="0"><div class="fill"></div><span class="ptext"></span></div>`:''}
     ${R.mode==='ladder'?'<div class="steps" aria-hidden="true"></div>':''}
     <section class="board">
       <div class="qcard">
         <div class="question"><span class="q"></span><span class="eq">= <span class="ans"></span></span></div>
         <div class="feedback" aria-live="polite"></div>
       </div>
-      <div class="numpad" role="group" aria-label="Sifferknappar">${keys.map(k=>`<button class="key ${k==='ok'||k==='del'?k:''}" data-k="${k}" tabindex="-1" aria-label="${aria[k]||k}">${label[k]||k}</button>`).join('')}</div>
+      <div class="numpad" role="group" aria-label="${tr('Sifferknappar','Number keys')}">${keys.map(k=>`<button class="key ${k==='ok'||k==='del'?k:''}" data-k="${k}" tabindex="-1" aria-label="${aria[k]||k}">${label[k]||k}</button>`).join('')}</div>
     </section>
   </main>`,{quit:askQuit,next:goNext});
   updatePlay();
@@ -442,7 +455,7 @@ function updatePlay(bump){
   const q=app.querySelector('.q'),ans=app.querySelector('.ans');
   q.textContent=formatFact(shown);
   q.dataset.a=shown.a;q.dataset.b=shown.b;
-  q.setAttribute('aria-label',`${shown.a} gånger ${shown.b}`);
+  q.setAttribute('aria-label',`${shown.a} ${tr('gånger','times')} ${shown.b}`);
   ans.className='ans'+(wrong?' bad':UI.input?'':' empty');
   ans.textContent=wrong?String(UI.fb.given):(UI.input||'?');
 
@@ -451,7 +464,7 @@ function updatePlay(bump){
   const prog=app.querySelector('.progress');
   if(prog){
     prog.querySelector('.fill').style.width=(100*R.asked/R.total)+'%';
-    prog.querySelector('.ptext').textContent=`${R.asked} av ${R.total} klara`;
+    prog.querySelector('.ptext').textContent=tr(`${R.asked} av ${R.total} klara`,`${R.asked} of ${R.total} done`);
     prog.setAttribute('aria-valuenow',String(R.asked));
   }
   const steps=app.querySelector('.steps');
@@ -471,7 +484,7 @@ function updatePlay(bump){
   }else{
     fb.className='feedback bad';
     const last=R.total!==null&&R.asked===R.total;
-    fb.innerHTML=`<span class="fbtext">Inte riktigt. ${formatFact(UI.fb.fact)} = ${UI.fb.expected}</span><button class="btn go next" data-act="next">${last?'Se resultatet':'Nästa'}</button>`;
+    fb.innerHTML=`<span class="fbtext">${tr('Inte riktigt.','Not quite.')} ${formatFact(UI.fb.fact)} = ${UI.fb.expected}</span><button class="btn go next" data-act="next">${last?tr('Se resultatet','See the result'):tr('Nästa','Next')}</button>`;
   }
   app.querySelectorAll('.key').forEach(k=>{
     k.disabled=wrong||(k.dataset.k==='ok'&&!UI.input)||(k.dataset.k==='del'&&!UI.input);
@@ -518,9 +531,9 @@ function goNext(){
 function askQuit(){
   if(!R)return;
   if(!R.asked){showMenu();return;}
-  modal(`<h3>Vill du sluta nu?</h3>
-    <p>Du har svarat på <b>${plural(R.asked,'fråga','frågor')}</b> och fått <b>${R.correct} rätt</b>.</p>
-    <div class="row center"><button class="btn go" data-m="close">Fortsätt räkna</button><button class="btn" data-m="stop">Sluta och se resultatet</button></div>`,
+  modal(`<h3>${tr('Vill du sluta nu?','Do you want to stop now?')}</h3>
+    <p>${tr(`Du har svarat på <b>${Q(R.asked)}</b> och fått <b>${R.correct} rätt</b>.`,`You have answered <b>${Q(R.asked)}</b> and got <b>${R.correct} right</b>.`)}</p>
+    <div class="row center"><button class="btn go" data-m="close">${tr('Fortsätt räkna','Keep going')}</button><button class="btn" data-m="stop">${tr('Sluta och se resultatet','Stop and see the result')}</button></div>`,
     {stop:()=>{stopRound(R);showSummary();}});
 }
 
@@ -529,25 +542,26 @@ function showSummary(){
   const s=summary(R),mode=UI.mode,opts=UI.opts;
   const newRec=s.bestStreak>UI.recordAtStart;
   let lead;
-  if(s.mode==='ladder'&&s.complete)lead=`Du gick hela vägen uppför ${tableName(s.tables[0])} tabell och fick ${s.correct} av ${s.total} rätt.`;
-  else if(s.complete)lead=`Du svarade på alla ${s.total} frågorna och fick ${s.correct} rätt.`;
-  else if(s.total!==null)lead=`Du hann svara på ${s.asked} av ${s.total} frågor och fick ${s.correct} rätt.`;
-  else lead=`Du svarade på ${plural(s.asked,'fråga','frågor')} och fick ${s.correct} rätt.`;
+  if(s.mode==='ladder'&&s.complete)lead=tr(`Du gick hela vägen uppför ${tableName(s.tables[0])} och fick ${s.correct} av ${s.total} rätt.`,
+    `You climbed all the way up the ${tableName(s.tables[0])} and got ${s.correct} of ${s.total} right.`);
+  else if(s.complete)lead=tr(`Du svarade på alla ${s.total} frågorna och fick ${s.correct} rätt.`,`You answered all ${s.total} questions and got ${s.correct} right.`);
+  else if(s.total!==null)lead=tr(`Du hann svara på ${s.asked} av ${s.total} frågor och fick ${s.correct} rätt.`,`You answered ${s.asked} of ${s.total} questions and got ${s.correct} right.`);
+  else lead=tr(`Du svarade på ${Q(s.asked)} och fick ${s.correct} rätt.`,`You answered ${Q(s.asked)} and got ${s.correct} right.`);
   const nextTable=s.mode==='ladder'&&s.tables[0]<10?s.tables[0]+1:null;
   go(`<main class="panel page summary">
     <h2>${verdict(s)}</h2>
     <p class="lead">${lead}</p>
     <div class="bigstats">
-      <div class="big" data-sum="asked"><b>${s.asked}</b><span>${s.asked===1?'fråga':'frågor'}</span></div>
-      <div class="big good" data-sum="correct"><b>${s.correct}</b><span>rätt</span></div>
-      <div class="big fire" data-sum="streak"><b>${s.bestStreak}</b><span>flest i rad</span></div>
+      <div class="big" data-sum="asked"><b>${s.asked}</b><span>${s.asked===1?tr('fråga','question'):tr('frågor','questions')}</span></div>
+      <div class="big good" data-sum="correct"><b>${s.correct}</b><span>${tr('rätt','right')}</span></div>
+      <div class="big fire" data-sum="streak"><b>${s.bestStreak}</b><span>${tr('flest i rad','most in a row')}</span></div>
     </div>
-    ${newRec?`<p class="newrec">🏆 Nytt rekord: ${s.bestStreak} rätt i rad!</p>`:''}
-    ${s.missed.length?`<h3>Öva lite extra på de här</h3><ul class="missed">${s.missed.map(f=>`<li>${formatFact(f)} = ${f.answer}</li>`).join('')}</ul>`:''}
+    ${newRec?`<p class="newrec">${tr(`🏆 Nytt rekord: ${s.bestStreak} rätt i rad!`,`🏆 New record: ${s.bestStreak} right in a row!`)}</p>`:''}
+    ${s.missed.length?`<h3>${tr('Öva lite extra på de här','Practise these a little extra')}</h3><ul class="missed">${s.missed.map(f=>`<li>${formatFact(f)} = ${f.answer}</li>`).join('')}</ul>`:''}
     <div class="row center">
-      <button class="btn go big" data-act="again">Spela igen</button>
-      ${nextTable?`<button class="btn big" data-act="nexttable">Ta ${tableName(nextTable)} tabell</button>`:''}
-      <button class="btn" data-act="menu">Till menyn</button>
+      <button class="btn go big" data-act="again">${tr('Spela igen','Play again')}</button>
+      ${nextTable?`<button class="btn big" data-act="nexttable">${tr('Ta ','Take the ')}${tableName(nextTable)}</button>`:''}
+      <button class="btn" data-act="menu">${tr('Till menyn','To the menu')}</button>
     </div>
   </main>`,{
     again:()=>startRound(mode,opts),
