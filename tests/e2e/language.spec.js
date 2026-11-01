@@ -349,3 +349,40 @@ test("Around the World in English: flags, the country card, the result and the p
   expect(europe.slice(0, 3)).toEqual(["Albania", "Andorra", "Austria"]);
   await expectNoSwedish(page, "passport");
 });
+
+// ---------- Tower of Hanoi ----------
+test("Tower of Hanoi in English: levels, a wrong move, a hint and a whole Easy tower", async ({ page, touch }) => {
+  await english(page);
+  await page.goto("games/hanoi.html");
+  await expect(page.locator("h1")).toHaveText("Tower of Hanoi");
+  await expect(page.locator(".level .nm")).toHaveText(["Easy", "Medium", "Hard", "Genius", "Impossible"]);
+  await expect(page.locator('.level[data-lvl="0"] .ds')).toHaveText("3 discs · at least 7 moves");
+  await expect(page.locator('.level[data-lvl="1"] .ds')).toHaveText("Move the tower on Easy to unlock.");
+  await expect(page.locator(".record")).toHaveText("⭐ Move a tower to get your first stars!");
+  await press(page.locator('[data-act="rules"]'), touch);
+  await expect(page.locator(".modal h3")).toHaveText("📖 How to play");
+  await expectNoSwedish(page, "rules");
+  await press(page.locator('.modal [data-m="close"]'), touch);
+
+  await press(page.locator('.level[data-lvl="0"]'), touch);
+  await expect(page.locator(".title b")).toHaveText("🐣 Easy");
+  await expect(page.locator(".msg")).toHaveText("Tap a peg to lift its top disc, then tap the peg where it should go.");
+  await expect(page.locator('.peg[data-p="2"]')).toHaveAttribute("aria-label", "The right peg (the goal): empty");
+  await expectNoSwedish(page, "board");
+  const peg = (p) => page.locator(`.peg[data-p="${p}"]`);
+  const tapMove = async ([a, b]) => { await press(peg(a), touch); await press(peg(b), touch); };
+  await tapMove([0, 1]);
+  await tapMove([0, 1]);
+  await expect(page.locator(".msg")).toHaveText("Disc 2 may not sit on disc 1. A bigger disc may never sit on a smaller one.");
+  await press(page.locator('[data-act="hint"]'), touch);
+  await expect(page.locator(".msg")).toHaveText("💡 Move disc 1 from the middle peg to the right peg. From here you need at least 7 more moves.");
+  await press(page.locator('[data-act="undo"]'), touch);
+  for (const mv of [[0, 2], [0, 1], [2, 1], [0, 2], [1, 0], [1, 2], [0, 2]]) await tapMove(mv);
+  await expect(page.locator(".modal h2")).toHaveText("Well done!");
+  await expect(page.locator(".modal .lead")).toHaveText("You moved the tower in 7 moves – the fewest possible! With hints you get two stars at most.");
+  await expect(page.locator(".modal .unlock")).toHaveText("🔓 You have unlocked 🧗 Medium!");
+  await expect(page.locator(".modal .btn")).toHaveText(["Try Medium", "Play again", "Menu"]);
+  await expectNoSwedish(page, "result");
+  await press(page.locator('.modal [data-m="menu"]'), touch);
+  await expect(page.locator(".record")).toHaveText("⭐ Stars: 2 of 15");
+});

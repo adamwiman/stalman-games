@@ -58,5 +58,14 @@ const GAMES = [
     en: { title: "Around the World", blurb: "Flags, capitals and countries!" },
     file: "games/jordenrunt.html",
     scoreKey: "score.jordenrunt"   // countries stamped in the passport
+  },
+  {
+    id: "hanoi",
+    title: "Tornet i Hanoi",
+    emoji: "🗼",
+    blurb: "Flytta tornet, en bricka i taget!",
+    en: { title: "Tower of Hanoi", blurb: "Move the tower, one disc at a time!" },
+    file: "games/hanoi.html",
+    scoreKey: "score.hanoi"        // stars, all levels together
   }
 ];

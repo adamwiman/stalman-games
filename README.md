@@ -17,6 +17,7 @@ scores and PIN-protected daily time limits per game.
 | ✖️ [Gångertabellen](#gångertabellen-notes) | Times Tables | times tables 1–10 practice |
 | 🕵️ [Detektiven](#detektiven-notes) | The Detective | who is the criminal? Logic puzzles with clues |
 | 🌍 [Jorden runt](#jorden-runt-notes) | Around the World | geography: flags, capitals, sizes and continents of all 195 countries |
+| 🗼 [Tornet i Hanoi](#tornet-i-hanoi-notes) | Tower of Hanoi | move the tower one disc at a time, 3 to 7 discs |
 
 Every game works offline, saves its best score for the hub card and obeys
 the daily time limits. Notes on each game are at the end of this file.
@@ -34,7 +35,7 @@ time limits are shared by both languages.
   `data-en-<attribute>` for labels), and scripts pick a text with
   `I18N.t("svenska", "English")`.
 - Games with text inside their logic block (Gångertabellen, Detektiven,
-  Jorden runt) have their own `setLang("en")`, so the unit tests can check
+  Jorden runt, Tornet i Hanoi) have their own `setLang("en")`, so the unit tests can check
   both languages.
 - Detektiven builds its clues with a separate English grammar
   (`clueTextEn`); the people keep their Swedish names. Jorden runt has an
@@ -138,6 +139,7 @@ games/numlings.html   Numlingarnas resa / The Numlings' Journey — logic & numb
 games/gangertabell.html  Gångertabellen / Times Tables — times tables 1–10 practice (fully self-contained)
 games/detektiven.html    Detektiven / The Detective — who is the criminal? Logic puzzles (fully self-contained)
 games/jordenrunt.html    Jorden runt / Around the World — geography games, flags and country data inside the file (fully self-contained)
+games/hanoi.html         Tornet i Hanoi / Tower of Hanoi — the classic disc puzzle, five levels (fully self-contained)
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
@@ -164,7 +166,9 @@ Then `npm test` runs everything:
   country data in Swedish and English, flags, questions on every level and
   area, scoring, unlocking and the passport), `tests/detektiven.test.js`
   (Detektiven clue texts in both languages, case generator, solver,
-  difficulty and unlocking) and `tests/integrity.test.js` (every game is in
+  difficulty and unlocking), `tests/hanoi.test.js` (Tornet i Hanoi rules,
+  undo, the hint from any position, stars, unlocking and saved towers) and
+  `tests/integrity.test.js` (every game is in
   `config.js` with an English title and precached in `sw.js`, loads
   `i18n.js`, has the back link in both languages, `guard.js`, service worker
   and score key, and loads nothing from the network).
@@ -188,7 +192,7 @@ handing it over.
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `hub.lang`   | `"sv"` (default) or `"en"`, set on the hub     |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, and last choices) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Slemrören the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, and last choices; Tornet i Hanoi keeps unlocked levels, stars and the tower in progress) |
 
 ## 2048 notes
 
@@ -422,3 +426,33 @@ and a **level**. Each game unlocks its own levels, one at a time:
 - Flag colours (for the clues) and lookalike flags were worked out from the
   rendered flags, then checked by hand; how well known a country is was set
   by hand.
+
+## Tornet i Hanoi notes
+
+The classic Tower of Hanoi puzzle (Tower of Hanoi in English). Move the
+whole tower from the first peg to the peg with the flag 🏁, one disc at a
+time, never putting a bigger disc on a smaller one.
+
+| Level | Discs | Fewest moves |
+| ----- | ----- | ------------ |
+| Lätt | 3 | 7 |
+| Mellan | 4 | 15 |
+| Svår | 5 | 31 |
+| Geni | 6 | 63 |
+| Omöjliga | 7 | 127 |
+
+- Lätt is open from the start; moving the tower on a level unlocks the next,
+  with one more disc. The level names are the same as in Detektiven and
+  Jorden runt.
+- Tap a peg to lift its top disc, then the peg to put it on; or drag the
+  disc. Keys 1, 2 and 3 pick the pegs, Backspace undoes, Escape puts a
+  lifted disc back.
+- **↩️ Ångra** takes back moves (they no longer count). **💡 Tips** shows
+  the best next move from any position and how many moves are left.
+- **Stars:** ⭐⭐⭐ for the fewest moves (2ⁿ − 1), ⭐⭐ for at most half as
+  many again, otherwise ⭐. With a hint, at most ⭐⭐.
+- **Score:** the hub trophy is all stars together (at most 15).
+- **Saved:** `state.hanoi` holds `prog` (unlocked level, best stars and
+  fewest moves per level) and `game` (the tower in progress, with its undo
+  steps and hints). A saved tower is only used if the discs are in a legal
+  order.

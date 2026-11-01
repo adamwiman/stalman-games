@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title data-en="Tower of Hanoi">Tornet i Hanoi</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
+<!--
+  Tornet i Hanoi / Tower of Hanoi — flytta tornet en bricka i taget (spel-id: hanoi)
+  Del av Stalman games. Helt fristående: inga nätverksresurser.
+  Fem nivåer, Lätt till Omöjliga, med 3 till 7 brickor. Lätt är öppen från början,
+  och ett löst torn låser upp nästa nivå med en bricka till.
+  Stjärnor: 3 för minsta antalet drag (2^n − 1), 2 för högst hälften fler, annars 1.
+  Med tips blir det som mest 2 stjärnor. Hubbens trofé är alla stjärnor tillsammans.
+  localStorage: score.hanoi (stjärnor), state.hanoi (nivåer, stjärnor, rekord och tornet man håller på med)
+-->
+<style>
+:root{
+  /* hubbens färger */
+  --sky:#ddf1ff; --ink:#17335b; --sun:#ffc63f; --coral:#ff6b6b; --mint:#38d9a9;
+  /* spelets extra färger */
+  --ink2:#4a6182; --paper:#ffffff; --wood:#c98d52; --wood2:#9a6331;
+  --font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--sky);overflow-x:hidden;font-size:17px;line-height:1.35;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+h1,h2,h3,p{margin:0}
+button{font:inherit;color:inherit;touch-action:manipulation}
+#app{max-width:980px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));min-height:100vh;display:flex;flex-direction:column;gap:14px}
+/* länk tillbaka till hubben (visas på menyn) */
+.hubnav{display:none;max-width:980px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+body.at-menu .hubnav{display:block}
+body.at-menu #app{padding-top:8px;min-height:0}
+.back{display:inline-block;text-decoration:none;color:var(--ink);font-weight:800;font-size:16px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 16px;box-shadow:0 3px 0 var(--ink)}
+.back:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+:focus-visible{outline:4px solid #1767d1;outline-offset:3px}
+
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:4px 5px 0 var(--ink)}
+.btn{font-weight:800;font-size:1.05rem;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.55em 1.15em;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s;line-height:1.15;min-height:48px}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.go{background:var(--sun)}
+.btn.big{font-size:1.25rem;padding:.65em 1.5em;min-height:56px}
+.btn.sm{font-size:.95rem;padding:.4em .95em;min-height:44px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 4px 0 var(--ink)}
+@media (hover:hover){
+  .btn:hover{background:#f0f8ff}
+  .btn.go:hover{background:#ffd466}
+  .level:not(.locked):hover{filter:brightness(1.03);transform:translateY(-2px)}
+}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.center{justify-content:center}
+
+/* ---------- meny ---------- */
+.menu{display:flex;flex-direction:column;gap:14px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:2px 0}
+.logo{font-size:clamp(48px,8vw,68px);line-height:1;background:#fff;border:4px solid var(--ink);border-radius:24px;box-shadow:5px 6px 0 var(--ink);padding:.12em .32em}
+h1{font-size:clamp(2rem,5vw,2.7rem);font-weight:900;letter-spacing:.3px}
+h2{font-size:clamp(1.35rem,3vw,1.8rem);font-weight:900}
+h3{font-size:1.2rem;font-weight:900}
+.sub{color:var(--ink2);font-weight:700;max-width:34em}
+.pickh{text-align:center}
+.levels{display:flex;flex-direction:column;gap:10px;width:100%;max-width:680px;margin:0 auto}
+.level{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px 14px;text-align:left;border:3px solid var(--ink);border-radius:20px;box-shadow:4px 5px 0 var(--ink);padding:10px 16px;cursor:pointer;min-height:76px;transition:transform .1s,box-shadow .1s}
+.level:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--ink)}
+.level .ico{font-size:2.1rem;line-height:1;grid-row:span 2}
+.level .nm{font-size:1.35rem;font-weight:900;line-height:1.1;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.level .ds{color:var(--ink2);font-weight:700;font-size:.95rem;grid-column:2}
+.level .tag{grid-column:3;grid-row:1 / span 2;font-size:.8rem;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 9px;white-space:nowrap}
+.level .tag.stars{font-size:1rem;letter-spacing:1px;padding:2px 9px}
+@media (max-width:520px){.level{grid-template-columns:auto 1fr}.level .tag{grid-column:2;grid-row:auto;justify-self:start}}
+.mini{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.mini i{display:block;height:5px;border-radius:3px;border:1.5px solid var(--ink)}
+.lv-latt{background:#dcf7ec}
+.lv-mellan{background:#fff4d1}
+.lv-svar{background:#ffe6e3}
+.lv-geni{background:#ebe3ff}
+.lv-omojliga{background:#dfe7f2}
+.level.locked{background:#eef2f7;color:#7d8ea6;border-color:#9fb0c6;box-shadow:3px 4px 0 #9fb0c6;cursor:default}
+.level.locked .ds,.level.locked .tag{color:#7d8ea6;border-color:#9fb0c6}
+.level.locked .mini{opacity:.35}
+.resume{display:flex;align-items:center;gap:14px;text-align:left;padding:14px 18px;cursor:pointer;background:var(--sun);font-weight:800;width:100%;max-width:680px;margin:0 auto}
+.resume:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--ink)}
+.resume .ico{font-size:2.2rem}
+.resume b{display:block;font-size:1.3rem;font-weight:900}
+.record{text-align:center;font-weight:800;font-size:1.1rem}
+.menumsg{text-align:center;font-weight:800;color:#c93a3a;min-height:1.35em}
+.menumsg:empty{display:none}
+
+/* ---------- spelplanen ---------- */
+.play{display:flex;flex-direction:column;gap:12px;flex:1}
+.bar{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap}
+.title{flex:1;min-width:150px;display:flex;flex-direction:column;line-height:1.15}
+.title b{font-size:1.2rem;font-weight:900}
+.title small{font-size:.95rem;font-weight:800;color:var(--ink2)}
+.stats{display:flex;gap:8px}
+.stat{display:flex;flex-direction:column;align-items:center;min-width:64px;background:#fff;border:3px solid var(--ink);border-radius:16px;padding:4px 10px;line-height:1.1}
+.stat .n{font-size:1.35rem;font-weight:900;font-variant-numeric:tabular-nums}
+.stat .l{font-size:.78rem;font-weight:800;color:var(--ink2)}
+.msg{text-align:center;font-weight:800;min-height:2.7em;color:var(--ink2);display:flex;align-items:center;justify-content:center}
+.msg.bad{color:#c93a3a}
+.msg.tip{color:#1a6fd1}
+.msg.ok{color:#1a8a5f}
+.board{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(4px,1.5vw,14px);padding:0 clamp(4px,1.5vw,14px) 18px;background:#eaf6ff;border:3px solid var(--ink);border-radius:22px;box-shadow:4px 5px 0 var(--ink);touch-action:none;height:var(--bh)}
+.board::after{content:"";position:absolute;left:10px;right:10px;bottom:8px;height:16px;border-radius:8px;background:var(--wood);border:3px solid var(--ink)}
+.peg{position:relative;display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-start;padding:0 0 22px;margin:0;border:0;background:transparent;cursor:pointer;border-radius:16px;z-index:1;--top:calc(var(--lift) + 10px)}
+.peg::before{content:"";position:absolute;bottom:20px;left:50%;width:14px;margin-left:-7px;top:var(--top);border-radius:7px 7px 0 0;background:var(--wood2);border:3px solid var(--ink);z-index:-1}
+.peg.goal::after{content:"🏁";position:absolute;top:calc(var(--top) - 34px);left:50%;transform:translateX(-50%);font-size:26px;line-height:1}
+.peg.sel{background:rgba(255,198,63,.25)}
+.peg.from{background:rgba(26,111,209,.13)}
+.peg.to{background:rgba(56,217,169,.32)}
+.peg:focus-visible{outline-offset:-4px}
+.disc{height:var(--dh);border:3px solid var(--ink);border-radius:calc(var(--dh) / 2);flex:none;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:calc(var(--dh) * .5);color:rgba(23,51,91,.75);transition:transform .15s}
+.disc.lifted{transform:translateY(calc(-1 * var(--liftby)))}
+.disc.ghost{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-50%);transition:none;box-shadow:0 8px 16px rgba(0,0,0,.2)}
+.disc.hidden{visibility:hidden}
+.peg.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.keys{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+
+/* ---------- dialog och konfetti ---------- */
+.modal-back{position:fixed;inset:0;z-index:60;background:rgba(23,51,91,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{max-width:460px;width:100%;padding:22px 20px;display:flex;flex-direction:column;gap:12px;text-align:center;max-height:calc(100vh - 32px);overflow:auto}
+.modal .bigstars{font-size:2.6rem;letter-spacing:6px}
+.modal ul{text-align:left;margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-weight:600}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:10px;height:16px;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<nav class="hubnav"><a class="back" href="../index.html" data-en="← Games">← Spel</a></nav>
+<div id="app"></div>
+<noscript>Det här spelet behöver JavaScript. / This game needs JavaScript.</noscript>
+<script>
+'use strict';
+/* =========================================================
+   Tornet i Hanoi — flytta tornet till pinnen med flaggan
+   ========================================================= */
+
+/*LOGIC-START*/
+// Ren spellogik utan DOM (testas i tests/hanoi.test.js).
+// Språket: 'sv' (standard) eller 'en'. Spelet sätter det från hubben (I18N.lang).
+let LANG='sv';
+function setLang(l){LANG=l==='en'?'en':'sv';}
+const tr=(sv,en)=>LANG==='en'?en:sv;
+
+// Nivåerna, med lika namn som i de andra spelen. n = antal brickor.
+const LEVELS=[
+  {id:'latt',name:'Lätt',en:'Easy',icon:'🐣',n:3},
+  {id:'mellan',name:'Mellan',en:'Medium',icon:'🧗',n:4},
+  {id:'svar',name:'Svår',en:'Hard',icon:'🏔️',n:5},
+  {id:'geni',name:'Geni',en:'Genius',icon:'🧠',n:6},
+  {id:'omojliga',name:'Omöjliga',en:'Impossible',icon:'💀',n:7}
+];
+const PEGS=3,GOAL=2;                 // pinnarna 0, 1, 2; tornet ska till pinne 2
+const minMoves=n=>2**n-1;
+const lvName=L=>LANG==='en'?L.en:L.name;
+
+// Ett nytt torn: alla brickor på pinne 0, största (n) längst ner.
+function newGame(level){
+  const n=LEVELS[level].n,pegs=[[],[],[]];
+  for(let k=n;k>=1;k--)pegs[0].push(k);
+  return {level,n,pegs,moves:0,history:[],hints:0,done:false};
+}
+const topDisc=(g,p)=>g.pegs[p].length?g.pegs[p][g.pegs[p].length-1]:0;
+// Ett drag är tillåtet om pinnen har en bricka och den inte hamnar på en mindre.
+function canMove(g,from,to){
+  if(g.done||from===to||!(from>=0&&from<PEGS)||!(to>=0&&to<PEGS))return false;
+  const a=topDisc(g,from),b=topDisc(g,to);
+  return a>0&&(b===0||a<b);
+}
+// Flyttar översta brickan. Ger true om draget gjordes.
+function move(g,from,to){
+  if(!canMove(g,from,to))return false;
+  g.pegs[to].push(g.pegs[from].pop());
+  g.moves++;g.history.push([from,to]);
+  g.done=g.pegs[GOAL].length===g.n;
+  return true;
+}
+// Ångrar senaste draget. Ett ångrat drag räknas inte längre.
+function undo(g){
+  if(g.done||!g.history.length)return false;
+  const [from,to]=g.history.pop();
+  g.pegs[from].push(g.pegs[to].pop());
+  g.moves--;
+  return true;
+}
+const pegOf=(pegs,k)=>pegs.findIndex(p=>p.includes(k));
+// Bästa nästa drag från vilket läge som helst: flytta den största brickan som inte
+// är framme till målet, men först alla mindre till den tredje pinnen. Ger [från, till] eller null.
+function bestMove(pegs,n,target){
+  target=target==null?GOAL:target;
+  for(let k=n;k>=1;k--){
+    const at=pegOf(pegs,k);
+    if(at===target)continue;
+    const other=3-at-target;
+    return bestMove(pegs,k-1,other)||[at,target];
+  }
+  return null;
+}
+// Hur många drag som minst behövs härifrån.
+function movesLeft(pegs,n,target){
+  target=target==null?GOAL:target;
+  if(n===0)return 0;
+  const at=pegOf(pegs,n);
+  if(at===target)return movesLeft(pegs,n-1,target);
+  return movesLeft(pegs,n-1,3-at-target)+1+minMoves(n-1);
+}
+// Stjärnor för ett löst torn.
+function starsFor(n,moves,hints){
+  const best=minMoves(n);
+  const s=moves<=best?3:moves<=Math.floor(best*1.5)?2:1;
+  return hints?Math.min(2,s):s;
+}
+
+// ---------- framsteg ----------
+// prog: {unlocked: index för högsta öppna nivå, stars: {nivå-id: 1–3}, best: {nivå-id: minst antal drag}}
+function cleanProgress(p){
+  const out={unlocked:0,stars:{},best:{}};
+  if(!p||typeof p!=='object')return out;
+  const u=Number(p.unlocked);
+  out.unlocked=Number.isInteger(u)?Math.max(0,Math.min(LEVELS.length-1,u)):0;
+  for(const L of LEVELS){
+    const s=Math.floor(Number(p.stars&&p.stars[L.id]));if(s>=1&&s<=3)out.stars[L.id]=s;
+    const b=Math.floor(Number(p.best&&p.best[L.id]));if(b>=minMoves(L.n))out.best[L.id]=b;
+  }
+  return out;
+}
+// Sparar ett löst torn. Ger index för nivån som låstes upp, annars -1.
+function recordWin(prog,level,moves,hints){
+  const L=LEVELS[level],s=starsFor(L.n,moves,hints);
+  if(!(prog.stars[L.id]>=s))prog.stars[L.id]=s;
+  if(!(prog.best[L.id]<=moves))prog.best[L.id]=moves;
+  if(level>=prog.unlocked&&level<LEVELS.length-1){prog.unlocked=level+1;return level+1;}
+  return -1;
+}
+const totalStars=prog=>LEVELS.reduce((a,L)=>a+(prog.stars[L.id]||0),0);
+const maxStars=()=>LEVELS.length*3;
+// Ett sparat torn används bara om brickorna ligger rätt (inga stora på små, alla med).
+function restoreGame(s,prog){
+  if(!s||typeof s!=='object'||!Number.isInteger(s.level)||!LEVELS[s.level])return null;
+  if(prog&&s.level>prog.unlocked)return null;
+  const n=LEVELS[s.level].n;
+  if(!Array.isArray(s.pegs)||s.pegs.length!==PEGS)return null;
+  const seen=[];
+  for(const p of s.pegs){
+    if(!Array.isArray(p))return null;
+    for(let i=0;i<p.length;i++){if(!Number.isInteger(p[i])||(i&&p[i]>p[i-1]))return null;seen.push(p[i]);}
+  }
+  seen.sort((a,b)=>a-b);
+  if(seen.length!==n||seen.some((k,i)=>k!==i+1))return null;
+  const g={level:s.level,n,pegs:s.pegs.map(p=>p.slice()),moves:Math.max(0,Math.floor(Number(s.moves))||0),
+    history:Array.isArray(s.history)?s.history.filter(m=>Array.isArray(m)&&m.length===2&&m.every(x=>Number.isInteger(x)&&x>=0&&x<PEGS)).map(m=>[m[0],m[1]]):[],
+    hints:Math.max(0,Math.floor(Number(s.hints))||0),done:false};
+  if(g.pegs[GOAL].length===n)return null;   // redan löst
+  return g;
+}
+const discsName=n=>tr(`${n} brickor`,`${n} discs`);
+const pegName=p=>tr(['vänstra pinnen','mittenpinnen','högra pinnen'],['the left peg','the middle peg','the right peg'])[p];
+/*LOGIC-END*/
+
+// ---------- spelets id och sparade värden ----------
+const GAME_ID='hanoi';
+const SCORE_KEY='score.'+GAME_ID;   // hubbens trofé: alla stjärnor tillsammans
+const SAVE_KEY='state.'+GAME_ID;    // nivåer, stjärnor, rekord och tornet man håller på med (hubbens konvention: state.<id>)
+setLang(I18N.lang);
+I18N.apply();
+const COLORS=['#ff6b6b','#ff9f43','#ffc63f','#38d9a9','#3d8be0','#9a6ad6','#f06595'];
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const starStr=s=>'⭐'.repeat(s)+'☆'.repeat(3-s);
+const lvLabel=L=>`${L.icon} ${lvName(L)}`;
+
+function readSave(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&typeof s==='object'?s:{};}catch(e){return {};}}
+const SAVED=readSave();
+let PROG=cleanProgress(SAVED.prog);
+let G=restoreGame(SAVED.game,PROG);  // tornet man håller på med, eller null
+let sel=-1;                          // pinnen vars översta bricka är upplyft
+let hint=null;                       // [från, till] när ett tips visas
+let ACT={};
+const app=document.getElementById('app');
+
+function persist(){
+  const game=G&&!G.done?{level:G.level,pegs:G.pegs,moves:G.moves,history:G.history,hints:G.hints}:null;
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({prog:PROG,game}));}catch(e){}
+}
+function writeScore(){const n=totalStars(PROG);if(n>0)try{localStorage.setItem(SCORE_KEY,String(n));}catch(e){}}
+
+function go(html,acts,bodyClass){
+  closeModal();
+  document.body.className=bodyClass||'';
+  app.innerHTML=html;ACT=acts||{};
+  window.scrollTo(0,0);
+}
+
+// ---------- meny ----------
+function miniTower(n){
+  return `<span class="mini" aria-hidden="true">${Array.from({length:n},(_,i)=>`<i style="width:${12+i*6}px;background:${COLORS[i]}"></i>`).join('')}</span>`;
+}
+function showMenu(msg){
+  if(G&&G.done)G=null;
+  sel=-1;hint=null;
+  const total=totalStars(PROG),resume=G&&G.moves>0;
+  go(`<main class="menu">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">🗼</div>
+      <h1>${tr('Tornet i Hanoi','Tower of Hanoi')}</h1>
+      <p class="sub">${tr('Flytta hela tornet till pinnen med flaggan 🏁. En bricka i taget, och en större bricka får aldrig ligga på en mindre.','Move the whole tower to the peg with the flag 🏁. One disc at a time, and a bigger disc may never sit on a smaller one.')}</p>
+    </header>
+    ${resume?`<button class="resume panel" data-act="resume"><span class="ico" aria-hidden="true">${LEVELS[G.level].icon}</span><span><b>${tr('Fortsätt tornet','Continue the tower')}</b>${lvName(LEVELS[G.level])} · ${discsName(G.n)} · ${G.moves} ${tr('drag','moves')}</span></button>`:''}
+    <h2 class="pickh">${resume?tr('Eller välj en nivå','Or pick a level'):tr('Välj nivå','Pick a level')}</h2>
+    <p class="menumsg" role="status">${msg||''}</p>
+    <div class="levels">${LEVELS.map(levelButton).join('')}</div>
+    <div class="row center"><button class="btn" data-act="rules">📖 ${tr('Så spelar du','How to play')}</button></div>
+    <p class="record">${total?`⭐ ${tr('Stjärnor','Stars')}: <b>${total}</b> ${tr('av','of')} ${maxStars()}`:tr('⭐ Flytta ett torn och få dina första stjärnor!','⭐ Move a tower to get your first stars!')}</p>
+  </main>`,{
+    resume:()=>renderPlay(),
+    level:b=>chooseLevel(+b.dataset.lvl),
+    rules:showRules
+  },'at-menu');
+}
+function levelButton(L,i){
+  const locked=i>PROG.unlocked,s=PROG.stars[L.id]||0;
+  const tag=locked?`<span class="tag">${tr('Låst','Locked')}</span>`
+    :s?`<span class="tag stars" aria-label="${s} ${tr('av 3 stjärnor','of 3 stars')}">${starStr(s)}</span>`
+    :`<span class="tag">${tr('Inte klarad än','Not solved yet')}</span>`;
+  return `<button class="level lv-${L.id}${locked?' locked':''}" data-act="level" data-lvl="${i}">
+    <span class="ico" aria-hidden="true">${locked?'🔒':L.icon}</span>
+    <span class="nm">${lvName(L)} ${miniTower(L.n)}</span>
+    <span class="ds">${locked?tr(`Flytta tornet på ${lvName(LEVELS[i-1])} för att låsa upp.`,`Move the tower on ${lvName(LEVELS[i-1])} to unlock.`)
+      :`${discsName(L.n)} · ${tr(`minst ${minMoves(L.n)} drag`,`at least ${minMoves(L.n)} moves`)}`}</span>
+    ${tag}
+  </button>`;
+}
+function chooseLevel(i){
+  if(i>PROG.unlocked){
+    const m=app.querySelector('.menumsg');
+    if(m)m.textContent=tr(`${lvName(LEVELS[i])} är låst. Flytta tornet på ${lvName(LEVELS[i-1])} först!`,`${lvName(LEVELS[i])} is locked. Move the tower on ${lvName(LEVELS[i-1])} first!`);
+    return;
+  }
+  if(G&&G.moves>0&&G.level!==i){
+    modal(`<h3>${tr('Börja ett nytt torn?','Start a new tower?')}</h3>
+      <p>${tr(`Du håller på med ett torn på <b>${lvName(LEVELS[G.level])}</b>. Det försvinner om du börjar ett nytt.`,`You are in the middle of a tower on <b>${lvName(LEVELS[G.level])}</b>. It will be lost if you start a new one.`)}</p>
+      <div class="row center"><button class="btn go" data-m="old">${tr('Fortsätt det gamla','Continue the old one')}</button><button class="btn" data-m="new">${tr('Börja nytt','Start new')}</button></div>`,
+      {old:()=>renderPlay(),new:()=>startLevel(i)});
+    return;
+  }
+  if(G&&G.level===i)return renderPlay();
+  startLevel(i);
+}
+function startLevel(i){G=newGame(i);sel=-1;hint=null;persist();renderPlay();}
+
+// ---------- spelplanen ----------
+// Brickornas höjd: så stor som får plats, mellan 18 och 46 px.
+function sizes(){
+  const vh=window.innerHeight,vw=Math.min(window.innerWidth,980);
+  const room=Math.max(220,vh-300);
+  const dh=Math.max(18,Math.min(46,Math.floor(room/(G.n+3)),Math.floor(vw/14)));
+  return {dh,lift:dh*1.4};
+}
+function renderPlay(){
+  if(!G)return showMenu();
+  const {dh,lift}=sizes(),L=LEVELS[G.level];
+  const bh=Math.round(dh*G.n+lift+dh+70);
+  go(`<main class="play">
+    <header class="bar">
+      <button class="btn sm" data-act="menu">${tr('Meny','Menu')}</button>
+      <div class="title"><b>${lvLabel(L)}</b><small>${discsName(G.n)} · ${tr(`minst ${minMoves(G.n)} drag`,`at least ${minMoves(G.n)} moves`)}</small></div>
+      <div class="stats"><div class="stat" data-stat="moves"><span class="n"></span><span class="l">${tr('drag','moves')}</span></div></div>
+    </header>
+    <p class="msg" role="status" aria-live="polite"></p>
+    <section class="board" aria-label="${tr('Tre pinnar','Three pegs')}" style="--bh:${bh}px;--dh:${dh}px;--lift:${lift}px;--liftby:${Math.round(lift-6)}px">
+      ${[0,1,2].map(p=>`<button class="peg${p===GOAL?' goal':''}" data-act="peg" data-p="${p}"></button>`).join('')}
+    </section>
+    <div class="keys">
+      <button class="btn" data-act="undo">↩️ ${tr('Ångra','Undo')}</button>
+      <button class="btn" data-act="hint">💡 ${tr('Tips','Hint')}</button>
+      <button class="btn" data-act="restart">🔄 ${tr('Börja om','Start over')}</button>
+    </div>
+  </main>`,{
+    menu:()=>{persist();showMenu();},
+    peg:b=>tapPeg(+b.dataset.p),
+    undo:doUndo,
+    hint:showHint,
+    restart:askRestart
+  });
+  refresh();
+  setMsg(G.moves===0?tr('Tryck på en pinne för att lyfta den översta brickan, och sedan på pinnen där den ska ligga.','Tap a peg to lift its top disc, then tap the peg where it should go.'):'');
+}
+function refresh(){
+  const board=app.querySelector('.board');if(!board)return;
+  board.querySelectorAll('.peg').forEach(el=>{
+    const p=+el.dataset.p,ring=G.pegs[p];
+    el.classList.toggle('sel',p===sel);
+    el.classList.toggle('from',!!hint&&hint[0]===p);
+    el.classList.toggle('to',!!hint&&hint[1]===p);
+    el.innerHTML=ring.map((k,i)=>{
+      const w=Math.round(30+70*(k-1)/Math.max(1,G.n-1));
+      const lifted=p===sel&&i===ring.length-1;
+      return `<span class="disc${lifted?' lifted':''}" data-k="${k}" style="width:${w}%;background:${COLORS[k-1]}" aria-hidden="true">${k}</span>`;
+    }).join('');
+    const label=`${pegName(p)}${p===GOAL?tr(' (målet)',' (the goal)'):''}: ${ring.length?tr('brickor ','discs ')+ring.join(', '):tr('tom','empty')}${p===sel?tr(', upplyft',', lifted'):''}`;
+    el.setAttribute('aria-label',label.charAt(0).toUpperCase()+label.slice(1));
+  });
+  const n=app.querySelector('[data-stat="moves"] .n');if(n)n.textContent=G.moves;
+  const u=app.querySelector('[data-act="undo"]');if(u)u.disabled=!G.history.length||G.done;
+  const h=app.querySelector('[data-act="hint"]');if(h)h.disabled=G.done;
+  const r=app.querySelector('[data-act="restart"]');if(r)r.disabled=!G.moves||G.done;
+}
+function setMsg(text,kind){
+  const m=app.querySelector('.msg');if(!m)return;
+  m.textContent=text;m.className='msg'+(kind?' '+kind:'');
+}
+function shakePeg(p){
+  const el=app.querySelector(`.peg[data-p="${p}"]`);if(!el||reduceMotion())return;
+  el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');
+}
+// Ett tryck på en pinne: lyft brickan, lägg den, eller ställ tillbaka den.
+function tapPeg(p){
+  if(!G||G.done)return;
+  if(sel<0){
+    if(!G.pegs[p].length){shakePeg(p);setMsg(tr('Den pinnen är tom. Välj en pinne med en bricka på.','That peg is empty. Pick a peg with a disc on it.'),'bad');return;}
+    sel=p;refresh();setMsg('');return;
+  }
+  if(p===sel){sel=-1;refresh();return;}
+  drop(sel,p);
+}
+function drop(from,to){
+  sel=-1;
+  if(!canMove(G,from,to)){
+    refresh();shakePeg(to);
+    setMsg(tr(`Bricka ${topDisc(G,from)} får inte ligga på bricka ${topDisc(G,to)}. En större bricka får aldrig ligga på en mindre.`,`Disc ${topDisc(G,from)} may not sit on disc ${topDisc(G,to)}. A bigger disc may never sit on a smaller one.`),'bad');
+    return;
+  }
+  move(G,from,to);hint=null;
+  refresh();setMsg('');persist();
+  if(G.done)win();
+}
+function doUndo(){if(G&&undo(G)){sel=-1;hint=null;refresh();setMsg('');persist();}}
+function showHint(){
+  if(!G||G.done)return;
+  const m=bestMove(G.pegs,G.n);if(!m)return;
+  sel=-1;hint=m;G.hints++;persist();refresh();
+  setMsg(tr(`💡 Flytta bricka ${topDisc(G,m[0])} från ${pegName(m[0])} till ${pegName(m[1])}. Härifrån behövs minst ${movesLeft(G.pegs,G.n)} drag till.`,
+    `💡 Move disc ${topDisc(G,m[0])} from ${pegName(m[0])} to ${pegName(m[1])}. From here you need at least ${movesLeft(G.pegs,G.n)} more moves.`),'tip');
+}
+function askRestart(){
+  if(!G||!G.moves)return;
+  modal(`<h3>${tr('Börja om?','Start over?')}</h3><p>${tr('Alla brickor går tillbaka till den första pinnen.','All the discs go back to the first peg.')}</p>
+    <div class="row center"><button class="btn go" data-m="close">${tr('Fortsätt','Continue')}</button><button class="btn" data-m="yes">${tr('Börja om','Start over')}</button></div>`,
+    {yes:()=>startLevel(G.level)});
+}
+function win(){
+  const level=G.level,n=G.n,moves=G.moves,hints=G.hints,s=starsFor(n,moves,hints),best=minMoves(n);
+  const unlocked=recordWin(PROG,level,moves,hints);
+  persist();writeScore();
+  const next=level+1<LEVELS.length?level+1:-1;
+  const lead=moves===best?tr(`Du flyttade tornet på ${moves} drag – det minsta som går!`,`You moved the tower in ${moves} moves – the fewest possible!`)
+    :tr(`Du flyttade tornet på ${moves} drag. Det går på ${best}.`,`You moved the tower in ${moves} moves. It can be done in ${best}.`);
+  const hintNote=hints&&starsFor(n,moves,0)>s?tr(' Med tips blir det som mest två stjärnor.',' With hints you get two stars at most.'):'';
+  setMsg(tr('🎉 Tornet är flyttat!','🎉 The tower is moved!'),'ok');
+  if(s===3||unlocked>=0)confetti();
+  setTimeout(()=>modal(`<h2>${s===3?tr('Perfekt!','Perfect!'):tr('Snyggt!','Well done!')}</h2>
+    <div class="bigstars" aria-label="${s} ${tr('av 3 stjärnor','of 3 stars')}">${starStr(s)}</div>
+    <p class="lead">${lead}${hintNote}</p>
+    ${unlocked>=0?`<p class="unlock"><b>🔓 ${tr(`Du har låst upp ${lvLabel(LEVELS[unlocked])}!`,`You have unlocked ${lvLabel(LEVELS[unlocked])}!`)}</b></p>`:''}
+    <div class="row center">
+      ${next>=0?`<button class="btn go big" data-m="next">${tr(`Prova ${lvName(LEVELS[next])}`,`Try ${lvName(LEVELS[next])}`)}</button>`:''}
+      <button class="btn${next>=0?'':' go big'}" data-m="again">${tr('Spela igen','Play again')}</button>
+      <button class="btn" data-m="menu">${tr('Meny','Menu')}</button>
+    </div>`,{next:()=>startLevel(next),again:()=>startLevel(level),menu:()=>{G=null;persist();showMenu();}},true),reduceMotion()?0:500);
+}
+
+// ---------- regler ----------
+function showRules(){
+  modal(`<h3>📖 ${tr('Så spelar du','How to play')}</h3>
+    <ul>${tr([
+      'Flytta hela tornet från den första pinnen till pinnen med flaggan 🏁.',
+      'Du får bara flytta en bricka i taget, och bara den översta brickan på en pinne.',
+      'En större bricka får aldrig ligga på en mindre.',
+      'Tryck på en pinne för att lyfta brickan och sedan på pinnen där den ska ligga. Du kan också dra brickan dit. På ett tangentbord funkar 1, 2 och 3.',
+      'Minsta antalet drag är 7 för 3 brickor, 15 för 4 brickor … Varje bricka till dubblar nästan antalet.',
+      '⭐⭐⭐ för minsta antalet drag, ⭐⭐ för högst hälften fler, annars ⭐. Med 💡 tips blir det som mest ⭐⭐.',
+      'Flytta tornet på en nivå för att låsa upp nästa, med en bricka till.'
+    ],[
+      'Move the whole tower from the first peg to the peg with the flag 🏁.',
+      'You may only move one disc at a time, and only the top disc on a peg.',
+      'A bigger disc may never sit on a smaller one.',
+      'Tap a peg to lift its disc, then tap the peg where it should go. You can also drag the disc there. On a keyboard, 1, 2 and 3 work too.',
+      'The fewest moves are 7 for 3 discs, 15 for 4 discs … Every extra disc almost doubles the number.',
+      '⭐⭐⭐ for the fewest moves, ⭐⭐ for at most half as many again, otherwise ⭐. With 💡 hints you get ⭐⭐ at most.',
+      'Move the tower on a level to unlock the next one, with one more disc.'
+    ]).map(t=>`<li>${t}</li>`).join('')}</ul>
+    <div class="row center"><button class="btn go" data-m="close">${tr('Nu kör vi!',"Let's go!")}</button></div>`);
+}
+
+// ---------- dialog och konfetti ----------
+let modalHandlers=null;
+// sticky: dialogen stängs bara med en knapp (inte med Escape eller ett tryck utanför)
+function modal(html,handlers,sticky){
+  closeModal();
+  const back=document.createElement('div');back.className='modal-back';
+  if(sticky)back.dataset.sticky='1';
+  back.innerHTML=`<div class="modal panel" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(back);
+  modalHandlers=handlers||{};
+  back.addEventListener('click',e=>{
+    const b=e.target.closest('[data-m]');
+    if(b){const fn=modalHandlers&&modalHandlers[b.dataset.m];closeModal();if(fn)fn(b);}
+    else if(e.target===back&&!sticky)closeModal();
+  });
+  const f=back.querySelector('.btn.go')||back.querySelector('button');if(f)f.focus({preventScroll:true});
+}
+function closeModal(){document.querySelectorAll('.modal-back').forEach(m=>m.remove());modalHandlers=null;}
+function confetti(){
+  if(reduceMotion())return;
+  const box=document.createElement('div');box.className='confetti';box.setAttribute('aria-hidden','true');
+  for(let i=0;i<70;i++){
+    const p=document.createElement('i');
+    p.style.left=Math.random()*100+'%';p.style.background=COLORS[i%COLORS.length];
+    p.style.animationDelay=(Math.random()*.6)+'s';p.style.animationDuration=(1.7+Math.random()*1.5)+'s';
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);setTimeout(()=>box.remove(),3800);
+}
+
+// ---------- inmatning ----------
+// Ett tryck (eller Enter på en pinne) kommer som click. Att dra en bricka sköts med
+// pointer-händelser; klicket som följer efter ett drag ignoreras.
+const DR={pid:null,from:-1,x:0,y:0,moved:false,ghost:null,until:0};
+const pegAt=(x,y)=>{const el=document.elementFromPoint(x,y);const p=el&&el.closest('.peg');return p?+p.dataset.p:-1;};
+app.addEventListener('pointerdown',e=>{
+  const peg=e.target.closest('.peg');
+  if(!peg||!G||G.done||(e.button&&e.button!==0)||document.querySelector('.modal-back'))return;
+  DR.pid=e.pointerId;DR.from=+peg.dataset.p;DR.x=e.clientX;DR.y=e.clientY;DR.moved=false;
+});
+app.addEventListener('pointermove',e=>{
+  if(DR.pid!==e.pointerId||DR.from<0)return;
+  const dx=e.clientX-DR.x,dy=e.clientY-DR.y;
+  if(!DR.moved&&dx*dx+dy*dy>144&&G.pegs[DR.from].length&&(sel<0||sel===DR.from)){
+    DR.moved=true;sel=DR.from;hint=null;refresh();
+    const disc=app.querySelector(`.peg[data-p="${DR.from}"] .disc:last-child`);
+    if(disc){
+      const r=disc.getBoundingClientRect();
+      DR.ghost=disc.cloneNode(true);DR.ghost.classList.remove('lifted');DR.ghost.classList.add('ghost');
+      DR.ghost.style.width=r.width+'px';document.body.appendChild(DR.ghost);disc.classList.add('hidden');
+    }
+  }
+  if(DR.moved&&DR.ghost){DR.ghost.style.left=e.clientX+'px';DR.ghost.style.top=e.clientY+'px';}
+});
+function endPointer(e,cancel){
+  if(DR.pid!==e.pointerId)return;
+  const {from,moved}=DR;
+  if(DR.ghost)DR.ghost.remove();
+  DR.pid=null;DR.from=-1;DR.ghost=null;
+  if(!moved||!G||G.done)return;
+  DR.until=Date.now()+500;            // klicket efter ett drag är inget tryck
+  const to=cancel?-1:pegAt(e.clientX,e.clientY);
+  if(to<0||to===from){sel=-1;refresh();return;}
+  drop(from,to);
+}
+document.addEventListener('pointerup',e=>endPointer(e,false));
+document.addEventListener('pointercancel',e=>endPointer(e,true));
+app.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]');
+  if(!a||a.disabled)return;
+  if(a.dataset.act==='peg'&&Date.now()<DR.until)return;
+  const fn=ACT[a.dataset.act];if(fn){e.preventDefault();fn(a,e);}
+});
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const open=document.querySelector('.modal-back');
+  if(open){if(e.key==='Escape'&&!open.dataset.sticky){e.preventDefault();closeModal();}return;}
+  if(!G||G.done||!app.querySelector('.board'))return;
+  if(/^[123]$/.test(e.key)){e.preventDefault();tapPeg(+e.key-1);}
+  else if(e.key==='Escape'&&sel>=0){e.preventDefault();sel=-1;refresh();}
+  else if(e.key==='Backspace'){e.preventDefault();doUndo();}
+});
+let resizeTimer=0;
+window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(G&&!G.done&&app.querySelector('.board')&&!document.querySelector('.modal-back'))renderPlay();},120);});
+
+showMenu();
+
+// fungerar utan internet via hubbens service worker
+if('serviceWorker' in navigator){navigator.serviceWorker.register('../sw.js').catch(function(){});}
+</script>
+<script src="../shared/guard.js" data-game="hanoi"></script>
+</body>
+</html>
