@@ -3,7 +3,7 @@
    IMPORTANT: whenever you change any file (or add a game),
    bump CACHE_VERSION so devices pick up the new files.
    ============================================================ */
-const CACHE_VERSION = "stalman-games-v12";
+const CACHE_VERSION = "stalman-games-v13";
 
 const ASSETS = [
   "./",
@@ -26,7 +26,8 @@ const ASSETS = [
   "./games/gangertabell.html",
   "./games/detektiven.html",
   "./games/jordenrunt.html",
-  "./games/hanoi.html"
+  "./games/hanoi.html",
+  "./games/glosor.html"
 ];
 
 self.addEventListener("install", (event) => {

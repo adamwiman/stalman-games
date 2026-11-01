@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title data-en="Word Hunt">Glosjakten</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="../shared/i18n.js"></script>
+<!--
+  Glosjakten / Word Hunt — träna enkla engelska glosor (spel-id: glosor)
+  Del av Stalman games. Helt fristående: inga nätverksresurser, orden och bilderna (emoji) ligger i filen.
+  Fem sätt att träna: Bilder, Engelska → svenska, Svenska → engelska, Skriv klart och Skriv ordet.
+  Tio kategorier med 176 ord. Varje sätt låser upp sina nivåer, Lätt till Omöjliga, en i taget.
+  Ett ord får ett klistermärke i albumet efter 3 rätt svar, i vilket sätt som helst.
+  Hubbens trofé är antalet klistermärken.
+  localStorage: score.glosor (klistermärken), state.glosor (nivåer, rekord, album, missar och val)
+-->
+<style>
+:root{
+  /* hubbens färger */
+  --sky:#ddf1ff; --ink:#17335b; --sun:#ffc63f; --coral:#ff6b6b; --mint:#38d9a9;
+  /* spelets extra färger */
+  --ink2:#4a6182; --paper:#ffffff; --hl:#1767d1;
+  --good:#1a8a5f; --goodbg:#d4f6ea; --bad:#c93a3a; --badbg:#ffe3e3;
+  --font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--font);color:var(--ink);background:var(--sky);overflow-x:hidden;font-size:17px;line-height:1.35;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+h1,h2,h3,p{margin:0}
+button{font:inherit;color:inherit;touch-action:manipulation}
+#app{max-width:1000px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;gap:12px}
+/* länk tillbaka till hubben (visas på menyn) */
+.hubnav{display:none;max-width:1000px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
+body.at-menu .hubnav{display:block}
+body.at-menu #app{padding-top:8px;min-height:0}
+.back{display:inline-block;text-decoration:none;color:var(--ink);font-weight:800;font-size:16px;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 16px;box-shadow:0 3px 0 var(--ink)}
+.back:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+:focus-visible{outline:4px solid var(--hl);outline-offset:3px}
+
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:4px 5px 0 var(--ink)}
+.btn{font-weight:800;font-size:1.05rem;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.55em 1.15em;box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s;line-height:1.15;min-height:48px}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.go{background:var(--sun)}
+.btn.big{font-size:1.2rem;padding:.6em 1.4em;min-height:56px}
+.btn.sm{font-size:.95rem;padding:.4em .95em;min-height:44px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 4px 0 var(--ink)}
+@media (hover:hover){
+  .btn:not(:disabled):hover{background:#f0f8ff}
+  .btn.go:not(:disabled):hover{background:#ffd466}
+  .mode:hover,.level:not(.locked):hover{filter:brightness(1.03);transform:translateY(-2px)}
+  .opt:not(:disabled):hover,.key:hover,.stile:hover{background:#f0f8ff}
+}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.center{justify-content:center}
+.small{font-size:.9rem;font-weight:800;color:var(--ink2)}
+h1{font-size:clamp(2rem,5vw,2.7rem);font-weight:900;letter-spacing:.3px}
+h2{font-size:clamp(1.25rem,3vw,1.7rem);font-weight:900}
+h3{font-size:1.15rem;font-weight:900}
+.sub{color:var(--ink2);font-weight:700;max-width:36em}
+
+/* bilderna: emoji, en färgruta eller ett tal */
+.pic{display:inline-flex;align-items:center;justify-content:center;line-height:1;flex:none}
+.pic.swatch{width:1em;height:1em;border-radius:.22em;box-shadow:0 0 0 3px var(--ink)}
+.pic.num{font-weight:900;font-variant-numeric:tabular-nums;font-size:.8em;min-width:1.2em;color:var(--ink)}
+.bigpic{font-size:clamp(72px,min(16vw,15vh),130px)}
+.midpic{font-size:clamp(48px,min(10vw,9vh),80px)}
+
+/* ---------- meny ---------- */
+.menu{display:flex;flex-direction:column;gap:14px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:2px 0}
+.logo{font-size:clamp(48px,8vw,68px);line-height:1;background:#fff;border:4px solid var(--ink);border-radius:24px;box-shadow:5px 6px 0 var(--ink);padding:.12em .32em}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:820px;margin:0 auto}
+@media (max-width:600px){.modes{grid-template-columns:1fr}}
+.mode{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto 1fr auto;gap:2px 12px;align-items:start;text-align:left;background:#fff;border:3px solid var(--ink);border-radius:20px;box-shadow:4px 5px 0 var(--ink);padding:12px 16px;cursor:pointer;transition:transform .1s,box-shadow .1s;min-height:96px}
+.mode:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--ink)}
+.mode .ico{font-size:2.3rem;line-height:1;grid-row:span 3;align-self:center}
+.mode .nm{font-size:1.3rem;font-weight:900;line-height:1.15}
+.mode .ds{color:var(--ink2);font-weight:700;font-size:.93rem}
+.mode .tag{justify-self:start;font-size:.8rem;font-weight:900;background:var(--sky);border:2px solid var(--ink);border-radius:999px;padding:1px 9px;margin-top:4px}
+.m-bilder{background:#ffe9e6}.m-ensv{background:#e6f0ff}.m-sven{background:#fff4d1}.m-luckor{background:#dcf7ec}.m-stava{background:#ebe3ff}
+.tools{gap:12px}
+.record{text-align:center;font-weight:800;font-size:1.1rem}
+
+/* ---------- inställningar för ett sätt ---------- */
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar h2{flex:1;min-width:0}
+.setup{display:flex;flex-direction:column;gap:14px}
+.group{display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-weight:800;font-size:.98rem;background:#fff;border:3px solid var(--ink);border-radius:999px;padding:.35em .9em;min-height:44px;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff}
+.chip:disabled{opacity:.45;cursor:not-allowed}
+.chip:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.menumsg{min-height:1.4em;font-weight:900;color:var(--bad)}
+.levels{display:flex;flex-direction:column;gap:10px;width:100%}
+.level{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px 14px;text-align:left;border:3px solid var(--ink);border-radius:20px;box-shadow:4px 5px 0 var(--ink);padding:10px 16px;cursor:pointer;min-height:72px;transition:transform .1s,box-shadow .1s}
+.level:active{transform:translate(2px,3px);box-shadow:2px 2px 0 var(--ink)}
+.level .ico{font-size:2rem;line-height:1;grid-row:span 2}
+.level .nm{font-size:1.3rem;font-weight:900;line-height:1.1}
+.level .ds{color:var(--ink2);font-weight:700;font-size:.93rem;grid-column:2}
+.level .tag{grid-column:3;grid-row:1 / span 2;font-size:.8rem;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 9px;white-space:nowrap}
+@media (max-width:520px){.level{grid-template-columns:auto 1fr}.level .tag{grid-column:2;grid-row:auto;justify-self:start}}
+.lv-latt{background:#dcf7ec}.lv-mellan{background:#fff4d1}.lv-svar{background:#ffe6e3}.lv-geni{background:#ebe3ff}.lv-omojliga{background:#dfe7f2}
+.level.locked{background:#eef2f7;color:#7d8ea6;border-color:#9fb0c6;box-shadow:3px 4px 0 #9fb0c6;cursor:default}
+.level.locked .ds,.level.locked .tag{color:#7d8ea6;border-color:#9fb0c6}
+.rules{font-weight:700;color:var(--ink2);background:#fff;border:2px dashed #9fb0c6;border-radius:14px;padding:8px 12px}
+
+/* ---------- spelet ---------- */
+.play{display:flex;flex-direction:column;gap:12px;flex:1}
+.bar{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.ptitle{flex:1;min-width:130px;display:flex;flex-direction:column;line-height:1.15}
+.ptitle b{font-size:1.15rem;font-weight:900}
+.ptitle small{font-size:.88rem;font-weight:800;color:var(--ink2)}
+.stats{display:flex;gap:8px}
+.stat{display:flex;flex-direction:column;align-items:center;min-width:68px;background:#fff;border:3px solid var(--ink);border-radius:16px;padding:2px 10px 3px;box-shadow:0 3px 0 var(--ink)}
+.stat .n{font-size:1.35rem;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .l{font-size:.78rem;font-weight:800;color:var(--ink2)}
+.stat.good{background:var(--goodbg)}
+.prompt{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.ask{text-align:center;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:900}
+.ask b{color:var(--hl)}
+.word{display:inline-flex;align-items:center;gap:12px;font-size:clamp(2rem,6vw,3rem);font-weight:900;background:#fff;border:3px solid var(--ink);border-radius:20px;box-shadow:0 4px 0 var(--ink);padding:.15em .6em}
+.say{font-size:1.4rem;line-height:1;background:var(--sky);border:3px solid var(--ink);border-radius:999px;width:48px;height:48px;cursor:pointer;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.say:active{transform:translateY(2px)}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:760px;margin:0 auto}
+@media (min-width:601px){.opts.t3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:900px}}
+.opt{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;font-weight:900;font-size:1.3rem;background:#fff;border:3px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 var(--ink);padding:10px 12px;min-height:64px;cursor:pointer;line-height:1.15;overflow-wrap:break-word}
+.opt:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.opt.right{background:var(--goodbg);border-color:var(--good);box-shadow:0 4px 0 var(--good)}
+.opt.wrong{background:var(--badbg);border-color:var(--bad);box-shadow:0 4px 0 var(--bad)}
+.opt.dim{opacity:.55}
+.opt:disabled{cursor:default}
+.opt .mark{position:absolute;top:-10px;right:-8px;font-size:1.5rem;line-height:1}
+.opt.wrong.shake{animation:shake .4s}
+
+/* rutorna och tangentbordet i Skriv klart och Skriv ordet */
+.slots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:760px;margin:0 auto}
+.slot{width:clamp(34px,7vw,52px);height:clamp(44px,8.5vw,62px);display:flex;align-items:center;justify-content:center;font-size:clamp(1.4rem,4vw,2.1rem);font-weight:900;background:#fff;border:3px solid var(--ink);border-radius:12px;text-transform:lowercase}
+.slot.given{background:#e6f0ff;color:var(--ink2);border-style:dashed}
+.slot.cur{border-color:var(--hl);box-shadow:0 0 0 3px #b9d4ff}
+.slot.gap{width:14px;border:0;background:transparent}
+.slots.right .slot:not(.gap){border-color:var(--good);background:var(--goodbg)}
+.slots.wrong .slot:not(.gap){border-color:var(--bad);background:var(--badbg)}
+.typed{min-width:min(420px,90%);min-height:64px;display:flex;align-items:center;justify-content:center;font-size:clamp(1.6rem,5vw,2.4rem);font-weight:900;background:#fff;border:3px solid var(--ink);border-radius:16px;padding:4px 16px;margin:0 auto;letter-spacing:1px;white-space:pre}
+.typed .caret{display:inline-block;width:3px;height:1.1em;background:var(--hl);margin-left:2px;animation:blink 1s steps(1) infinite}
+.typed.right{border-color:var(--good);background:var(--goodbg)}
+.typed.wrong{border-color:var(--bad);background:var(--badbg)}
+.kbd{display:flex;flex-direction:column;gap:7px;width:100%;max-width:760px;margin:0 auto}
+.krow{display:flex;justify-content:center;gap:6px}
+.key{flex:1 1 0;max-width:68px;min-height:52px;font-size:1.35rem;font-weight:900;background:#fff;border:3px solid var(--ink);border-radius:12px;box-shadow:0 3px 0 var(--ink);cursor:pointer;padding:0}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.key.wide{max-width:none;flex:3 1 0;font-size:1.05rem}
+.key.back{max-width:96px;flex:1.5 1 0}
+.key.ok{max-width:340px;flex:2 1 0;background:var(--sun);font-size:1.1rem}
+.key:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:0 3px 0 var(--ink)}
+
+/* svaret: blad längst ner med ordkort och Nästa */
+.sheet{position:sticky;bottom:0;z-index:5;margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:#fff;border:3px solid var(--ink);border-radius:20px;box-shadow:0 -2px 0 var(--ink),4px 5px 0 var(--ink)}
+.sheet.ok{background:#f1fcf7;border-color:var(--good)}
+.sheet.bad{background:#fff5f5;border-color:var(--bad)}
+.sheet .msg{font-size:1.25rem;font-weight:900;text-align:center}
+.sheet.ok .msg{color:var(--good)}
+.sheet.bad .msg{color:var(--bad)}
+.sheet .why{font-weight:800;text-align:center;max-width:40em}
+.sheet .foot{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:center;width:100%}
+.sheet.pop{animation:pop .3s}
+.wcard{display:flex;gap:14px;align-items:center;text-align:left}
+.wcard .pic{font-size:56px}
+.wcard .info{display:flex;flex-direction:column;gap:1px;font-weight:800;min-width:0}
+.wcard .info b{font-size:1.5rem;font-weight:900}
+.wcard .new{font-size:.9rem;font-weight:900;color:var(--good)}
+.wcard.big{flex-direction:column;text-align:center}
+.wcard.big .pic{font-size:96px}
+.wcard.big .info{align-items:center}
+
+/* ---------- resultat ---------- */
+.page{padding:18px;display:flex;flex-direction:column;gap:14px}
+.summary{align-items:center;text-align:center}
+.medal{font-size:64px;line-height:1}
+.lead{font-size:1.2rem;font-weight:800;max-width:30em}
+.bigstats{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.big{min-width:110px;background:#fff;border:3px solid var(--ink);border-radius:20px;padding:8px 16px 10px;box-shadow:0 4px 0 var(--ink);display:flex;flex-direction:column;align-items:center}
+.big b{font-size:2.3rem;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.big span{font-weight:800;color:var(--ink2)}
+.big.good{background:var(--goodbg)}
+.big.good b{color:var(--good)}
+.unlock{font-weight:900;font-size:1.2rem;background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:.3em 1em}
+.missed{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;width:100%;max-width:720px}
+
+/* ---------- albumet ---------- */
+.albumpage{display:flex;flex-direction:column;gap:14px}
+.meter{height:22px;background:#fff;border:3px solid var(--ink);border-radius:999px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--mint)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.stile{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;background:#fff;border:2px solid var(--ink);border-radius:14px;padding:8px 4px 6px;cursor:pointer;font-weight:800;font-size:.85rem;line-height:1.15;text-align:center;min-height:44px}
+.stile .pic{font-size:44px;margin-bottom:2px}
+.stile b{font-size:1rem;font-weight:900}
+.stile .sv{color:var(--ink2)}
+.stile.no .pic{filter:grayscale(1);opacity:.3}
+.stile.yes{background:#fffbea;border-color:#d39b00;box-shadow:0 3px 0 #d39b00}
+.stile .star{position:absolute;top:-8px;right:-6px;font-size:1.35rem;line-height:1;transform:rotate(12deg)}
+.stile .dots{font-size:.7rem;letter-spacing:2px;color:var(--ink2)}
+.done{font-size:.85rem;font-weight:900;background:var(--sun);border:2px solid var(--ink);border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:middle}
+
+/* ---------- dialog och regler ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(23,51,91,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:500}
+.modal{max-width:520px;width:100%;max-height:calc(100dvh - 32px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px;text-align:center;align-items:center}
+.about{text-align:left;align-items:stretch}
+.about h3{text-align:center}
+.about ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-weight:700}
+.about li b{font-weight:900}
+
+/* ---------- konfetti ---------- */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:600}
+.confetti i{position:absolute;top:-24px;width:11px;height:15px;border-radius:3px;animation:fall linear forwards}
+
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+@keyframes fall{to{transform:translateY(112vh) rotate(560deg)}}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+/* mobil (t.ex. iPhone 15 Pro, 393 px) */
+@media (max-width:600px){
+  #app{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+  .opt{font-size:1.1rem;min-height:56px}
+  .stat{min-width:56px}
+  .krow{gap:4px}
+  .key{min-height:46px;font-size:1.15rem;border-width:2px}
+}
+</style>
+</head>
+<body>
+<nav class="hubnav"><a class="back" href="../index.html" data-en="← Games">← Spel</a></nav>
+<div id="app"></div>
+<noscript>Det här spelet behöver JavaScript. / This game needs JavaScript.</noscript>
+<script>
+'use strict';
+/* =========================================================
+   Glosjakten — engelska glosor med bilder, val och stavning
+   ========================================================= */
+
+/*LOGIC-START*/
+// Ren spellogik utan DOM (testas i tests/glosor.test.js).
+
+// ---------- orden ----------
+// Tio kategorier med enkla engelska glosor. Varje ord: [engelska, svenska, svårighet 1–3,
+// bild, andra stavningar som också räknas]. Bilden är en emoji, en färg (#rrggbb) eller ett tal.
+const CATS=[
+  {id:'farger',name:'Färger',en:'Colours',icon:'🎨'},
+  {id:'djur',name:'Djur',en:'Animals',icon:'🐾'},
+  {id:'siffror',name:'Siffror',en:'Numbers',icon:'🔢'},
+  {id:'mat',name:'Mat',en:'Food',icon:'🍽️'},
+  {id:'klader',name:'Kläder',en:'Clothes',icon:'👕'},
+  {id:'kroppen',name:'Kroppen',en:'The body',icon:'💪'},
+  {id:'hemma',name:'Hemma',en:'At home',icon:'🏠'},
+  {id:'natur',name:'Natur och väder',en:'Nature and weather',icon:'🌳'},
+  {id:'fordon',name:'Fordon',en:'Vehicles',icon:'🚦'},
+  {id:'gora',name:'Saker man gör',en:'Things to do',icon:'🤸'}
+];
+const WORD_LIST={
+  farger:[
+    ['red','röd',1,'#e53935'],['blue','blå',1,'#1e88e5'],['green','grön',1,'#43a047'],['yellow','gul',1,'#fdd835'],
+    ['black','svart',1,'#212121'],['white','vit',1,'#ffffff'],
+    ['pink','rosa',2,'#f48fb1'],['brown','brun',2,'#8d5a3b'],['grey','grå',2,'#9e9e9e',['gray']],['purple','lila',2,'#8e24aa'],
+    ['turquoise','turkos',3,'#1fc8c8'],['dark blue','mörkblå',3,'#1a237e'],['light green','ljusgrön',3,'#a5d66b']],
+  djur:[
+    ['dog','hund',1,'🐶'],['cat','katt',1,'🐱'],['horse','häst',1,'🐴'],['cow','ko',1,'🐮'],['pig','gris',1,'🐷'],
+    ['bird','fågel',1,'🐦'],['fish','fisk',1,'🐟'],
+    ['mouse','mus',2,'🐭'],['rabbit','kanin',2,'🐰'],['sheep','får',2,'🐑'],['duck','anka',2,'🦆'],['bear','björn',2,'🐻'],
+    ['lion','lejon',2,'🦁'],['frog','groda',2,'🐸'],['monkey','apa',2,'🐵'],
+    ['elephant','elefant',3,'🐘'],['giraffe','giraff',3,'🦒'],['snake','orm',3,'🐍'],['owl','uggla',3,'🦉'],
+    ['squirrel','ekorre',3,'🐿️'],['butterfly','fjäril',3,'🦋'],['spider','spindel',3,'🕷️'],['turtle','sköldpadda',3,'🐢',['tortoise']]],
+  siffror:[
+    ['one','ett',1,'1'],['two','två',1,'2'],['three','tre',1,'3'],['four','fyra',1,'4'],['five','fem',1,'5'],
+    ['six','sex',2,'6'],['seven','sju',2,'7'],['eight','åtta',2,'8'],['nine','nio',2,'9'],['ten','tio',2,'10'],
+    ['eleven','elva',3,'11'],['twelve','tolv',3,'12'],['thirteen','tretton',3,'13'],['twenty','tjugo',3,'20'],
+    ['hundred','hundra',3,'100',['a hundred','one hundred']]],
+  mat:[
+    ['apple','äpple',1,'🍎'],['banana','banan',1,'🍌'],['bread','bröd',1,'🍞'],['milk','mjölk',1,'🥛'],['egg','ägg',1,'🥚'],
+    ['water','vatten',1,'💧'],
+    ['cake','tårta',2,'🎂'],['cheese','ost',2,'🧀'],['ice cream','glass',2,'🍦',['icecream']],['carrot','morot',2,'🥕'],
+    ['potato','potatis',2,'🥔'],['strawberry','jordgubbe',2,'🍓'],
+    ['tomato','tomat',3,'🍅'],['cucumber','gurka',3,'🥒'],['pear','päron',3,'🍐'],['honey','honung',3,'🍯'],
+    ['pancake','pannkaka',3,'🥞'],['sandwich','smörgås',3,'🥪'],['soup','soppa',3,'🍲']],
+  klader:[
+    ['shoe','sko',1,'👟'],['hat','hatt',1,'🎩'],['sock','strumpa',1,'🧦'],['dress','klänning',1,'👗'],['shirt','skjorta',1,'👔'],
+    ['trousers','byxor',2,'👖',['pants']],['jacket','jacka',2,'🧥'],['scarf','halsduk',2,'🧣'],['cap','keps',2,'🧢'],
+    ['boots','stövlar',2,'👢'],['gloves','handskar',2,'🧤'],
+    ['glasses','glasögon',3,'👓'],['umbrella','paraply',3,'☂️'],['bag','väska',3,'👜'],['crown','krona',3,'👑'],
+    ['backpack','ryggsäck',3,'🎒',['rucksack']],['swimsuit','baddräkt',3,'🩱']],
+  kroppen:[
+    ['eye','öga',1,'👁️'],['ear','öra',1,'👂'],['nose','näsa',1,'👃'],['mouth','mun',1,'👄'],['foot','fot',1,'🦶'],
+    ['leg','ben',2,'🦵'],['tooth','tand',2,'🦷'],['tongue','tunga',2,'👅'],['hair','hår',2,'💇'],['beard','skägg',2,'🧔'],
+    ['brain','hjärna',3,'🧠'],['heart','hjärta',3,'❤️'],['thumb','tumme',3,'👍'],['lungs','lungor',3,'🫁'],['muscle','muskel',3,'💪']],
+  hemma:[
+    ['house','hus',1,'🏠'],['door','dörr',1,'🚪'],['bed','säng',1,'🛏️'],['chair','stol',1,'🪑'],['book','bok',1,'📕'],
+    ['window','fönster',2,'🪟'],['key','nyckel',2,'🔑'],['clock','klocka',2,'⏰'],['cup','kopp',2,'☕'],
+    ['phone','telefon',2,'📱',['telephone']],['bath','badkar',2,'🛁',['bathtub']],['toothbrush','tandborste',2,'🪥'],
+    ['computer','dator',3,'💻'],['scissors','sax',3,'✂️'],['candle','ljus',3,'🕯️'],['mirror','spegel',3,'🪞'],
+    ['sofa','soffa',3,'🛋️',['couch']],['spoon','sked',3,'🥄'],['knife','kniv',3,'🔪']],
+  natur:[
+    ['sun','sol',1,'☀️'],['moon','måne',1,'🌙'],['star','stjärna',1,'⭐'],['tree','träd',1,'🌳'],['flower','blomma',1,'🌸'],
+    ['rain','regn',1,'🌧️'],
+    ['snow','snö',2,'❄️'],['cloud','moln',2,'☁️'],['sea','hav',2,'🌊'],['wind','vind',2,'🌬️'],['rainbow','regnbåge',2,'🌈'],
+    ['mountain','berg',2,'⛰️'],['leaf','löv',2,'🍃'],
+    ['lightning','blixt',3,'⚡'],['volcano','vulkan',3,'🌋'],['island','ö',3,'🏝️'],['forest','skog',3,'🌲'],['fire','eld',3,'🔥'],
+    ['mushroom','svamp',3,'🍄'],['stone','sten',3,'🪨',['rock']]],
+  fordon:[
+    ['car','bil',1,'🚗'],['bus','buss',1,'🚌'],['boat','båt',1,'⛵'],['train','tåg',1,'🚆'],['bike','cykel',1,'🚲',['bicycle']],
+    ['plane','flygplan',2,'✈️',['aeroplane','airplane']],['ship','fartyg',2,'🚢'],['truck','lastbil',2,'🚚',['lorry']],
+    ['tractor','traktor',2,'🚜'],['rocket','raket',2,'🚀'],['helicopter','helikopter',2,'🚁'],
+    ['ambulance','ambulans',3,'🚑'],['fire engine','brandbil',3,'🚒',['fire truck']],['police car','polisbil',3,'🚓'],
+    ['motorbike','motorcykel',3,'🏍️',['motorcycle']],['tram','spårvagn',3,'🚋'],['scooter','sparkcykel',3,'🛴']],
+  gora:[
+    ['run','springa',1,'🏃'],['swim','simma',1,'🏊'],['eat','äta',1,'😋'],['sleep','sova',1,'😴'],['read','läsa',1,'📖'],
+    ['sing','sjunga',1,'🎤'],
+    ['jump','hoppa',2,'🦘'],['drink','dricka',2,'🥤'],['write','skriva',2,'✍️'],['dance','dansa',2,'💃'],['cry','gråta',2,'😭'],
+    ['laugh','skratta',2,'😂'],
+    ['climb','klättra',3,'🧗'],['think','tänka',3,'🤔'],['listen','lyssna',3,'🎧'],['wave','vinka',3,'👋'],['smile','le',3,'😊'],
+    ['draw','rita',3,'🖍️']]
+};
+// Alla ord i en lista. id = det engelska ordet.
+const WORDS=[];
+for(const C of CATS)for(const [en,sv,t,pic,alt] of WORD_LIST[C.id])WORDS.push({id:en,en,sv,t,pic,alt:alt||[],k:C.id});
+const BY={};for(const w of WORDS)BY[w.id]=w;
+const CAT={};for(const C of CATS)CAT[C.id]=C;
+// Bilder som är för lika för att stå bredvid varandra i Bilder.
+const TWINS=[['read','book'],['smile','laugh'],['rain','cloud'],['ship','boat'],['forest','tree'],['bus','tram'],
+  ['bike','motorbike'],['bike','scooter'],['motorbike','scooter'],['car','police car'],['truck','fire engine'],
+  ['shoe','boots'],['milk','drink'],['mouth','tongue'],['cake','pancake']];
+const twin=(a,b)=>TWINS.some(([x,y])=>(a===x&&b===y)||(a===y&&b===x));
+
+// pick: hur fel svar väljs. any = slumpvis, cat = från samma kategori, alike = ord som liknar
+// svaret, spell = felstavningar av svaret (när svaren är engelska).
+// hide: hur stor del av bokstäverna som fattas i Skriv klart ('first' = alla utom den första).
+// boxes: hjälpen i Skriv ordet ('first' = rutor och första bokstaven, 'len' = rutor, 'none' = ingen).
+const LEVELS=[
+  {id:'latt',name:'Lätt',en:'Easy',icon:'🐣',tier:1,opts:3,pick:'any',pic:true,hide:1/3,boxes:'first',need:7},
+  {id:'mellan',name:'Mellan',en:'Medium',icon:'🎒',tier:2,opts:4,pick:'any',pic:true,hide:1/2,boxes:'len',need:8},
+  {id:'svar',name:'Svår',en:'Hard',icon:'📚',tier:3,opts:5,pick:'cat',pic:false,hide:2/3,boxes:'none',need:8},
+  {id:'geni',name:'Geni',en:'Genius',icon:'🧠',tier:3,opts:6,pick:'alike',pic:false,hide:'first',boxes:'none',need:9},
+  {id:'omojliga',name:'Omöjliga',en:'Impossible',icon:'💀',tier:3,opts:6,pick:'spell',pic:false,hide:'first',boxes:'none',need:10}
+];
+// ask: vad frågan visar, ans: vilket språk svaren är på.
+const MODES=[
+  {id:'bilder',name:'Bilder',icon:'🖼️',kind:'choice',ask:'pic',ans:'en',
+    blurb:'Vilket engelskt ord passar bilden?',en:{name:'Pictures',blurb:'Which English word fits the picture?'}},
+  {id:'ensv',name:'Engelska → svenska',icon:'🇬🇧',kind:'choice',ask:'en',ans:'sv',
+    blurb:'Vad betyder det engelska ordet?',en:{name:'English → Swedish',blurb:'What does the English word mean?'}},
+  {id:'sven',name:'Svenska → engelska',icon:'🇸🇪',kind:'choice',ask:'sv',ans:'en',
+    blurb:'Välj rätt engelskt ord.',en:{name:'Swedish → English',blurb:'Pick the right English word.'}},
+  {id:'luckor',name:'Skriv klart',icon:'✏️',kind:'complete',
+    blurb:'Några bokstäver fattas – skriv dem!',en:{name:'Fill in the gaps',blurb:'Some letters are missing – type them!'}},
+  {id:'stava',name:'Skriv ordet',icon:'⌨️',kind:'type',
+    blurb:'Skriv hela det engelska ordet.',en:{name:'Spell the word',blurb:'Type the whole English word.'}}
+];
+const MODE={};for(const M of MODES)MODE[M.id]=M;
+const AREAS=[{id:'alla',name:'Alla ord',en:'All words',icon:'🌐'}].concat(CATS,[{id:'missar',name:'Mina missar',en:'My misses',icon:'🎯'}]);
+const LEN=10;          // frågor i en runda
+const STICKER=3;       // rätt svar om ett ord som ger ett klistermärke i albumet
+const MISS_MIN=6;      // så många missar behövs för "Mina missar"
+
+// ---------- språk ----------
+// 'sv' (standard) eller 'en'. Byter namnen på kategorier, nivåer och lägen på plats.
+// Glosorna själva är alltid svenska och engelska.
+let LANG='sv';
+const tr=(sv,en)=>LANG==='en'?en:sv;
+const named=[...CATS,...LEVELS,...MODES,AREAS[0],AREAS[AREAS.length-1]];
+for(const o of named)o.sv=[o.name,o.blurb];
+function setLang(l){
+  LANG=l==='en'?'en':'sv';
+  for(const o of named){
+    const e=typeof o.en==='string'?{name:o.en}:o.en;
+    o.name=LANG==='en'?e.name:o.sv[0];
+    if(o.sv[1]!=null)o.blurb=LANG==='en'?e.blurb:o.sv[1];
+  }
+}
+
+// ---------- slump ----------
+function makeRand(seed){
+  let a=seed>>>0;
+  return function(){a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};
+}
+function shuffle(rand,arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pickWeighted(rand,list,w){
+  let tot=0;const ws=list.map(x=>{const v=w(x);tot+=v;return v;});
+  let r=rand()*tot;for(let i=0;i<list.length;i++){r-=ws[i];if(r<0)return list[i];}
+  return list[list.length-1];
+}
+
+// ---------- text ----------
+// Svaren jämförs utan stora bokstäver, extra mellanslag och bindestreck.
+const norm=s=>String(s).toLowerCase().replace(/-/g,' ').replace(/\s+/g,' ').trim();
+const isRightSpelling=(w,text)=>[w.en,...w.alt].some(x=>norm(x)===norm(text));
+const textOf=(w,lang)=>lang==='sv'?w.sv:w.en;
+function editDistance(a,b){
+  const m=a.length,n=b.length;let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur;
+  }
+  return prev[n];
+}
+// Felstavningar av ett engelskt ord, så som barn ofta stavar fel. g är hur vanligt felet är:
+// 0 = ljud som stavas på flera sätt, en dubbelbokstav som blir enkel, ett e för mycket eller
+// för lite, 1 = en annan vokal eller en enkel bokstav som blir dubbel, 2 = två bokstäver som har bytt plats.
+// Inga riktiga ord från listan och aldrig ordet självt.
+const SOUNDS=[['ph','f'],['f','ph'],['ck','k'],['k','ck'],['c','k'],['k','c'],['w','v'],['v','w'],['th','d'],['ee','ea'],['ea','ee'],
+  ['oo','u'],['ou','o'],['kn','n'],['mb','m'],['wr','r'],['gh',''],['y','i'],['i','y'],['s','z'],['qu','kw'],['tch','ch'],['ir','er'],['er','ir']];
+const VOWELS='aeiou';
+function spellVariants(word){
+  const out=new Map(),real=new Set(WORDS.flatMap(w=>[w.en,...w.alt]).map(norm));
+  const add=(s,g)=>{s=s.replace(/\s+/g,' ').trim();if(s.length>=2&&/^[a-z]/.test(s)&&!real.has(norm(s))&&norm(s)!==norm(word)&&!(out.get(s)<=g))out.set(s,g);};
+  const isL=ch=>/[a-z]/.test(ch);
+  for(const [a,b] of SOUNDS){let k=word.indexOf(a,1);while(k>0){add(word.slice(0,k)+b+word.slice(k+a.length),0);k=word.indexOf(a,k+1);}}
+  if(word.endsWith('e'))add(word.slice(0,-1),0);else if(!VOWELS.includes(word[word.length-1]))add(word+'e',0);
+  for(let i=1;i<word.length;i++){
+    const ch=word[i];if(!isL(ch))continue;
+    if(word[i-1]===ch)add(word.slice(0,i)+word.slice(i+1),0);                  // dubbelbokstav blir enkel
+    else if(!VOWELS.includes(ch)&&ch!==word[i+1])add(word.slice(0,i+1)+ch+word.slice(i+1),1);   // enkel blir dubbel
+    if(VOWELS.includes(ch))for(const v of VOWELS)if(v!==ch)add(word.slice(0,i)+v+word.slice(i+1),1);
+    if(i<word.length-1&&isL(word[i+1])&&word[i+1]!==ch)add(word.slice(0,i)+word[i+1]+ch+word.slice(i+2),2);   // två bokstäver byter plats
+  }
+  return [...out].map(([s,g])=>({s,g}));
+}
+const misspellings=word=>spellVariants(word).sort((a,b)=>a.g-b.g).map(v=>v.s);
+
+// ---------- vilka ord som är med ----------
+const inArea=(w,area,miss)=>area==='missar'?!!(miss&&miss[w.id]>0):area==='alla'||!area?true:w.k===area;
+// Orden som frågorna handlar om. Är de för få på nivån tas svårare ord med.
+function poolFor(area,lvl,miss){
+  const base=WORDS.filter(w=>inArea(w,area,miss));
+  if(area==='missar')return base;
+  let t=LEVELS[lvl].tier,pool=base.filter(w=>w.t<=t);
+  while(pool.length<5&&t<3){t++;pool=base.filter(w=>w.t<=t);}
+  return pool;
+}
+const missCount=miss=>WORDS.filter(w=>miss&&miss[w.id]>0).length;
+
+// Svarsalternativen: svaret och fel svar, som text på svarsspråket.
+function makeOptions(rand,M,L,area,target){
+  const t=BY[target],lang=M.ans,n=L.opts,right=textOf(t,lang);
+  const out=[right],used=new Set([target]);
+  const fits=w=>!used.has(w.id)&&!out.includes(textOf(w,lang))&&(M.ask!=='pic'||[...used].every(u=>!twin(u,w.id)));
+  const take=w=>{used.add(w.id);out.push(textOf(w,lang));};
+  const sameCat=WORDS.filter(w=>w.k===t.k);
+  if(L.pick==='spell'&&lang==='en'){
+    // de vanligaste felen först, i slumpad ordning inom varje sort
+    for(const v of shuffle(rand,spellVariants(t.en)).sort((a,b)=>a.g-b.g)){if(out.length>=n)break;if(!out.includes(v.s))out.push(v.s);}
+  }
+  if(L.pick==='alike'||L.pick==='spell'){
+    const near=w=>editDistance(textOf(w,lang),right)+(w.k===t.k?0:1.5);
+    const cand=shuffle(rand,WORDS.filter(fits)).sort((a,b)=>near(a)-near(b));
+    for(const w of cand.slice(0,n+2)){if(out.length>=n)break;if(fits(w))take(w);}
+  }
+  if(L.pick==='cat'||L.pick==='alike'||L.pick==='spell'||area==='missar'){
+    for(const w of shuffle(rand,sameCat)){if(out.length>=n)break;if(fits(w))take(w);}
+  }
+  // de lättare nivåerna: fel svar bland ord på samma nivå från samma område
+  const near=area==='missar'?sameCat:WORDS.filter(w=>inArea(w,area,null));
+  for(const tier of [L.tier,L.tier+1,3]){
+    for(const w of shuffle(rand,near.filter(w=>w.t<=tier))){if(out.length>=n)break;if(fits(w))take(w);}
+  }
+  for(const w of shuffle(rand,WORDS)){if(out.length>=n)break;if(fits(w))take(w);}
+  return shuffle(rand,out);
+}
+// Rutorna i Skriv klart och Skriv ordet: en bokstav (given) eller null (ska skrivas).
+// Mellanslag är alltid givna, och i Skriv klart syns alltid den första bokstaven.
+function makeSlots(rand,word,hide){
+  const slots=[...word].map(ch=>ch===' '?' ':ch);
+  const letters=slots.map((ch,i)=>i).filter(i=>slots[i]!==' '&&i>0);
+  const n=hide==='first'?letters.length:Math.min(letters.length,Math.max(1,Math.round((letters.length+1)*hide)));
+  for(const i of shuffle(rand,letters).slice(0,n))slots[i]=null;
+  return slots;
+}
+const blanks=q=>q.slots?q.slots.filter(s=>s===null).length:Infinity;
+// Det som har skrivits, insatt i rutorna.
+function filled(q,typed){
+  if(!q.slots)return typed;
+  let k=0;return q.slots.map(s=>s===null?(typed[k++]||''):s).join('');
+}
+
+// ---------- en runda ----------
+// cfg: {mode, lvl, area}
+function newRound(cfg,seed,miss){
+  const M=MODE[cfg.mode],L=LEVELS[cfg.lvl];
+  return {cfg,M,L,rand:makeRand(seed),miss:miss||{},pool:poolFor(cfg.area,cfg.lvl,miss),
+    len:LEN,used:[],qs:[],i:-1,answered:0,right:0,missed:[]};
+}
+function pickTarget(R){
+  const fresh=R.pool.filter(w=>!R.used.includes(w.id));
+  const list=fresh.length?fresh:R.pool.filter(w=>w.id!==R.used[R.used.length-1]);
+  const w=pickWeighted(R.rand,list.length?list:R.pool,w=>1+2*Math.min(3,R.miss[w.id]||0));
+  R.used.push(w.id);
+  return w;
+}
+function genQuestion(R){
+  const {M,L,cfg}=R,t=pickTarget(R);
+  if(M.kind==='choice')return {type:'choice',target:t.id,options:makeOptions(R.rand,M,L,cfg.area,t.id),answer:textOf(t,M.ans)};
+  if(M.kind==='complete')return {type:'type',target:t.id,slots:makeSlots(R.rand,t.en,L.hide),typed:''};
+  const slots=L.boxes==='none'?null:[...t.en].map((ch,i)=>ch===' '?' ':i===0&&L.boxes==='first'?ch:null);
+  return {type:'type',target:t.id,slots,typed:''};
+}
+function nextQuestion(R){const q=genQuestion(R);R.qs.push(q);R.i=R.qs.length-1;return q;}
+const currentQ=R=>R.qs[R.i]||null;
+const roundOver=R=>R.answered>=R.len;
+const roundCleared=R=>R.right>=R.L.need;
+
+// Skriver en bokstav (a–z eller mellanslag) eller suddar den sista. Ger true om något ändrades.
+function typeKey(R,key){
+  const q=currentQ(R);if(!q||q.done||q.type!=='type')return false;
+  if(key==='back'){if(!q.typed)return false;q.typed=q.typed.slice(0,-1);return true;}
+  if(!/^[a-z ]$/.test(key))return false;
+  if(q.typed.length>=(q.slots?blanks(q):30))return false;
+  if(key===' '&&(q.slots||!q.typed||q.typed.endsWith(' ')))return false;
+  q.typed+=key;return true;
+}
+const canSubmit=q=>!!q&&!q.done&&q.type==='type'&&(q.slots?q.typed.length===blanks(q):q.typed.trim().length>0);
+// Svar: ett alternativ (i Bilder och översättningarna) eller det som har skrivits.
+// Ger {q, touched:[[ord, rätt?]]} eller null om frågan inte kan besvaras.
+function answer(R,ans){
+  const q=currentQ(R);if(!q||q.done)return null;
+  const w=BY[q.target];
+  if(q.type==='choice'){
+    if(!q.options.includes(ans))return null;
+    q.pick=ans;q.ok=ans===q.answer;
+  }else{
+    if(!canSubmit(q))return null;
+    q.pick=filled(q,q.typed).trim();
+    q.ok=q.slots&&q.slots.some(s=>s!==null&&s!==' ')?norm(q.pick)===norm(w.en):isRightSpelling(w,q.pick);
+  }
+  q.done=true;
+  R.answered++;
+  if(q.ok)R.right++;else if(!R.missed.includes(q.target))R.missed.push(q.target);
+  return {q,touched:[[q.target,q.ok]]};
+}
+
+// ---------- framsteg, album och missar ----------
+function cleanProgress(p){
+  const out={};
+  for(const M of MODES){
+    const m=p&&typeof p==='object'&&p[M.id]&&typeof p[M.id]==='object'?p[M.id]:{};
+    const u=Number.isInteger(m.u)?Math.max(0,Math.min(LEVELS.length-1,m.u)):0;
+    const arr=a=>LEVELS.map((_,i)=>Array.isArray(a)&&Number(a[i])>0?Math.min(LEN,Math.floor(Number(a[i]))):0);
+    out[M.id]={u,b:arr(m.b),c:arr(m.c)};
+  }
+  return out;
+}
+const cleanCounts=(o,max)=>{const out={};if(o&&typeof o==='object')for(const k of Object.keys(o)){const v=Math.floor(Number(o[k]));if(BY[k]&&v>0)out[k]=Math.min(max,v);}return out;};
+// Sparar resultatet. Ger index för nivån som låstes upp, annars -1.
+function recordRound(prog,modeId,lvl,score,cleared){
+  const m=prog[modeId];
+  if(score>m.b[lvl])m.b[lvl]=score;
+  if(!cleared)return -1;
+  m.c[lvl]=Math.min(9999,m.c[lvl]+1);
+  if(lvl>=m.u&&m.u<LEVELS.length-1){m.u=lvl+1;return m.u;}
+  return -1;
+}
+// Rätt svar ger ett steg mot klistermärket, fel svar en miss (som tas bort av rätt svar).
+// Ger orden som just fick sitt klistermärke.
+function applyTouched(album,miss,touched){
+  const fresh=[];
+  for(const [id,ok] of touched){
+    if(ok){
+      const before=album[id]||0;album[id]=Math.min(99,before+1);
+      if(before<STICKER&&album[id]>=STICKER)fresh.push(id);
+      if(miss[id]){miss[id]--;if(!miss[id])delete miss[id];}
+    }else miss[id]=Math.min(5,(miss[id]||0)+2);
+  }
+  return fresh;
+}
+const hasSticker=(album,id)=>(album[id]||0)>=STICKER;
+const stickerCount=album=>WORDS.filter(w=>hasSticker(album,w.id)).length;
+const catWords=k=>WORDS.filter(w=>w.k===k);
+const catDone=(album,k)=>catWords(k).every(w=>hasSticker(album,w.id));
+/*LOGIC-END*/
+
+// ---------- spelets id och sparade värden ----------
+const GAME_ID='glosor';
+const SCORE_KEY='score.'+GAME_ID;   // hubbens trofé: antal klistermärken i albumet
+const SAVE_KEY='state.'+GAME_ID;    // nivåer, rekord, album, missar och val (hubbens konvention: state.<id>)
+setLang(I18N.lang);
+I18N.apply();
+const PRAISE=tr(['Rätt!','Snyggt!','Precis!','Helt rätt!','Bra!','Toppen!'],['Right!','Nice!','Exactly!','Spot on!','Good!','Great!']);
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const q2=s=>tr(`”${s}”`,`“${s}”`);   // ett ord inom citattecken
+// Bilden till ett ord: en färgruta, ett tal eller en emoji.
+function picHtml(w,cls){
+  const c=cls?' '+cls:'';
+  if(w.pic[0]==='#')return `<span class="pic${c}" aria-hidden="true"><span class="pic swatch" style="background:${w.pic}"></span></span>`;
+  if(/^\d+$/.test(w.pic))return `<span class="pic${c}" aria-hidden="true"><span class="pic num">${w.pic}</span></span>`;
+  return `<span class="pic${c}" aria-hidden="true">${w.pic}</span>`;
+}
+// 🔊 läser upp ett engelskt ord, om enheten har en röst för det (iPaden har det utan internet).
+const canSpeak=typeof window.speechSynthesis!=='undefined'&&typeof window.SpeechSynthesisUtterance!=='undefined';
+function speak(text){
+  try{
+    const u=new SpeechSynthesisUtterance(text),voices=speechSynthesis.getVoices();
+    u.lang='en-GB';u.rate=.85;
+    const v=voices.find(v=>/^en[-_]GB/i.test(v.lang))||voices.find(v=>/^en/i.test(v.lang));
+    if(v)u.voice=v;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }catch(e){}
+}
+const sayBtn=text=>canSpeak?`<button class="say" data-say="${esc(text)}" aria-label="${tr('Lyssna','Listen')}">🔊</button>`:'';
+
+function readSave(){
+  try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s&&typeof s==='object'?s:{};}catch(e){return {};}
+}
+function cleanSave(s){
+  const pref={};
+  if(s.pref&&typeof s.pref==='object')for(const M of MODES){
+    const p=s.pref[M.id];
+    if(p&&typeof p==='object'&&AREAS.some(a=>a.id===p.area))pref[M.id]={area:p.area};
+  }
+  return {prog:cleanProgress(s.prog),album:cleanCounts(s.album,99),miss:cleanCounts(s.miss,5),pref};
+}
+let S=cleanSave(readSave());
+let R=null;        // rundan som spelas
+let ACT={};
+let guardUntil=0;  // ett tryck som svarar sväljer nästa tryck en kort stund
+const app=document.getElementById('app');
+
+function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({prog:S.prog,album:S.album,miss:S.miss,pref:S.pref}));}catch(e){}}
+function writeScore(){const n=stickerCount(S.album);if(n>0)try{localStorage.setItem(SCORE_KEY,String(n));}catch(e){}}
+function prefOf(modeId){
+  const p=S.pref[modeId]||(S.pref[modeId]={});
+  let area=p.area||'alla';
+  if(area==='missar'&&missCount(S.miss)<MISS_MIN)area='alla';
+  return {area};
+}
+
+// ---------- skärmar ----------
+function go(html,acts,bodyClass,keepScroll){
+  closeModal();
+  document.body.className=bodyClass||'';
+  app.innerHTML=html;ACT=acts||{};
+  if(!keepScroll)window.scrollTo(0,0);
+}
+
+function showMenu(){
+  R=null;
+  const n=stickerCount(S.album);
+  go(`<main class="menu">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">🔤</div>
+      <h1>${tr('Glosjakten','Word Hunt')}</h1>
+      <p class="sub">${tr('Lär dig engelska ord med bilder, val och stavning. Hur vill du träna?','Learn English words with pictures, choices and spelling. How do you want to practise?')}</p>
+    </header>
+    <div class="modes">${MODES.map(M=>{const L=LEVELS[S.prog[M.id].u];return `<button class="mode m-${M.id}" data-act="mode" data-mode="${M.id}">
+      <span class="ico" aria-hidden="true">${M.icon}</span><span class="nm">${M.name}</span>
+      <span class="ds">${M.blurb}</span><span class="tag">${L.icon} ${L.name}</span></button>`;}).join('')}</div>
+    <div class="row center tools">
+      <button class="btn" data-act="album">📒 ${tr('Mitt album','My album')}</button>
+      <button class="btn" data-act="about">📖 ${tr('Om spelet','About the game')}</button>
+    </div>
+    <p class="record">${n?`📒 ${tr('Klistermärken i albumet','Stickers in the album')}: <b>${n}</b> ${tr('av','of')} ${WORDS.length}`
+      :tr('📒 Svara rätt på ett ord tre gånger så får du ditt första klistermärke!','📒 Answer a word right three times to get your first sticker!')}</p>
+  </main>`,{
+    mode:b=>showSetup(b.dataset.mode),
+    album:()=>showAlbum(),
+    about:showAbout
+  },'at-menu');
+}
+
+const tierText=L=>tr(['de lättaste orden','lätta och lite svårare ord','alla ord'],['the easiest words','easy and slightly harder words','all words'])[L.tier-1];
+function levelDetail(M,L){
+  const parts=[];
+  if(M.kind==='choice'){
+    parts.push(tr(`${L.opts} svar att välja på`,`${L.opts} answers to choose from`),tierText(L));
+    if(L.pick==='cat')parts.push(tr('fel svar från samma kategori','wrong answers from the same category'));
+    if(L.pick==='alike'||(L.pick==='spell'&&M.ans==='sv'))parts.push(tr('ord som liknar varandra','words that look alike'));
+    if(L.pick==='spell'&&M.ans==='en')parts.push(tr('hitta rätt stavning','find the right spelling'));
+    if(L.pic&&M.ask==='sv')parts.push(tr('med bild','with a picture'));
+  }else if(M.kind==='complete'){
+    parts.push(L.hide==='first'?tr('bara första bokstaven syns','only the first letter shows')
+      :L.hide<.4?tr('några bokstäver fattas','a few letters are missing')
+      :L.hide<.6?tr('hälften av bokstäverna fattas','half the letters are missing')
+      :tr('de flesta bokstäverna fattas','most of the letters are missing'),tierText(L));
+    if(L.pic)parts.push(tr('med bild','with a picture'));
+  }else{
+    parts.push(L.boxes==='first'?tr('rutor och första bokstaven','boxes and the first letter')
+      :L.boxes==='len'?tr('rutorna visar hur långt ordet är','the boxes show how long the word is')
+      :tr('ingen hjälp','no help'),tierText(L));
+    if(L.pic)parts.push(tr('med bild','with a picture'));
+  }
+  return parts.join(' · ');
+}
+const bestText=v=>v?tr(`Bäst: ${v} av ${LEN}`,`Best: ${v} of ${LEN}`):tr('Inte spelad än','Not played yet');
+const needText=()=>tr(`${LEN} frågor. För att klara en nivå och låsa upp nästa: ${LEVELS.map(L=>`${L.name} ${L.need}`).join(', ')} rätt.`,
+  `${LEN} questions. To clear a level and unlock the next: ${LEVELS.map(L=>`${L.name} ${L.need}`).join(', ')} right.`);
+function areaLabel(a){
+  if(a.id==='missar')return `${a.name} (${missCount(S.miss)})`;
+  return a.name+(CAT[a.id]&&catDone(S.album,a.id)?' 🏅':'');
+}
+function showSetup(modeId,msg){
+  R=null;
+  const M=MODE[modeId],P=prefOf(modeId),pr=S.prog[modeId],nm=missCount(S.miss);
+  go(`<main class="setup">
+    <div class="topbar"><button class="btn sm" data-act="menu">← ${tr('Meny','Menu')}</button><h2>${M.icon} ${M.name}</h2></div>
+    <p class="sub">${M.blurb}</p>
+    <section class="group"><h3>${tr('Vilka ord?','Which words?')}</h3>
+      <div class="chips" role="group">${AREAS.map(a=>`<button class="chip" data-act="area" data-v="${a.id}" aria-pressed="${a.id===P.area}"${a.id==='missar'&&nm<MISS_MIN?' disabled':''}>${a.icon} ${esc(areaLabel(a))}</button>`).join('')}</div>
+      ${nm<MISS_MIN?`<p class="small">${tr(`🎯 Mina missar: ord du har svarat fel på. Det behövs minst ${MISS_MIN} för att öva på dem.`,`🎯 My misses: words you have answered wrong. You need at least ${MISS_MIN} to practise them.`)}</p>`:''}
+    </section>
+    <section class="group"><h3>${tr('Välj nivå','Pick a level')}</h3>
+      <p class="menumsg" role="status">${msg?esc(msg):''}</p>
+      <div class="levels">${LEVELS.map((L,i)=>{const locked=i>pr.u;return `<button class="level lv-${L.id}${locked?' locked':''}" data-act="level" data-lvl="${i}">
+        <span class="ico" aria-hidden="true">${locked?'🔒':L.icon}</span><span class="nm">${L.name}</span>
+        <span class="ds">${locked?tr(`Klara ${LEVELS[i-1].name} för att låsa upp.`,`Clear ${LEVELS[i-1].name} to unlock.`):levelDetail(M,L)}</span>
+        <span class="tag">${locked?tr('Låst','Locked'):(pr.c[i]?'✓ ':'')+bestText(pr.b[i])}</span></button>`;}).join('')}</div>
+    </section>
+    <p class="rules">ℹ️ ${needText()}</p>
+  </main>`,{
+    menu:()=>showMenu(),
+    area:b=>{S.pref[modeId]={area:b.dataset.v};persist();showSetup(modeId);},
+    level:b=>{
+      const i=+b.dataset.lvl;
+      if(i>pr.u){const m=app.querySelector('.menumsg');if(m)m.textContent=tr(`${LEVELS[i].name} är låst. Klara ${LEVELS[i-1].name} först!`,`${LEVELS[i].name} is locked. Clear ${LEVELS[i-1].name} first!`);return;}
+      startRound(modeId,i);
+    }
+  });
+}
+const newSeed=()=>((Date.now()&0x7fffffff)^Math.floor(Math.random()*0x7fffffff))>>>0;
+function startRound(modeId,lvl){
+  R=newRound({mode:modeId,lvl,area:prefOf(modeId).area},newSeed(),S.miss);
+  R.fresh=[];
+  guardUntil=0;
+  nextQuestion(R);
+  renderPlay();
+}
+
+// ---------- spelplanen ----------
+const activeRound=()=>R;
+const areaName=id=>{const a=AREAS.find(x=>x.id===id);return a?a.name:'';};
+const qNum=Q=>Math.min(Q.len,Q.answered+(currentQ(Q)&&!currentQ(Q).done?1:0));
+function barHtml(Q){
+  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><span class="n">${n}</span><span class="l">${l}</span></div>`;
+  return `<div class="bar">
+    <button class="btn sm" data-act="quit">✕ ${tr('Avsluta','Stop')}</button>
+    <div class="ptitle"><b>${Q.M.icon} ${Q.M.name}</b><small>${Q.L.icon} ${Q.L.name} · ${esc(areaName(Q.cfg.area))}</small></div>
+    <div class="stats">${st(`${qNum(Q)}/${Q.len}`,tr('fråga','question'))}${st(Q.right,tr('rätt','right'),'good')}</div>
+  </div>`;
+}
+function wcard(w,big,fresh){
+  return `<div class="wcard${big?' big':''}">${picHtml(w)}<div class="info"><b lang="en">${esc(w.en)}</b><span>🇸🇪 ${esc(w.sv)}</span>${fresh?`<span class="new">⭐ ${tr('Nytt klistermärke!','New sticker!')}</span>`:''}</div>${sayBtn(w.en)}</div>`;
+}
+function sheetHtml(Q,q,why){
+  const nextLabel=roundOver(Q)?tr('Se resultat','See results'):tr('Nästa →','Next →');
+  const praise=PRAISE[(Q.answered*7+Q.right)%PRAISE.length];
+  return `<div class="sheet ${q.ok?'ok':'bad'}${reduceMotion()?'':' pop'}" role="status">
+    <p class="msg">${q.ok?'✅ '+praise:'❌ '+tr('Inte riktigt','Not quite')}</p>
+    ${why?`<p class="why">${why}</p>`:''}
+    <div class="foot">${wcard(BY[q.target],false,Q.fresh.includes(q.target))}<button class="btn go big" data-act="next">${nextLabel}</button></div>
+  </div>`;
+}
+// Rutorna med givna och skrivna bokstäver, eller raden man skriver på.
+function slotsHtml(q){
+  const st=q.done?(q.ok?' right':' wrong'):'';
+  if(!q.slots)return `<div class="typed${st}" lang="en" aria-label="${tr('Det du har skrivit','What you have typed')}: ${esc(q.typed)}">${esc(q.typed)}${q.done?'':'<span class="caret"></span>'}</div>`;
+  let k=0;const cur=q.typed.length;
+  const cells=q.slots.map(s=>{
+    if(s===' ')return '<span class="slot gap"></span>';
+    if(s!==null)return `<span class="slot given">${esc(s)}</span>`;
+    const i=k++;
+    return `<span class="slot${!q.done&&i===cur?' cur':''}">${esc(q.typed[i]||'')}</span>`;
+  }).join('');
+  return `<div class="slots${st}" lang="en" role="img" aria-label="${esc(filled(q,q.typed.padEnd(blanks(q),'_')))}">${cells}</div>`;
+}
+function kbdHtml(q){
+  const key=k=>`<button class="key" data-act="key" data-k="${k}">${k}</button>`;
+  const rows=['qwertyuiop','asdfghjkl','zxcvbnm'].map(r=>[...r].map(key).join(''));
+  return `<div class="kbd" role="group" aria-label="${tr('Tangentbord','Keyboard')}">
+    <div class="krow">${rows[0]}</div><div class="krow">${rows[1]}</div>
+    <div class="krow">${rows[2]}<button class="key back" data-act="key" data-k="back" aria-label="${tr('Sudda','Delete')}">⌫</button></div>
+    <div class="krow">${q.slots?'':`<button class="key wide" data-act="key" data-k=" ">${tr('mellanslag','space')}</button>`}<button class="key ok" data-act="submit"${canSubmit(q)?'':' disabled'}>${tr('Svara','Answer')} ✓</button></div>
+  </div>`;
+}
+const isRealWord=(text,lang)=>WORDS.some(w=>textOf(w,lang)===text);
+function whyText(Q,q){
+  const w=BY[q.target],M=Q.M;
+  if(q.type==='choice'){
+    if(q.ok)return '';
+    if(M.ans==='en'&&!isRealWord(q.pick,'en'))return tr(`${q2(esc(q.pick))} är felstavat. Det stavas ${q2(esc(w.en))}.`,`${q2(esc(q.pick))} is spelt wrong. It is spelt ${q2(esc(w.en))}.`);
+    if(M.ask==='pic')return tr(`Bilden är ${q2(esc(w.en))} (${esc(w.sv)}). Du valde ${q2(esc(q.pick))}.`,`The picture is ${q2(esc(w.en))} (${esc(w.sv)}). You chose ${q2(esc(q.pick))}.`);
+    if(M.ans==='sv')return tr(`${q2(esc(w.en))} betyder ${q2(esc(w.sv))}. Du valde ${q2(esc(q.pick))}.`,`${q2(esc(w.en))} means ${q2(esc(w.sv))}. You chose ${q2(esc(q.pick))}.`);
+    return tr(`${q2(esc(w.sv))} heter ${q2(esc(w.en))} på engelska. Du valde ${q2(esc(q.pick))}.`,`${q2(esc(w.sv))} is ${q2(esc(w.en))} in English. You chose ${q2(esc(q.pick))}.`);
+  }
+  if(!q.ok)return tr(`Du skrev ${q2(esc(q.pick))}. Det stavas ${q2(esc(w.en))}.`,`You wrote ${q2(esc(q.pick))}. It is spelt ${q2(esc(w.en))}.`);
+  if(norm(q.pick)!==norm(w.en))return tr(`Det räknas! I brittisk engelska skriver man oftast ${q2(esc(w.en))}.`,`That counts! In British English it is usually ${q2(esc(w.en))}.`);
+  return '';
+}
+function renderPlay(o){
+  o=o||{};
+  const Q=activeRound(),q=currentQ(Q);
+  if(!q)return showMenu();
+  const w=BY[q.target],M=Q.M,L=Q.L;
+  let body;
+  if(q.type==='choice'){
+    let ask;
+    if(M.ask==='pic')ask=`<div class="prompt"><p class="ask">${tr('Vilket engelskt ord passar bilden?','Which English word fits the picture?')}</p>${picHtml(w,'bigpic')}</div>`;
+    else if(M.ask==='en')ask=`<div class="prompt"><p class="ask">${tr('Vad betyder ordet på svenska?','What does the word mean in Swedish?')}</p><div class="word"><span lang="en">${esc(w.en)}</span>${sayBtn(w.en)}</div></div>`;
+    else ask=`<div class="prompt">${L.pic?picHtml(w,'midpic'):''}<p class="ask">${tr(`Vad heter <b>${esc(w.sv)}</b> på engelska?`,`What is <b>${esc(w.sv)}</b> in English?`)}</p></div>`;
+    body=ask+`<div class="opts${q.options.length===4?'':' t3'}">${q.options.map((t,i)=>{
+      const st=q.done?(t===q.answer?' right':t===q.pick?' wrong':' dim'):'';
+      const mark=q.done&&t===q.answer?'<span class="mark">✅</span>':q.done&&t===q.pick?'<span class="mark">❌</span>':'';
+      return `<button class="opt${st}" data-act="pick" data-i="${i+1}"${M.ans==='en'?' lang="en"':''}${q.done?' disabled':''}>${esc(t)}${mark}</button>`;
+    }).join('')}</div>`;
+  }else{
+    const ask=M.kind==='complete'?tr(`Skriv klart det engelska ordet för <b>${esc(w.sv)}</b>`,`Finish the English word for <b>${esc(w.sv)}</b>`)
+      :tr(`Skriv <b>${esc(w.sv)}</b> på engelska`,`Write <b>${esc(w.sv)}</b> in English`);
+    body=`<div class="prompt">${L.pic?picHtml(w,'midpic'):''}<p class="ask">${ask}</p></div>${slotsHtml(q)}${q.done?'':kbdHtml(q)}`;
+  }
+  const sheet=q.done?sheetHtml(Q,q,whyText(Q,q)):'';
+  go(`<main class="play">${barHtml(Q)}${body}${sheet}</main>`,PLAY_ACTS,'',o.keep);
+  if(q.done&&q.ok===false){const x=app.querySelector('.opt.wrong');if(x&&!reduceMotion())x.classList.add('shake');}
+}
+// Ett svar: albumet och missarna uppdateras, ett nytt svar sväljer nästa tryck en kort stund.
+function afterAnswer(res){
+  if(!res)return;
+  const fresh=applyTouched(S.album,S.miss,res.touched);
+  R.fresh.push(...fresh);
+  persist();writeScore();
+  guardUntil=Date.now()+350;
+  renderPlay({keep:true});
+}
+function goNext(){
+  if(Date.now()<guardUntil)return;
+  const Q=activeRound(),q=currentQ(Q);
+  if(!q||!q.done)return;
+  if(roundOver(Q))return showSummary();
+  nextQuestion(Q);
+  renderPlay();
+}
+function pressKey(k){
+  const Q=activeRound();
+  if(Q&&typeKey(Q,k))renderPlay({keep:true});
+}
+function submit(){
+  if(Date.now()<guardUntil)return;
+  afterAnswer(answer(activeRound()));
+}
+const PLAY_ACTS={
+  quit:()=>{
+    const Q=activeRound();
+    if(Q.answered===0)return showSetup(Q.M.id);
+    modal(tr(`<h3>Avsluta?</h3><p>Rundan räknas inte för att låsa upp nya nivåer. Klistermärkena i albumet finns kvar.</p>
+      <div class="row center"><button class="btn go" data-m="close">Spela vidare</button><button class="btn" data-m="quit">Avsluta</button></div>`,
+      `<h3>Stop?</h3><p>The round does not count towards unlocking new levels. The stickers in your album stay.</p>
+      <div class="row center"><button class="btn go" data-m="close">Keep playing</button><button class="btn" data-m="quit">Stop</button></div>`),
+      {quit:()=>showSetup(Q.M.id)});
+  },
+  pick:b=>{
+    if(Date.now()<guardUntil)return;
+    const Q=activeRound(),q=currentQ(Q);if(!q||q.type!=='choice')return;
+    afterAnswer(answer(Q,q.options[+b.dataset.i-1]));
+  },
+  key:b=>pressKey(b.dataset.k),
+  submit:()=>submit(),
+  next:()=>goNext()
+};
+
+// ---------- resultat ----------
+const wordTile=w=>`<button class="stile${hasSticker(S.album,w.id)?' yes':''}" data-act="word" data-w="${esc(w.id)}">${picHtml(w)}<b lang="en">${esc(w.en)}</b><span class="sv">${esc(w.sv)}</span>${hasSticker(S.album,w.id)?`<span class="star" aria-label="${tr('klistermärke','sticker')}">⭐</span>`:''}</button>`;
+function showSummary(){
+  const Q=R,M=Q.M,L=Q.L,lvl=Q.cfg.lvl;
+  const cleared=roundCleared(Q);
+  const unlocked=recordRound(S.prog,M.id,lvl,Q.right,cleared);
+  persist();writeScore();
+  const title=Q.right===Q.len?tr('Alla rätt – perfekt!','All right – perfect!'):cleared?tr('Nivån är klarad!','Level cleared!'):tr('Bra kämpat!','Good effort!');
+  const lead=tr(`Du hade ${Q.right} av ${Q.len} rätt på ${L.name}.`,`You got ${Q.right} of ${Q.len} right on ${L.name}.`)
+    +(cleared?'':tr(` Svara rätt på ${L.need} för att klara nivån.`,` Answer ${L.need} right to clear the level.`));
+  const medal=Q.right===Q.len?'🏅':cleared?'🎉':'💪';
+  const next=lvl+1<LEVELS.length&&lvl+1<=S.prog[M.id].u?lvl+1:-1;
+  const fresh=Q.fresh.map(id=>BY[id]),miss=Q.missed.map(id=>BY[id]);
+  go(`<main class="panel page summary">
+    <div class="medal" aria-hidden="true">${medal}</div>
+    <h2>${title}</h2>
+    <p class="lead">${lead}</p>
+    <div class="bigstats"><div class="big${cleared?' good':''}" data-sum="right"><b>${Q.right}/${Q.len}</b><span>${tr('rätt','right')}</span></div></div>
+    ${unlocked>=0?`<p class="unlock">🔓 ${tr('Du har låst upp','You have unlocked')} ${LEVELS[unlocked].icon} ${LEVELS[unlocked].name}!</p>`:''}
+    <div class="row center">
+      ${next>=0&&cleared?`<button class="btn go big" data-act="nextlvl">${tr(`Prova ${LEVELS[next].name}`,`Try ${LEVELS[next].name}`)}</button>`:''}
+      <button class="btn${next>=0&&cleared?'':' go'} big" data-act="again">${tr('Spela igen','Play again')}</button>
+      <button class="btn big" data-act="setup">${tr('Byt nivå','Change level')}</button>
+      <button class="btn big" data-act="menu">${tr('Meny','Menu')}</button>
+    </div>
+    ${fresh.length?`<h3 class="fresh">⭐ ${tr('Nya klistermärken i albumet','New stickers in your album')}</h3><div class="missed fresh">${fresh.map(wordTile).join('')}</div>`:''}
+    ${miss.length?`<h3 class="practise">${tr('Öva mer på','Practise more')}</h3><div class="missed practise">${miss.map(wordTile).join('')}</div>`:''}
+  </main>`,{
+    nextlvl:()=>startRound(M.id,next),
+    again:()=>startRound(M.id,lvl),
+    setup:()=>showSetup(M.id),
+    menu:()=>showMenu(),
+    word:b=>wordModal(b.dataset.w)
+  });
+  if(cleared)confetti();
+}
+function wordModal(id){
+  modal(`${wcard(BY[id],true)}<div class="row center"><button class="btn go" data-m="close">${tr('Stäng','Close')}</button></div>`);
+}
+
+// ---------- albumet ----------
+function showAlbum(){
+  const n=stickerCount(S.album);
+  go(`<main class="albumpage">
+    <div class="topbar"><button class="btn sm" data-act="menu">← ${tr('Meny','Menu')}</button><h2>📒 ${tr('Mitt album','My album')}</h2></div>
+    <p class="sub">${tr(`Ett ord får ett klistermärke när du har svarat rätt på det ${STICKER} gånger, i vilket sätt som helst. Samla en hel kategori så får du en medalj! Tryck på ett ord för att se det stort.`,
+      `A word gets a sticker when you have answered it right ${STICKER} times, in any way of playing. Collect a whole category to win a medal! Tap a word to see it big.`)}</p>
+    <p class="record"><b>${n}</b> ${tr('av','of')} ${WORDS.length} ${tr('klistermärken','stickers')} · 🏅 ${CATS.filter(C=>catDone(S.album,C.id)).length} ${tr('av','of')} ${CATS.length} ${tr('medaljer','medals')}</p>
+    <div class="meter" aria-hidden="true"><i style="width:${(100*n/WORDS.length).toFixed(1)}%"></i></div>
+    ${CATS.map(C=>{
+      const list=catWords(C.id),got=list.filter(w=>hasSticker(S.album,w.id)).length;
+      return `<section class="group" data-cat="${C.id}"><h3>${C.icon} ${C.name} <span class="small">${got} ${tr('av','of')} ${list.length}</span>${got===list.length?`<span class="done">🏅 ${tr('Medalj!','Medal!')}</span>`:''}</h3>
+        <div class="sgrid">${list.map(w=>{const v=S.album[w.id]||0,yes=v>=STICKER;
+          return `<button class="stile ${yes?'yes':'no'}" data-act="word" data-w="${esc(w.id)}">${picHtml(w)}<b lang="en">${esc(w.en)}</b><span class="sv">${esc(w.sv)}</span>${yes?`<span class="star" aria-label="${tr('klistermärke','sticker')}">⭐</span>`:`<span class="dots" aria-label="${v} ${tr('av','of')} ${STICKER}">${'●'.repeat(v)}${'○'.repeat(STICKER-v)}</span>`}</button>`;}).join('')}</div></section>`;
+    }).join('')}
+  </main>`,{menu:()=>showMenu(),word:b=>wordModal(b.dataset.w)});
+}
+
+// ---------- om spelet ----------
+function showAbout(){
+  modal(`<div class="about">${tr(`
+    <h3>📖 Om spelet</h3>
+    <ul>
+      <li><b>Fem sätt att träna:</b> Bilder, Engelska → svenska, Svenska → engelska, Skriv klart och Skriv ordet.</li>
+      <li><b>Nivåer:</b> Lätt, Mellan, Svår, Geni och Omöjliga. Nästa nivå låses upp när du klarar nivån före, i varje sätt för sig. Lätt har de lättaste orden, från Svår kommer alla.</li>
+      <li><b>Vilka ord:</b> alla ord eller en av ${CATS.length} kategorier. <b>Mina missar</b> är ord du har svarat fel på – de kommer också oftare i vanliga rundor.</li>
+      <li><b>Albumet:</b> svara rätt på ett ord ${STICKER} gånger så får det ett klistermärke. Kan du samla alla ${WORDS.length}?</li>
+      <li><b>🔊</b> läser upp det engelska ordet, om iPaden har en engelsk röst.</li>
+      <li><b>Stavning:</b> brittisk (colour, grey), men när du skriver räknas amerikansk stavning (gray) också.</li>
+      <li><b>Tangentbord:</b> bokstäverna skriver, Backsteg suddar och Enter svarar. 1–6 väljer ett svar.</li>
+    </ul>`,`
+    <h3>📖 About the game</h3>
+    <ul>
+      <li><b>Five ways to practise:</b> Pictures, English → Swedish, Swedish → English, Fill in the gaps and Spell the word.</li>
+      <li><b>Levels:</b> Easy, Medium, Hard, Genius and Impossible. The next level unlocks when you clear the level before it, in each way separately. Easy has the easiest words, from Hard on all of them come.</li>
+      <li><b>Which words:</b> all words or one of ${CATS.length} categories. <b>My misses</b> are words you have answered wrong – they also come up more often in normal rounds.</li>
+      <li><b>The album:</b> answer a word right ${STICKER} times and it gets a sticker. Can you collect all ${WORDS.length}?</li>
+      <li><b>🔊</b> reads the English word aloud, if the iPad has an English voice.</li>
+      <li><b>Spelling:</b> British (colour, grey), but when you type, American spelling (gray) counts too.</li>
+      <li><b>Keyboard:</b> the letters type, Backspace deletes and Enter answers. 1–6 picks an answer.</li>
+    </ul>`)}
+    <div class="row center"><button class="btn go" data-m="close">${tr('Stäng','Close')}</button></div>
+  </div>`);
+}
+
+// ---------- dialog och konfetti ----------
+let modalOpen=null;
+function modal(html,handlers){
+  closeModal();
+  const back=document.createElement('div');back.className='modal-back';
+  back.innerHTML=`<div class="modal panel" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(back);
+  modalOpen={handlers:handlers||{}};
+  back.addEventListener('click',e=>{
+    const b=e.target.closest('[data-m]');
+    if(b){const fn=modalOpen&&modalOpen.handlers[b.dataset.m];closeModal();if(fn)fn(b);}
+    else if(e.target===back)closeModal();
+  });
+  const f=back.querySelector('.btn.go')||back.querySelector('button');if(f)f.focus({preventScroll:true});
+}
+function closeModal(){
+  const open=document.querySelectorAll('.modal-back');
+  open.forEach(m=>m.remove());modalOpen=null;
+  if(open.length&&document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
+}
+function confetti(){
+  if(reduceMotion())return;
+  const box=document.createElement('div');box.className='confetti';box.setAttribute('aria-hidden','true');
+  const cols=['#ff6b6b','#3d8be0','#ffc63f','#9a6ad6','#38d9a9'];
+  for(let i=0;i<70;i++){
+    const p=document.createElement('i');
+    p.style.left=Math.random()*100+'%';p.style.background=cols[i%cols.length];
+    p.style.animationDelay=(Math.random()*.6)+'s';p.style.animationDuration=(1.7+Math.random()*1.5)+'s';
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);setTimeout(()=>box.remove(),3800);
+}
+
+// ---------- inmatning ----------
+// 🔊 fungerar överallt, också i dialogerna
+document.addEventListener('click',e=>{
+  const s=e.target.closest&&e.target.closest('.say');
+  if(s){e.preventDefault();e.stopPropagation();speak(s.dataset.say);}
+},true);
+app.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act]');
+  if(a&&!a.disabled){const fn=ACT[a.dataset.act];if(fn){e.preventDefault();fn(a,e);}}
+});
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  if(modalOpen){if(e.key==='Escape'){e.preventDefault();closeModal();}return;}
+  const Q=activeRound(),q=Q&&currentQ(Q);
+  if(!q||!app.querySelector('.play'))return;
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(q.done)return goNext();
+    if(q.type==='type')submit();
+    return;
+  }
+  if(q.done)return;
+  if(q.type==='type'){
+    const k=e.key==='Backspace'?'back':e.key.length===1?e.key.toLowerCase():'';
+    if(k==='back'||/^[a-z ]$/.test(k)){e.preventDefault();pressKey(k);}
+    return;
+  }
+  if(!/^[1-9]$/.test(e.key))return;
+  const b=app.querySelector(`.play [data-i="${e.key}"]:not(:disabled)`);
+  if(b){e.preventDefault();PLAY_ACTS.pick(b);}
+});
+
+showMenu();
+
+// fungerar utan internet via hubbens service worker
+if('serviceWorker' in navigator){navigator.serviceWorker.register('../sw.js').catch(function(){});}
+</script>
+<script src="../shared/guard.js" data-game="glosor"></script>
+</body>
+</html>

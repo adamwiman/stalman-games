@@ -67,5 +67,14 @@ const GAMES = [
     en: { title: "Tower of Hanoi", blurb: "Move the tower, one disc at a time!" },
     file: "games/hanoi.html",
     scoreKey: "score.hanoi"        // stars, all levels together
+  },
+  {
+    id: "glosor",
+    title: "Glosjakten",
+    emoji: "🔤",
+    blurb: "Lär dig engelska ord med bilder och stavning!",
+    en: { title: "Word Hunt", blurb: "Learn English words with pictures and spelling!" },
+    file: "games/glosor.html",
+    scoreKey: "score.glosor"       // stickers in the album
   }
 ];

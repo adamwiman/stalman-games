@@ -399,3 +399,65 @@ test("Tower of Hanoi in English: levels, a wrong move, a hint and a whole Easy t
   await press(page.locator('.modal [data-m="menu"]'), touch);
   await expect(page.locator(".record")).toHaveText("⭐ Stars: 2 of 15");
 });
+
+// ---------- Word Hunt ----------
+// The menus are English; the words to learn are still Swedish and English.
+test("Word Hunt in English: the menu, the setup, a question of each kind, the result and the album", async ({ page, touch }) => {
+  test.setTimeout(60000);
+  await seedStorage(page, Object.assign({}, EN, { "state.glosor": { album: { dog: 3 }, prog: { stava: { u: 2 } }, pref: { sven: { area: "djur" } } } }));
+  await page.goto("games/glosor.html");
+  // the Swedish words, longest first (so "regnbåge" goes before "regn")
+  const sv = await page.evaluate(() => WORDS.map((w) => w.sv).sort((a, b) => b.length - a.length));
+  await expect(page.locator("h1")).toHaveText("Word Hunt");
+  await expect(page.locator(".mode .nm")).toHaveText(["Pictures", "English → Swedish", "Swedish → English", "Fill in the gaps", "Spell the word"]);
+  await expect(page.locator(".mode .tag").first()).toHaveText("🐣 Easy");
+  await expect(page.locator(".record")).toHaveText("📒 Stickers in the album: 1 of 176");
+  await press(page.locator('[data-act="about"]'), touch);
+  await expect(page.locator(".modal h3")).toHaveText("📖 About the game");
+  await expectNoSwedish(page, "about");
+  await press(page.locator('.modal [data-m="close"]'), touch);
+
+  await press(page.locator('.mode[data-mode="sven"]'), touch);
+  await expect(page.locator(".topbar h2")).toHaveText("🇸🇪 Swedish → English");
+  await expect(page.locator('.chip[data-act="area"]').first()).toHaveText("🌐 All words");
+  await expect(page.locator('.chip[data-v="farger"]')).toHaveText("🎨 Colours");
+  await expect(page.locator('.chip[data-v="missar"]')).toHaveText("🎯 My misses (0)");
+  await expect(page.locator('.level[data-lvl="0"] .ds')).toHaveText("3 answers to choose from · the easiest words · with a picture");
+  await expect(page.locator('.level[data-lvl="1"] .ds')).toHaveText("Clear Easy to unlock.");
+  await expectNoSwedish(page, "setup");
+
+  await press(page.locator('.level[data-lvl="0"]'), touch);
+  await expect(page.locator(".ptitle small")).toHaveText("🐣 Easy · Animals");
+  await expect(page.locator("[data-stat], .stat .l")).toHaveText(["question", "right"]);
+  for (let i = 0; i < 10; i++) {
+    const q = await page.evaluate(() => { const q = currentQ(activeRound()); return { en: BY[q.target].en, sv: BY[q.target].sv, wrong: q.options.find((o) => o !== q.answer) }; });
+    await expect(page.locator(".ask")).toHaveText(`What is ${q.sv} in English?`);
+    await press(page.locator(".opts .opt", { hasText: new RegExp(`^${i === 0 ? q.wrong : q.en}$`) }), touch);
+    if (i === 0) {
+      await expect(page.locator(".sheet .msg")).toHaveText("❌ Not quite");
+      await expect(page.locator(".sheet .why")).toHaveText(`“${q.sv}” is “${q.en}” in English. You chose “${q.wrong}”.`);
+      await expectNoSwedish(page, "answer", sv);
+    }
+    await expect.poll(() => page.evaluate(() => Date.now() >= guardUntil)).toBe(true);
+    await press(page.locator('.sheet [data-act="next"]'), touch);
+  }
+  await expect(page.locator(".summary h2")).toHaveText("Level cleared!");
+  await expect(page.locator(".summary .lead")).toHaveText("You got 9 of 10 right on Easy.");
+  await expect(page.locator(".summary .unlock")).toHaveText("🔓 You have unlocked 🎒 Medium!");
+  await expect(page.locator(".summary .btn")).toHaveText(["Try Medium", "Play again", "Change level", "Menu"]);
+  await expectNoSwedish(page, "result", sv);
+
+  // the typing keyboard
+  await page.evaluate(() => startRound("stava", 2));
+  await expect(page.locator(".ask")).toHaveText(/^Write .+ in English$/);
+  await expect(page.locator('.kbd .key[data-k=" "]')).toHaveText("space");
+  await expect(page.locator('.kbd [data-act="submit"]')).toHaveText("Answer ✓");
+  await expect(page.locator('.kbd .key[data-k="back"]')).toHaveAttribute("aria-label", "Delete");
+  await expectNoSwedish(page, "typing", sv);
+
+  // the album
+  await page.evaluate(() => showAlbum());
+  await expect(page.locator(".topbar h2")).toHaveText("📒 My album");
+  await expect(page.locator('section[data-cat="djur"] h3')).toHaveText(/^🐾 Animals \d+ of 23$/);
+  await expectNoSwedish(page, "album", sv);
+});

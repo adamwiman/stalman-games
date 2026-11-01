@@ -18,6 +18,7 @@ scores and PIN-protected daily time limits per game.
 | 🕵️ [Detektiven](#detektiven-notes) | The Detective | who is the criminal? Logic puzzles with clues |
 | 🌍 [Jorden runt](#jorden-runt-notes) | Around the World | geography: flags, capitals, sizes and continents of all 195 countries |
 | 🗼 [Tornet i Hanoi](#tornet-i-hanoi-notes) | Tower of Hanoi | move the tower one disc at a time, 3 to 7 discs |
+| 🔤 [Glosjakten](#glosjakten-notes) | Word Hunt | English words: pictures, translations and spelling, with a sticker album |
 
 Every game works offline, saves its best score for the hub card and obeys
 the daily time limits. Notes on each game are at the end of this file.
@@ -35,7 +36,7 @@ time limits are shared by both languages.
   `data-en-<attribute>` for labels), and scripts pick a text with
   `I18N.t("svenska", "English")`.
 - Games with text inside their logic block (Gångertabellen, Detektiven,
-  Jorden runt, Tornet i Hanoi) have their own `setLang("en")`, so the unit tests can check
+  Jorden runt, Tornet i Hanoi, Glosjakten) have their own `setLang("en")`, so the unit tests can check
   both languages.
 - Detektiven builds its clues with a separate English grammar
   (`clueTextEn`); the people keep their Swedish names. Jorden runt has an
@@ -140,6 +141,7 @@ games/gangertabell.html  Gångertabellen / Times Tables — times tables 1–10 
 games/detektiven.html    Detektiven / The Detective — who is the criminal? Logic puzzles (fully self-contained)
 games/jordenrunt.html    Jorden runt / Around the World — geography games, flags and country data inside the file (fully self-contained)
 games/hanoi.html         Tornet i Hanoi / Tower of Hanoi — the classic disc puzzle, five levels (fully self-contained)
+games/glosor.html        Glosjakten / Word Hunt — English vocabulary, 176 words with emoji pictures inside the file (fully self-contained)
 tests/                logic, consistency and browser tests (see "Tests")
 package.json          test tooling only — the site itself has no build step
 playwright.config.js  browser test setup (desktop Chrome/Safari, iPad)
@@ -167,8 +169,10 @@ Then `npm test` runs everything:
   area, scoring, unlocking and the passport), `tests/detektiven.test.js`
   (Detektiven clue texts in both languages, case generator, solver,
   difficulty and unlocking), `tests/hanoi.test.js` (Tornet i Hanoi rules,
-  undo, the hint from any position, stars, unlocking and saved towers) and
-  `tests/integrity.test.js` (every game is in
+  undo, the hint from any position, stars, unlocking and saved towers),
+  `tests/glosor.test.js` (Glosjakten word list, answers to choose from on
+  every level, misspellings, the letter boxes, typing, rounds, unlocking,
+  stickers and misses) and `tests/integrity.test.js` (every game is in
   `config.js` with an English title and precached in `sw.js`, loads
   `i18n.js`, has the back link in both languages, `guard.js`, service worker
   and score key, and loads nothing from the network).
@@ -192,7 +196,7 @@ handing it over.
 | `hub.usage`  | `{date, byGame:{gameId: secondsPlayedToday}}`  |
 | `hub.lang`   | `"sv"` (default) or `"en"`, set on the hub     |
 | `score.<id>` | each game's best score                         |
-| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Rörmokaren the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, and last choices; Tornet i Hanoi keeps unlocked levels, stars and the tower in progress) |
+| `state.<id>` | optional saved game-in-progress (2048 and Numlingarnas resa use it; Gångertabellen keeps the last chosen tables there and Rörmokaren the last difficulty; Detektiven keeps unlocked levels and the case in progress; Jorden runt keeps unlocked levels and records per game, the passport, misses, and last choices; Tornet i Hanoi keeps unlocked levels, stars and the tower in progress; Glosjakten keeps unlocked levels and records per way of practising, the album, misses and the last choice of words) |
 
 ## 2048 notes
 
@@ -463,3 +467,52 @@ time, never putting a bigger disc on a smaller one.
   fewest moves per level) and `game` (the tower in progress, with its undo
   steps and hints). A saved tower is only used if the discs are in a legal
   order.
+
+## Glosjakten notes
+
+English vocabulary for Swedish kids (Word Hunt in English). 176 simple words in
+ten categories: colours, animals, numbers, food, clothes, the body, at home,
+nature and weather, vehicles, and things to do. Every word has a picture (an
+emoji, a colour swatch or the number), so the game stays small.
+
+| Way to practise | The question | The answer |
+| --------------- | ------------ | ---------- |
+| 🖼️ Bilder | a picture | pick the English word |
+| 🇬🇧 Engelska → svenska | an English word (🔊 reads it aloud) | pick the Swedish word |
+| 🇸🇪 Svenska → engelska | a Swedish word | pick the English word |
+| ✏️ Skriv klart | a Swedish word and the English one with letters missing | type the missing letters |
+| ⌨️ Skriv ordet | a Swedish word | type the whole English word |
+
+Before playing you pick **which words** (all words, one category, or **Mina
+missar**: words answered wrong, once there are at least six) and a **level**.
+Each way of practising unlocks its own levels, one at a time:
+
+| Level | Words | Answers to pick from | Skriv klart | Skriv ordet | Clear with |
+| ----- | ----- | -------------------- | ----------- | ----------- | ---------- |
+| Lätt | the easiest | 3 | a third missing, picture | boxes and the first letter, picture | 7 of 10 |
+| Mellan | easy and harder | 4 | half missing, picture | boxes, picture | 8 of 10 |
+| Svår | all | 5, from the same category | two thirds missing | no help | 8 of 10 |
+| Geni | all | 6 that look alike | only the first letter | no help | 9 of 10 |
+| Omöjliga | all | 6 misspellings of the right word | only the first letter | no help | 10 of 10 |
+
+- Typing uses the game's own keyboard (a–z, space and delete), so the iPad's
+  keyboard never covers the question and autocorrect never helps. A real
+  keyboard works too: letters, Backspace, Enter, and 1–6 to pick an answer.
+- Spelling is British (colour, grey, trousers). When typing, a few other
+  spellings also count (gray, pants, airplane …) and the game says which one
+  is British.
+- Misspellings on Omöjliga are the mistakes kids make: a letter too many or
+  too few, two letters swapped, another vowel, a sound spelt another way
+  (elephant → elefant). They are never one of the game's real words.
+- Pictures that look alike (a ship and a boat, a tree and a forest) never
+  come in the same Bilder question.
+- **🔊** reads the English word aloud with the device's own voice (works
+  offline on the iPad); the button only shows where speech is available.
+- **The album (📒 Mitt album):** a word gets a sticker after 3 right answers,
+  in any way of practising. A whole category gives a medal 🏅, shown in the
+  album and on the category's button. Wrong answers are remembered as misses
+  and come back more often.
+- **Score:** the hub trophy is the number of stickers.
+- **Saved:** `state.glosor` holds `prog` (unlocked level, best score and
+  cleared rounds per way of practising), `album`, `miss` and `pref` (the last
+  choice of words per way of practising). A round in progress is not saved.
