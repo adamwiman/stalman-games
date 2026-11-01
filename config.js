@@ -15,11 +15,11 @@ const GAMES = [
     scoreKey: "score.2048"         // localStorage key the game writes its best score to
   },
   {
-    id: "goopipes",
-    title: "Slemrören",
-    emoji: "🧪",
-    blurb: "Bygg röret innan slemmet rinner ut!",
-    en: { title: "Goo Pipes", blurb: "Build the pipe before the goo spills!" },
+    id: "goopipes",                // the id is from when it was called Goo Pipes (keeps scores and limits)
+    title: "Rörmokaren",
+    emoji: "🔧",
+    blurb: "Lägg rören innan vattnet kommer!",
+    en: { title: "The Plumber", blurb: "Lay the pipes before the water comes!" },
     file: "games/goopipes.html",
     scoreKey: "score.goopipes"
   },

@@ -60,7 +60,7 @@ test("the hub is Swedish by default and switches to English and back", async ({ 
   // the choice is remembered, and the games follow it
   await page.reload();
   await expect(page.locator(".blurb").first()).toHaveText(GAMES[0].en.blurb);
-  await press(page.locator(".game-card", { hasText: "Goo Pipes" }), touch);
+  await press(page.locator(".game-card", { hasText: "The Plumber" }), touch);
   await expect(page.locator("a.back")).toHaveText("← Games");
   await press(page.locator("a.back"), touch);
   await expect(page.locator(".blurb").first()).toHaveText(GAMES[0].en.blurb);
@@ -155,30 +155,43 @@ test("2048 in English", async ({ page, touch }) => {
   await expect(page.locator("#board .tile")).toHaveCount(2);
 });
 
-// ---------- Goo Pipes ----------
-test("Goo Pipes in English: difficulties, status and the end of a round", async ({ page, touch }) => {
+// ---------- The Plumber ----------
+test("The Plumber in English: the menu, the rules, the game bar and the end of a round", async ({ page, touch }) => {
   await english(page);
   await page.goto("games/goopipes.html");
-  await expect(page.locator("h1 > span").first()).toHaveText("GOO PIPES");
-  await expect(page.locator(".box .lbl")).toHaveText(["SCORE", "BEST", "LEVEL", "PIPE"]);
+  await expect(page.locator("h1")).toHaveText("The Plumber");
+  await expect(page.locator(".pickh")).toHaveText("Pick a difficulty");
+  await expect(page.locator("#levels .level .nm")).toHaveText(["Easy", "Medium", "Hard"]);
+  await expect(page.locator("#levels .level .ds")).toHaveText(["Calm water and short pipes", "Slightly faster water", "Fast water and long pipes"]);
+  await expect(page.locator("#levels .level .tag")).toHaveText("Last time");
+  await expect(page.locator("#record")).toHaveText("🏆 How far can you lead the water?");
+  await press(page.locator("#rules"), touch);
+  await expect(page.locator("#modalTitle")).toHaveText("📖 How to play");
+  await expect(page.locator("#modalBtns .btn")).toHaveText("Let's go!");
+  await expectNoSwedish(page, "rules");
+  await press(page.locator("#modalBtns .btn"), touch);
+  await expectNoSwedish(page, "menu");
+
+  await press(page.locator('#levels .level[data-diff="mellan"]'), touch);
+  await expect(page.locator("#diff")).toHaveText("🚿 Medium");
+  await expect(page.locator(".stat .l")).toHaveText(["score", "best", "level", "pipe"]);
   await expect(page.locator(".qlbl")).toHaveText("NEXT");
-  await expect(page.locator("#modalTitle")).toHaveText("Choose difficulty");
-  await expect(page.locator("#modalBtns button.diff span")).toHaveText(["Easy", "Medium", "Hard"]);
-  await expect(page.locator("#modalBtns button.diff small")).toHaveText(["Slow goo and short pipes", "Slightly faster goo", "Fast goo and long pipes"]);
-  await press(page.locator('#modalBtns button.diff[data-diff="mellan"]'), touch);
-  await expect(page.locator("#diff")).toHaveText("MEDIUM");
-  await expect(page.locator("#status")).toHaveText(/^GOO IN 1[56] s$/);
+  await expect(page.locator("#status")).toHaveText(/^WATER IN 1[56] s$/);
   await expect(page.locator("#fast")).toHaveText("⏩ Fast");
-  await press(page.locator("#new"), touch);
-  await expect(page.locator("#modalBtns button", { hasText: "Continue" })).toHaveCount(1);
-  await press(page.locator("#modalBtns button", { hasText: "Continue" }), touch);
+  await expect(page.locator("#menuBtn")).toHaveText("Menu");
+  await expectNoSwedish(page, "game");
+  await press(page.locator("#menuBtn"), touch);
+  await expect(page.locator("#resume")).toContainText("Continue the game");
+  await expect(page.locator("#resume")).toContainText("Medium · level 1 · 0 points");
+  await expect(page.locator(".pickh")).toHaveText("Or start again");
+  await press(page.locator("#resume"), touch);
   await press(page.locator("#fast"), touch);
-  await expect(page.locator("#modal.show")).toBeVisible({ timeout: 20000 });
-  await expect(page.locator("#modalTitle")).toHaveText("The goo spilled! ☠️");
+  await expect(page.locator("#modal")).toBeVisible({ timeout: 20000 });
+  await expect(page.locator("#modalTitle")).toHaveText("The water spilled! 💦");
   await expect(page.locator("#modalText")).toHaveText(/^The pipe was \d+ long, but the goal was 6\.$/);
   await expect(page.locator("#status")).toHaveText("ROUND OVER");
-  await expect(page.locator("#modalBtns button")).toHaveText(["Try again", "Change difficulty"]);
-  await expectNoSwedish(page, "Goo Pipes");
+  await expect(page.locator("#modalBtns .btn")).toHaveText(["Try again", "Change difficulty"]);
+  await expectNoSwedish(page, "The Plumber");
 });
 
 // ---------- Times Tables ----------

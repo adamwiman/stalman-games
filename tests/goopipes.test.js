@@ -44,7 +44,7 @@ for (const type of Object.keys(EXPECTED)) {
     eq(`exitSide(${type}, ${side})`, L.exitSide(type, side), EXPECTED[type][side]);
   }
 }
-eq("exitSide on start piece is null (goo can't re-enter the pump)", L.exitSide("S", "L"), null);
+eq("exitSide on start piece is null (water can't re-enter the pump)", L.exitSide("S", "L"), null);
 eq("axisOf L/R = h", [L.axisOf("L"), L.axisOf("R")], ["h", "h"]);
 eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
 
@@ -69,7 +69,7 @@ eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
 
 // ---- 3. tryEnter: valid entries for each piece type from every valid direction ----
 {
-  // moveDir that makes the goo enter via side `enter`
+  // moveDir that makes the water enter via side `enter`
   const moveFor = { U: "D", R: "L", D: "U", L: "R" };
   for (const type of L.PIECE_TYPES) {
     for (const enter of ["U", "R", "D", "L"]) {
@@ -161,7 +161,7 @@ eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
   b[0][0] = L.makeStart("R");
   b[1][1] = L.makePiece("H");
   b[2][2] = L.makePiece("X");
-  b[2][2].filled.h = true; // goo has reached it
+  b[2][2].filled.h = true; // water has reached it
   eq("empty cell → place", L.placement(b, 5, 5), "place");
   eq("un-flooded piece → replace", L.placement(b, 1, 1), "replace");
   eq("start piece → locked", L.placement(b, 0, 0), null);
@@ -191,7 +191,7 @@ eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
   }
   const p1 = L.levelParams(1), p5 = L.levelParams(5), p20 = L.levelParams(20);
   check("required distance grows", p1.required < p5.required && p5.required <= p20.required);
-  check("goo speeds up per level", p1.fillMs > p5.fillMs && p5.fillMs >= p20.fillMs && p20.fillMs >= 700);
+  check("water speeds up per level", p1.fillMs > p5.fillMs && p5.fillMs >= p20.fillMs && p20.fillMs >= 700);
   check("countdown shrinks but never below 4s",
     p1.countdownMs > p5.countdownMs && p20.countdownMs >= 4000);
 }
@@ -204,7 +204,7 @@ eq("axisOf U/D = v", [L.axisOf("U"), L.axisOf("D")], ["v", "v"]);
   check("every difficulty has an English description", L.DIFFICULTY_ORDER.every((d) => L.DIFFICULTIES[d].en.kid.length > 0));
   eq("Svår is the original game", L.levelParams(1, "svar"), { required: 8, fillMs: 2600, countdownMs: 12000, fastMs: 110 });
   eq("no difficulty means Svår", L.levelParams(7), L.levelParams(7, "svar"));
-  eq("Lätt level 1: short pipe, slow goo, long countdown", L.levelParams(1, "latt"),
+  eq("Lätt level 1: short pipe, slow water, long countdown", L.levelParams(1, "latt"),
     { required: 5, fillMs: 4400, countdownMs: 20000, fastMs: 110 });
   for (const d of L.DIFFICULTY_ORDER) {
     let prev = null;
